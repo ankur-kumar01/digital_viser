@@ -1,4 +1,6 @@
-require('dotenv').config();
+const path = require('path');
+// Fix for Hostinger: Ensure dotenv always looks in the backend folder, regardless of CWD
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const express = require('express');
 const cors = require('cors');
@@ -10,7 +12,6 @@ const walletRoutes = require('./routes/wallet');
 const fdrRoutes = require('./routes/fdr');
 const adminRoutes = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
-const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -74,14 +75,18 @@ if (fs.existsSync(frontendDistPath)) {
   });
 }
 
-// Verify database connection and start server
-pool.query('SELECT 1')
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`🚀 Digital_Viser API Server running on port ${PORT}`);
+// Start server regardless of initial DB connection so Hostinger doesn't throw 503
+app.listen(PORT, () => {
+  console.log(`🚀 Digital_Viser API Server running on port ${PORT}`);
+  
+  // Verify database connection after server is running
+  pool.query('SELECT 1')
+    .then(() => {
+      console.log('✅ Database connection successful');
+    })
+    .catch((err) => {
+      console.error('❌ Failed to connect to database:', err);
+      console.error('Please check your .env credentials on Hostinger!');
+      // We removed process.exit(1) so the server stays alive to report errors instead of crashing
     });
-  })
-  .catch((err) => {
-    console.error('❌ Failed to connect to database:', err);
-    process.exit(1);
-  });
+});
