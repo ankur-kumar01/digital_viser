@@ -167,6 +167,15 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
 /* Utility Classes */
 .animate-fade-in {
   animation: fadeIn 0.35s ease-out forwards;
@@ -178,6 +187,17 @@ h1, h2, h3, h4, h5, h6 {
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+.shimmer {
+  background: linear-gradient(
+    to right,
+    var(--bg-tertiary) 4%,
+    var(--border-card) 25%,
+    var(--bg-tertiary) 36%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
 }
 
 /* ===== CARDS ===== */

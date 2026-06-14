@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fdrAPI } from '../api';
 import { Calendar, RefreshCw, BarChart2, CheckCircle2 } from 'lucide-react';
+import { ShimmerLoader } from '../components/ShimmerLoader';
 
 interface MyFDRsProps {
   onNavigate: (view: string) => void;
@@ -72,8 +73,23 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
 
       {isLoading ? (
         /* LOADING */
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0', color: 'var(--text-secondary)' }}>
-          <span>Loading fixed deposit records...</span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+          {[1, 2, 3].map(i => (
+            <div key={i} className="glass-card glow-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <ShimmerLoader width="40%" height="24px" />
+                <ShimmerLoader width="20%" height="24px" />
+              </div>
+              <ShimmerLoader width="60%" height="32px" />
+              <ShimmerLoader width="100%" height="8px" borderRadius="4px" />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
+                <ShimmerLoader height="40px" />
+                <ShimmerLoader height="40px" />
+                <ShimmerLoader height="40px" />
+                <ShimmerLoader height="40px" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : fdrs.length === 0 ? (
         /* EMPTY STATE */
@@ -116,7 +132,7 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
                   display: 'flex', 
                   flexDirection: 'column', 
                   gap: '16px',
-                  border: isCompleted ? '1px solid rgba(0, 210, 252, 0.15)' : '1px solid var(--accent-primary-glow)'
+                  border: isCompleted ? '1px solid var(--accent-info-glow)' : '1px solid var(--accent-primary-glow)'
                 }}
               >
                 {/* Header row */}
@@ -161,8 +177,8 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
                     display: 'grid', 
                     gridTemplateColumns: '1fr 1fr', 
                     gap: '12px', 
-                    background: 'var(--bg-glass)', 
-                    border: '1px solid var(--border-glass)',
+                    background: 'var(--bg-tertiary)', 
+                    border: '1px solid var(--border-card)',
                     borderRadius: 'var(--radius-sm)',
                     padding: '12px',
                     fontSize: '0.85rem'
@@ -190,14 +206,14 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
 
                 {/* Footer status text */}
                 {!isCompleted && fdr.next_installment_date && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-glass)', paddingTop: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-card)', paddingTop: '10px' }}>
                     <Calendar size={13} color="var(--accent-primary)" />
                     <span>Next Interest Payout: <strong>{formatDate(fdr.next_installment_date)}</strong></span>
                   </div>
                 )}
 
                 {isCompleted && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--accent-info)', borderTop: '1px solid var(--border-glass)', paddingTop: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--accent-info)', borderTop: '1px solid var(--border-card)', paddingTop: '10px' }}>
                     <CheckCircle2 size={13} />
                     <span>Principal and total yields returned to wallet.</span>
                   </div>
