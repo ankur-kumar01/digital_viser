@@ -12,6 +12,7 @@ const walletRoutes = require('./routes/wallet');
 const fdrRoutes = require('./routes/fdr');
 const adminRoutes = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
+const gamesRoutes = require('./routes/games');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -44,12 +45,14 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/fdr', fdrRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/games', gamesRoutes);
 
 // Initialize Cron Jobs
 require('./cron');
 
 // Static file serving for uploads
 app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
+app.use('/api/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
 
 // Health check for API (Deep diagnostic)
 app.get('/api/health', async (req, res) => {

@@ -701,4 +701,25 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
+// GET /games
+router.get('/games', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM games ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch games' });
+  }
+});
+
+// PUT /games/:id
+router.put('/games/:id', async (req, res) => {
+  try {
+    const { is_active } = req.body;
+    await pool.query('UPDATE games SET is_active = ? WHERE id = ?', [is_active !== false, req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update game status' });
+  }
+});
+
 module.exports = router;

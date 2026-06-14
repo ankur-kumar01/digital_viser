@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Wallet, PlusCircle, BarChart3, Receipt, X, Users, User, ArrowUpRight, Gift } from 'lucide-react';
+import { LayoutDashboard, Wallet, PlusCircle, BarChart3, Receipt, X, Users, User, ArrowUpRight, Gift, Gamepad2 } from 'lucide-react';
 
 interface SidebarProps {
   currentView: string;
@@ -19,6 +19,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'profile', name: 'My Profile', icon: <User size={20} /> },
     { id: 'create-fdr', name: 'Create FDR', icon: <PlusCircle size={20} /> },
     { id: 'my-fdrs', name: 'My FDRs', icon: <BarChart3 size={20} /> },
+    { id: 'games', name: 'Gaming Zone', icon: <Gamepad2 size={20} /> },
     { id: 'transactions', name: 'Transactions', icon: <Receipt size={20} /> },
   ];
 
@@ -30,6 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'admin-methods', name: 'Payment Channels', icon: <Wallet size={20} /> },
     { id: 'admin-fdr-plans', name: 'FDR Plans', icon: <PlusCircle size={20} /> },
     { id: 'admin-schemes', name: 'Reward Schemes', icon: <Gift size={20} /> },
+    { id: 'admin-games', name: 'Manage Games', icon: <Gamepad2 size={20} /> },
     { id: 'admin-settings', name: 'System Settings', icon: <Wallet size={20} /> },
     { id: 'admin-profile', name: 'Admin Profile', icon: <User size={20} /> },
   ];

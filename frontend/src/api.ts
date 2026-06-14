@@ -138,6 +138,10 @@ export const fdrAPI = {
   getPnL: () => request('GET', '/fdr/pnl'),
 };
 
+export const gamesAPI = {
+  getGames: () => request('GET', '/games'),
+};
+
 export const adminAPI = {
   login: (credentials: any) => adminRequest('POST', '/admin/auth/login', credentials),
   getStats: () => adminRequest('GET', '/admin/stats'),
@@ -171,4 +175,6 @@ export const adminAPI = {
   getProfile: () => adminRequest('GET', '/admin/profile'),
   updateProfile: (data: any) => adminRequest('PUT', '/admin/profile', data),
   deleteUser: (id: number) => adminRequest('DELETE', `/admin/users/${id}`),
+  getGames: () => adminRequest('GET', '/admin/games'),
+  updateGameStatus: (id: number, is_active: boolean) => adminRequest('PUT', `/admin/games/${id}`, { is_active }),
 };

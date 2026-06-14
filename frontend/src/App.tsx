@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
-import { LayoutDashboard, Wallet, ArrowUpRight, BarChart3, User } from 'lucide-react';
+import { LayoutDashboard, Wallet, ArrowUpRight, BarChart3, User, Gamepad2 } from 'lucide-react';
 import { Auth } from './views/Auth';
 import { DashboardOverview } from './views/DashboardOverview';
 import { Deposit } from './views/Deposit';
@@ -11,6 +11,9 @@ import { MyFDRs } from './views/MyFDRs';
 import { Transactions } from './views/Transactions';
 import { Profile } from './views/Profile';
 import { Referrals } from './views/Referrals';
+import { GamesCenter } from './views/GamesCenter';
+import { AviatorGame } from './views/games/AviatorGame';
+import { ColourTradingGame } from './views/games/ColourTradingGame';
 import { authAPI, clearToken, getToken, adminAPI, getAdminToken, clearAdminToken } from './api';
 
 // Admin Views
@@ -25,6 +28,7 @@ import { AdminSchemes } from './views/admin/AdminSchemes';
 import { AdminUserProfileDetails } from './views/admin/AdminUserProfileDetails';
 import { AdminSettings } from './views/admin/AdminSettings';
 import { AdminProfile } from './views/admin/AdminProfile';
+import { AdminGames } from './views/admin/AdminGames';
 
 export const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -200,6 +204,15 @@ export const App: React.FC = () => {
             {currentView === 'transactions' && (
               <Transactions />
             )}
+            {currentView === 'games' && (
+              <GamesCenter onNavigate={setCurrentView} />
+            )}
+            {currentView === 'game-aviator' && (
+              <AviatorGame user={user} refreshUser={refreshUser} onNavigate={setCurrentView} />
+            )}
+            {currentView === 'game-colour-trading' && (
+              <ColourTradingGame user={user} refreshUser={refreshUser} onNavigate={setCurrentView} />
+            )}
           </>
         ) : (
           <>
@@ -226,6 +239,7 @@ export const App: React.FC = () => {
                 }} 
               />
             )}
+            {currentView === 'admin-games' && <AdminGames />}
           </>
         )}
       </main>
@@ -238,7 +252,7 @@ export const App: React.FC = () => {
             { id: 'deposit', label: 'Deposit', icon: <Wallet size={20} /> },
             { id: 'withdraw', label: 'Withdraw', icon: <ArrowUpRight size={20} /> },
             { id: 'my-fdrs', label: 'FDRs', icon: <BarChart3 size={20} /> },
-            { id: 'profile', label: 'Profile', icon: <User size={20} /> },
+            { id: 'games', label: 'Gaming Zone', icon: <Gamepad2 size={20} /> },
           ].map((item) => (
             <button
               key={item.id}
