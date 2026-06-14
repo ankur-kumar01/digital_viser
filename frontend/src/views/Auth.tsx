@@ -84,29 +84,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         padding: '20px'
       }}
     >
-      {/* Decorative Blur Orbs */}
-      <div 
-        style={{
-          position: 'absolute',
-          width: '400px',
-          height: '400px',
-          background: 'radial-gradient(circle, var(--accent-primary-glow) 0%, transparent 70%)',
-          top: '-100px',
-          right: '-100px',
-          zIndex: 1
-        }}
-      />
-      <div 
-        style={{
-          position: 'absolute',
-          width: '500px',
-          height: '500px',
-          background: 'radial-gradient(circle, rgba(0, 245, 160, 0.04) 0%, transparent 70%)',
-          bottom: '-150px',
-          left: '-150px',
-          zIndex: 1
-        }}
-      />
+      {/* Decorative Orbs Removed per "No Gradients" request */}
 
       <div className="glass-card glow-card animate-fade-in auth-card">
         {/* Brand Header */}
@@ -119,9 +97,9 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               width: '50px',
               height: '50px',
               borderRadius: '14px',
-              background: 'linear-gradient(135deg, var(--accent-primary) 0%, #a855f7 100%)',
+              background: 'var(--accent-primary)',
               marginBottom: '16px',
-              boxShadow: '0 8px 20px rgba(139, 92, 246, 0.3)'
+              boxShadow: '0 8px 20px var(--accent-primary-glow)'
             }}
           >
             <KeyRound size={24} color="var(--text-primary)" />

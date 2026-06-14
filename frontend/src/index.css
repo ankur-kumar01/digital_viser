@@ -34,8 +34,8 @@
   --bg-nav: rgba(248, 250, 252, 0.75);
   --bg-input: rgba(255, 255, 255, 0.85);
   --bg-input-focus: #ffffff;
-  --bg-main-gradient: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.7) 0%, rgba(248, 250, 252, 1) 100%);
-  --bg-body-gradient: radial-gradient(at 0% 0%, rgba(202, 138, 4, 0.03) 0px, transparent 40%), radial-gradient(at 100% 100%, rgba(5, 150, 105, 0.02) 0px, transparent 40%), var(--bg-primary);
+  --bg-main-gradient: #ffffff;
+  --bg-body-gradient: #f8fafc;
 
   /* Fonts */
   --font-headings: 'Outfit', sans-serif;
@@ -81,8 +81,8 @@
     --bg-nav: rgba(9, 9, 11, 0.4);
     --bg-input: rgba(15, 21, 36, 0.6);
     --bg-input-focus: rgba(15, 21, 36, 0.9);
-    --bg-main-gradient: radial-gradient(circle at 50% 50%, rgba(24, 24, 27, 0.45) 0%, rgba(9, 9, 11, 1) 100%);
-    --bg-body-gradient: radial-gradient(at 0% 0%, rgba(250, 204, 21, 0.04) 0px, transparent 40%), radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.03) 0px, transparent 40%), var(--bg-primary);
+    --bg-main-gradient: #0c0d12;
+    --bg-body-gradient: #06070a;
     
     --shadow-glow: 0 0 35px rgba(250, 204, 21, 0.08);
   }
@@ -263,14 +263,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent-primary) 0%, #a855f7 100%);
+  background: var(--accent-secondary);
   color: #ffffff;
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+  box-shadow: 0 4px 15px var(--accent-secondary-glow);
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+  box-shadow: 0 6px 20px var(--accent-secondary-glow);
   filter: brightness(1.1);
 }
 
@@ -298,14 +298,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-danger {
-  background: linear-gradient(135deg, var(--accent-danger) 0%, #ff6b81 100%);
+  background: var(--accent-danger);
   color: white;
-  box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
+  box-shadow: 0 4px 15px var(--accent-danger-glow);
 }
 
 .btn-danger:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 71, 87, 0.5);
+  box-shadow: 0 6px 20px var(--accent-danger-glow);
 }
 
 /* Badges */
