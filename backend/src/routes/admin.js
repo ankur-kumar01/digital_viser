@@ -128,6 +128,16 @@ router.put('/methods/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to update payment method' });
   }
 });
+// DELETE /methods/:id
+router.delete('/methods/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM payment_methods WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete payment method' });
+  }
+});
 
 // GET /fdr-plans
 router.get('/fdr-plans', async (req, res) => {

@@ -144,6 +144,7 @@ export const adminAPI = {
   getMethods: () => adminRequest('GET', '/admin/methods'),
   createMethod: (data: any) => adminRequest('POST', '/admin/methods', data),
   updateMethod: (id: number, data: any) => adminRequest('PUT', `/admin/methods/${id}`, data),
+  deleteMethod: (id: number) => adminRequest('DELETE', `/admin/methods/${id}`),
   getFdrPlans: () => adminRequest('GET', '/admin/fdr-plans'),
   createFdrPlan: (data: any) => adminRequest('POST', '/admin/fdr-plans', data),
   updateFdrPlan: (id: number, data: any) => adminRequest('PUT', `/admin/fdr-plans/${id}`, data),

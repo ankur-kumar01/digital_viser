@@ -59,6 +59,16 @@ export const AdminPaymentMethods: React.FC = () => {
     }
   };
 
+  const handleDeleteMethod = async (id: number) => {
+    if (!window.confirm("Are you sure you want to permanently delete this payment method? This cannot be undone.")) return;
+    try {
+      await adminAPI.deleteMethod(id);
+      fetchData();
+    } catch (err) {
+      alert('Failed to delete method');
+    }
+  };
+
   const openConfigModal = (method: any) => {
     setConfiguringMethod(method);
     setAdminInstructions(method.admin_instructions ? (typeof method.admin_instructions === 'string' ? JSON.parse(method.admin_instructions) : method.admin_instructions) : []);
@@ -146,6 +156,9 @@ export const AdminPaymentMethods: React.FC = () => {
                       </button>
                       <button onClick={() => handleToggleMethod(m.id, !!m.is_active)} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
                         {m.is_active ? <><PowerOff size={14}/> Disable</> : <><Power size={14}/> Enable</>}
+                      </button>
+                      <button onClick={() => handleDeleteMethod(m.id)} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem', color: 'var(--accent-danger)' }}>
+                        <Trash2 size={14}/>
                       </button>
                     </div>
                   </td>
