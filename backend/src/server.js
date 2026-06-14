@@ -3,9 +3,13 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const { pool } = require('./db');
 const { runMigrations } = require('./migrate');
+const AviatorGameLogic = require('./services/aviatorLogic');
 
 // Import route files
 const authRoutes = require('./routes/auth');
@@ -16,7 +20,77 @@ const uploadRoutes = require('./routes/upload');
 const gamesRoutes = require('./routes/games');
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
+
+const io = new Server(server, {
+  cors: {
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (process.env.ALLOWED_ORIGINS) {
+        const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',');
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      } else {
+        callback(null, true);
+      }
+    },
+    credentials: true
+  }
+});
+
+// Initialize Aviator Game Logic
+const aviatorEngine = new AviatorGameLogic(io);
+
+// Socket.io Authentication Middleware
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) return next(new Error('Authentication error'));
+  
+  jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key', (err, decoded) => {
+    if (err) return next(new Error('Authentication error'));
+    socket.user = decoded;
+    next();
+  });
+});
+
+io.on('connection', (socket) => {
+  console.log('User connected to socket:', socket.user.userId);
+  
+  // Send current state immediately on connect
+  socket.emit('aviator_state', {
+    state: aviatorEngine.state,
+    roundId: aviatorEngine.roundId,
+    startTime: aviatorEngine.startTime,
+    hash: aviatorEngine.hash
+  });
+
+  socket.on('aviator_bet', async (data, callback) => {
+    try {
+      const res = await aviatorEngine.handleBet(socket.user.userId, data.amount);
+      if (typeof callback === 'function') callback({ success: true, newBalance: res.newBalance });
+    } catch (err) {
+      if (typeof callback === 'function') callback({ error: err.message });
+    }
+  });
+
+  socket.on('aviator_cashout', async (data, callback) => {
+    try {
+      const res = await aviatorEngine.handleCashout(socket.user.userId);
+      if (typeof callback === 'function') callback({ 
+        success: true, 
+        newBalance: res.newBalance,
+        multiplier: res.multiplier,
+        winAmount: res.winAmount
+      });
+    } catch (err) {
+      if (typeof callback === 'function') callback({ error: err.message });
+    }
+  });
+});
 
 // Middleware
 // Dynamic CORS to allow any subdomain or specified origins, supporting credentials
@@ -118,8 +192,8 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Start server regardless of initial DB connection so Hostinger doesn't throw 503
-app.listen(PORT, async () => {
-  console.log(`🚀 Digital_Viser API Server running on port ${PORT}`);
+server.listen(PORT, async () => {
+  console.log(`🚀 Digital_Viser API & Socket Server running on port ${PORT}`);
   
   try {
     // Automatically run migrations on server startup (crucial for Hostinger/Passenger deployments)

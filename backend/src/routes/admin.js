@@ -722,4 +722,41 @@ router.put('/games/:id', async (req, res) => {
   }
 });
 
+// GET /settings
+router.get('/settings', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT setting_key, setting_value, description FROM system_settings');
+    const settings = {};
+    rows.forEach(r => settings[r.setting_key] = r.setting_value);
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+// PUT /settings
+router.put('/settings', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const { settings } = req.body;
+    await conn.beginTransaction();
+
+    for (const [key, value] of Object.entries(settings)) {
+      await conn.query(
+        'INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
+        [key, String(value), String(value)]
+      );
+    }
+
+    await conn.commit();
+    res.json({ success: true });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Failed to update settings:', err);
+    res.status(500).json({ error: 'Failed to update settings' });
+  } finally {
+    conn.release();
+  }
+});
+
 module.exports = router;

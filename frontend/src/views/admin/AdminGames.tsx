@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../../api';
-import { Gamepad2, Play, Pause, Settings, Info } from 'lucide-react';
+import { Gamepad2, Play, Pause, Settings, Info, X } from 'lucide-react';
 
 export const AdminGames: React.FC = () => {
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [aviatorHouseEdge, setAviatorHouseEdge] = useState('3');
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const fetchGames = async () => {
     try {
-      const res = await adminAPI.getGames();
-      setGames(res);
+      const [gamesRes, settingsRes] = await Promise.all([
+        adminAPI.getGames(),
+        adminAPI.getSettings().catch(() => ({}))
+      ]);
+      setGames(gamesRes);
+      if (settingsRes.aviator_house_edge) {
+        setAviatorHouseEdge(settingsRes.aviator_house_edge);
+      }
     } catch (err) {
       console.error('Failed to fetch games', err);
     } finally {
@@ -29,6 +38,19 @@ export const AdminGames: React.FC = () => {
       fetchGames();
     } catch (err: any) {
       alert(err.message || `Failed to ${action} game`);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      await adminAPI.updateSettings({ aviator_house_edge: aviatorHouseEdge });
+      alert('Aviator settings updated successfully!');
+      setSettingsModalOpen(false);
+    } catch (err: any) {
+      alert(err.message || 'Failed to update settings');
+    } finally {
+      setSavingSettings(false);
     }
   };
 
@@ -106,13 +128,16 @@ export const AdminGames: React.FC = () => {
                     {g.is_active ? <Pause size={18} /> : <Play size={18} />}
                     {g.is_active ? 'Disable Game' : 'Enable Game'}
                   </button>
-                  <button 
-                    className="btn btn-secondary"
-                    style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    title="Settings (Coming Soon)"
-                  >
-                    <Settings size={18} />
-                  </button>
+                  {g.slug === 'aviator' && (
+                    <button 
+                      onClick={() => setSettingsModalOpen(true)}
+                      className="btn btn-secondary"
+                      style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      title="Aviator Settings"
+                    >
+                      <Settings size={18} />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -120,6 +145,142 @@ export const AdminGames: React.FC = () => {
           ))
         )}
       </div>
+
+      {/* Premium Aviator Settings Modal */}
+      {settingsModalOpen && (
+        <div 
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(12px)',
+            zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'fadeIn 0.3s ease-out'
+          }}
+        >
+          <div 
+            style={{ 
+              width: '100%', maxWidth: '480px', 
+              background: 'linear-gradient(145deg, var(--bg-secondary), var(--bg-primary))',
+              border: '1px solid var(--border-glass)',
+              borderRadius: '24px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(139, 92, 246, 0.15)',
+              overflow: 'hidden',
+              position: 'relative'
+            }}
+          >
+            {/* Decorative Glow */}
+            <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '150px', height: '150px', background: 'var(--accent-primary)', filter: 'blur(80px)', opacity: 0.3, borderRadius: '50%' }} />
+
+            <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ background: 'var(--accent-primary-glow)', padding: '10px', borderRadius: '12px', color: 'var(--accent-primary)' }}>
+                  <Settings size={20} />
+                </div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, background: 'linear-gradient(to right, var(--text-primary), var(--text-secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                  Aviator Configuration
+                </h3>
+              </div>
+              <button 
+                onClick={() => setSettingsModalOpen(false)}
+                style={{ background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-muted)', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                onMouseOver={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--border-light)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div style={{ padding: '32px', position: 'relative', zIndex: 1 }}>
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-glass)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.95rem', fontWeight: 600, marginBottom: '16px' }}>
+                  <Info size={16} color="var(--accent-primary)" />
+                  House Edge Percentage (%)
+                </label>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ position: 'relative', flex: '0 0 120px' }}>
+                    <input 
+                      type="number" 
+                      value={aviatorHouseEdge} 
+                      onChange={(e) => setAviatorHouseEdge(e.target.value)}
+                      style={{
+                        width: '100%',
+                        background: 'var(--bg-primary)',
+                        border: '2px solid var(--border-light)',
+                        borderRadius: '12px',
+                        padding: '12px 16px',
+                        fontSize: '1.5rem',
+                        fontWeight: 800,
+                        color: 'var(--accent-primary)',
+                        textAlign: 'center',
+                        transition: 'border-color 0.2s',
+                        outline: 'none'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = 'var(--accent-primary)'}
+                      onBlur={(e) => e.target.style.borderColor = 'var(--border-light)'}
+                      min="1" max="99" step="0.1"
+                    />
+                    <div style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontWeight: 700 }}>%</div>
+                  </div>
+                  
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Return To Player (RTP)</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#10b981' }}>
+                      {100 - parseFloat(aviatorHouseEdge || '0')}%
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ marginTop: '20px', padding: '12px', background: 'var(--accent-primary-glow)', borderRadius: '8px', borderLeft: '3px solid var(--accent-primary)' }}>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    <strong style={{ color: 'var(--accent-primary)' }}>Notice:</strong> The house edge determines the mathematical probability of plane crashes at 1.00x. A house edge of 3% means players will win back ~97% of all bets over the long term. Changes apply to the immediate next round automatically.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '24px 32px', background: 'var(--bg-tertiary)', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'flex-end', gap: '12px', position: 'relative', zIndex: 1 }}>
+              <button 
+                onClick={() => setSettingsModalOpen(false)} 
+                disabled={savingSettings}
+                style={{
+                  padding: '12px 24px',
+                  background: 'transparent',
+                  border: '1px solid var(--border-light)',
+                  color: 'var(--text-primary)',
+                  borderRadius: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.background = 'var(--border-light)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveSettings} 
+                disabled={savingSettings}
+                style={{
+                  padding: '12px 24px',
+                  background: 'var(--accent-primary)',
+                  border: 'none',
+                  color: '#fff',
+                  borderRadius: '12px',
+                  fontWeight: 600,
+                  cursor: savingSettings ? 'not-allowed' : 'pointer',
+                  opacity: savingSettings ? 0.7 : 1,
+                  boxShadow: '0 4px 14px 0 rgba(139, 92, 246, 0.39)',
+                  display: 'flex', alignItems: 'center', gap: '8px'
+                }}
+              >
+                {savingSettings ? 'Saving Configuration...' : 'Save Configuration'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
