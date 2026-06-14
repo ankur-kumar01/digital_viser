@@ -479,7 +479,7 @@ h1, h2, h3, h4, h5, h6 {
 @media (max-width: 992px) {
   .sidebar-container {
     transform: translateX(-100%);
-    background: rgba(18, 18, 22, 0.96) !important;
+    background: var(--bg-secondary) !important;
     z-index: 100;
   }
   
