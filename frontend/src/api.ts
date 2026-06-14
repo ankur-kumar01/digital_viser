@@ -156,8 +156,8 @@ export const adminAPI = {
   rejectWithdrawal: (id: number) => adminRequest('POST', `/admin/withdrawals/${id}/reject`),
   getUsers: () => adminRequest('GET', '/admin/users'),
   updateUser: (id: number, data: any) => adminRequest('PUT', `/admin/users/${id}`, data),
-  adjustBalance: (id: number, action: 'add' | 'subtract', amount: number, description: string) => 
-    adminRequest('POST', `/admin/users/${id}/balance`, { action, amount, description }),
+  adjustBalance: (id: number, action: 'add' | 'subtract', amount: number, description: string, wallet_type: 'main' | 'bonus' | 'referral' = 'main') => 
+    adminRequest('POST', `/admin/users/${id}/balance`, { action, amount, description, wallet_type }),
   getSchemes: () => adminRequest('GET', '/admin/schemes'),
   createScheme: (data: any) => adminRequest('POST', '/admin/schemes', data),
   updateScheme: (id: number, data: any) => adminRequest('PUT', `/admin/schemes/${id}`, data),

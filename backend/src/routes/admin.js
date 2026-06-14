@@ -347,36 +347,44 @@ router.put('/users/:id', async (req, res) => {
 router.post('/users/:id/balance', async (req, res) => {
   const conn = await pool.getConnection();
   try {
-    const { action, amount, description } = req.body;
+    const { action, amount, description, wallet_type = 'main' } = req.body;
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
       return res.status(400).json({ error: 'Valid positive amount is required' });
     }
 
+    const columnMap = {
+      'main': 'balance',
+      'bonus': 'bonus_balance',
+      'referral': 'referral_balance'
+    };
+
+    const targetColumn = columnMap[wallet_type] || 'balance';
+
     await conn.beginTransaction();
 
-    const [userRows] = await conn.query('SELECT balance FROM users WHERE id = ? FOR UPDATE', [req.params.id]);
+    const [userRows] = await conn.query(`SELECT ${targetColumn} FROM users WHERE id = ? FOR UPDATE`, [req.params.id]);
     if (userRows.length === 0) throw new Error('User not found');
 
-    let currentBalance = parseFloat(userRows[0].balance);
+    let currentBalance = parseFloat(userRows[0][targetColumn]);
     
     let transactionType = '';
     let transactionAmount = 0;
 
     if (action === 'add') {
-      await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [numericAmount, req.params.id]);
+      await conn.query(`UPDATE users SET ${targetColumn} = ${targetColumn} + ? WHERE id = ?`, [numericAmount, req.params.id]);
       transactionType = 'admin_adjustment_add';
       transactionAmount = numericAmount;
     } else if (action === 'subtract') {
-      if (currentBalance < numericAmount) throw new Error('Insufficient user balance to subtract this amount');
-      await conn.query('UPDATE users SET balance = balance - ? WHERE id = ?', [numericAmount, req.params.id]);
+      if (currentBalance < numericAmount) throw new Error(`Insufficient ${wallet_type} balance to subtract this amount`);
+      await conn.query(`UPDATE users SET ${targetColumn} = ${targetColumn} - ? WHERE id = ?`, [numericAmount, req.params.id]);
       transactionType = 'admin_adjustment_subtract';
       transactionAmount = -numericAmount;
     } else {
       throw new Error('Invalid action');
     }
 
-    const logDescription = description || `Admin adjustment (${action})`;
+    const logDescription = description || `Admin adjustment (${action}) to ${wallet_type} wallet`;
     await conn.query(
       'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
       [req.params.id, transactionType, transactionAmount, logDescription]

@@ -160,6 +160,7 @@ export const App: React.FC = () => {
         user={user} 
         onLogout={handleLogout} 
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        isAdmin={isAdmin}
       />
 
       {/* Backdrop overlay for mobile */}

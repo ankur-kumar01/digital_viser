@@ -27,6 +27,13 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
   const [lockDate, setLockDate] = useState('');
   const [lockLoading, setLockLoading] = useState(false);
 
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [adjustWalletType, setAdjustWalletType] = useState<'main' | 'bonus' | 'referral'>('main');
+  const [adjustAction, setAdjustAction] = useState<'add' | 'subtract'>('add');
+  const [adjustAmount, setAdjustAmount] = useState('');
+  const [adjustDescription, setAdjustDescription] = useState('');
+  const [adjustLoading, setAdjustLoading] = useState(false);
+
   const fetchDetails = async () => {
     try {
       const res = await adminAPI.getUserDetails(userId);
@@ -113,6 +120,22 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
     }
   };
 
+  const handleAdjustBalance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdjustLoading(true);
+    try {
+      await adminAPI.adjustBalance(userId, adjustAction, parseFloat(adjustAmount), adjustDescription, adjustWalletType);
+      setShowAdjustModal(false);
+      setAdjustAmount('');
+      setAdjustDescription('');
+      fetchDetails();
+    } catch (err: any) {
+      alert(err.message || 'Failed to adjust balance');
+    } finally {
+      setAdjustLoading(false);
+    }
+  };
+
   const handleDeleteUser = async () => {
     if (!window.confirm("WARNING: Are you absolutely sure you want to delete this user? This will permanently erase their account, balance, transactions, and FDRs. This action CANNOT be undone.")) return;
     if (!window.confirm("DOUBLE CONFIRMATION: Please confirm again. Delete user data permanently?")) return;
@@ -143,18 +166,22 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '16px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '16px' }}>
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', WebkitOverflowScrolling: 'touch' }} className="hide-scrollbar">
         {['overview', 'transactions', 'fdrs', 'locking'].map(tab => (
           <button 
             key={tab}
             onClick={() => setActiveTab(tab as any)}
             className="btn"
             style={{ 
-              background: activeTab === tab ? 'var(--accent-primary-glow)' : 'transparent',
+              background: activeTab === tab ? 'var(--accent-primary-glow)' : 'var(--bg-tertiary)',
               color: activeTab === tab ? 'var(--accent-primary)' : 'var(--text-secondary)',
-              border: 'none',
-              padding: '8px 16px',
-              textTransform: 'capitalize'
+              border: activeTab === tab ? '1px solid var(--accent-primary)' : '1px solid var(--border-glass)',
+              padding: '10px 20px',
+              borderRadius: 'var(--radius-full)',
+              textTransform: 'capitalize',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.2s ease',
+              fontWeight: 500
             }}
           >
             {tab === 'fdrs' ? 'FDRs' : tab}
@@ -197,21 +224,42 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
             <h3 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Wallet size={18} /> Wallet Balances
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-              <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: 'var(--radius-sm)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: 'var(--radius-sm)', position: 'relative' }}>
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Main Balance</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-primary)', margin: '8px 0' }}>{formatCurrency(data.user.balance)}</div>
                 <div style={{ color: 'var(--accent-danger)', fontSize: '0.8rem' }}><Lock size={12} style={{display:'inline'}}/> Locked: {formatCurrency(data.user.locked_balance)}</div>
+                <button 
+                  onClick={() => { setAdjustWalletType('main'); setShowAdjustModal(true); }}
+                  className="btn btn-secondary" 
+                  style={{ position: 'absolute', top: '16px', right: '16px', padding: '6px 12px', fontSize: '0.8rem', borderRadius: 'var(--radius-full)' }}
+                >
+                  ± Adjust
+                </button>
               </div>
-              <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: 'var(--radius-sm)' }}>
+              <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: 'var(--radius-sm)', position: 'relative' }}>
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Bonus Balance</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-secondary)', margin: '8px 0' }}>{formatCurrency(data.user.bonus_balance)}</div>
                 <div style={{ color: 'var(--accent-danger)', fontSize: '0.8rem' }}><Lock size={12} style={{display:'inline'}}/> Locked: {formatCurrency(data.user.locked_bonus_balance)}</div>
+                <button 
+                  onClick={() => { setAdjustWalletType('bonus'); setShowAdjustModal(true); }}
+                  className="btn btn-secondary" 
+                  style={{ position: 'absolute', top: '16px', right: '16px', padding: '6px 12px', fontSize: '0.8rem', borderRadius: 'var(--radius-full)' }}
+                >
+                  ± Adjust
+                </button>
               </div>
-              <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: 'var(--radius-sm)' }}>
+              <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: 'var(--radius-sm)', position: 'relative' }}>
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Referral Balance</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-info)', margin: '8px 0' }}>{formatCurrency(data.user.referral_balance)}</div>
                 <div style={{ color: 'var(--accent-danger)', fontSize: '0.8rem' }}><Lock size={12} style={{display:'inline'}}/> Locked: {formatCurrency(data.user.locked_referral_balance)}</div>
+                <button 
+                  onClick={() => { setAdjustWalletType('referral'); setShowAdjustModal(true); }}
+                  className="btn btn-secondary" 
+                  style={{ position: 'absolute', top: '16px', right: '16px', padding: '6px 12px', fontSize: '0.8rem', borderRadius: 'var(--radius-full)' }}
+                >
+                  ± Adjust
+                </button>
               </div>
             </div>
           </div>
@@ -382,6 +430,35 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
                 <input type="date" className="input-field" value={lockDate} onChange={e => setLockDate(e.target.value)} />
               </div>
               <button type="submit" className="btn btn-primary" style={{ background: 'var(--accent-warning)' }} disabled={lockLoading}>{lockLoading ? 'Locking...' : 'Lock Funds'}</button>
+            </form>
+          </div>
+        </div>, document.body
+      )}
+
+      {showAdjustModal && createPortal(
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '20px' }}>
+          <div className="glass-card" style={{ maxWidth: '400px', width: '100%', padding: '24px', position: 'relative' }}>
+            <button onClick={() => setShowAdjustModal(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={24} /></button>
+            <h3 style={{ marginBottom: '20px', textTransform: 'capitalize' }}>Adjust {adjustWalletType} Balance</h3>
+            <form onSubmit={handleAdjustBalance} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label className="input-label">Action</label>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button type="button" onClick={() => setAdjustAction('add')} className="btn" style={{ flex: 1, background: adjustAction === 'add' ? 'var(--accent-primary-glow)' : 'var(--bg-tertiary)', color: adjustAction === 'add' ? 'var(--accent-primary)' : 'var(--text-secondary)', border: adjustAction === 'add' ? '1px solid var(--accent-primary)' : '1px solid var(--border-glass)' }}>Add</button>
+                  <button type="button" onClick={() => setAdjustAction('subtract')} className="btn" style={{ flex: 1, background: adjustAction === 'subtract' ? 'var(--accent-danger-glow)' : 'var(--bg-tertiary)', color: adjustAction === 'subtract' ? 'var(--accent-danger)' : 'var(--text-secondary)', border: adjustAction === 'subtract' ? '1px solid var(--accent-danger)' : '1px solid var(--border-glass)' }}>Subtract</button>
+                </div>
+              </div>
+              <div>
+                <label className="input-label">Amount</label>
+                <input type="number" step="0.01" className="input-field" value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)} required placeholder="e.g. 500" />
+              </div>
+              <div>
+                <label className="input-label">Description / Reason</label>
+                <input type="text" className="input-field" value={adjustDescription} onChange={e => setAdjustDescription(e.target.value)} placeholder="e.g. Bonus adjustment" />
+              </div>
+              <button type="submit" className="btn btn-primary" disabled={adjustLoading} style={{ marginTop: '10px' }}>
+                {adjustLoading ? 'Processing...' : 'Confirm Adjustment'}
+              </button>
             </form>
           </div>
         </div>, document.body

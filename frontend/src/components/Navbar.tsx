@@ -6,9 +6,10 @@ interface NavbarProps {
   user: any;
   onLogout: () => void;
   onToggleSidebar: () => void;
+  isAdmin?: boolean;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar }) => {
+export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar, isAdmin = false }) => {
   const formatBalance = (bal: number | string) => {
     const numeric = typeof bal === 'string' ? parseFloat(bal) : bal;
     return new Intl.NumberFormat('en-IN', {
@@ -80,29 +81,31 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar 
 
       {/* Right: Balance + Logout — always in one row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-        {/* Balance Chip */}
-        <div 
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '6px', 
-            background: 'var(--accent-secondary-light)', 
-            border: '1px solid var(--accent-secondary-glow)',
-            borderRadius: '8px',
-            padding: '6px 12px',
-          }}
-        >
-          <Wallet size={14} color="var(--accent-secondary)" style={{ flexShrink: 0 }} />
-          <span style={{ 
-            fontSize: '0.85rem', 
-            fontWeight: 700, 
-            fontFamily: 'var(--font-headings)', 
-            color: 'var(--accent-secondary)',
-            whiteSpace: 'nowrap',
-          }}>
-            {user ? (totalPortfolioValue !== null ? formatBalance(totalPortfolioValue) : formatBalance(user.balance)) : '₹0'}
-          </span>
-        </div>
+        {/* Balance Chip (Hidden for Admins) */}
+        {!isAdmin && (
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              background: 'var(--accent-secondary-light)', 
+              border: '1px solid var(--accent-secondary-glow)',
+              borderRadius: '8px',
+              padding: '6px 12px',
+            }}
+          >
+            <Wallet size={14} color="var(--accent-secondary)" style={{ flexShrink: 0 }} />
+            <span style={{ 
+              fontSize: '0.85rem', 
+              fontWeight: 700, 
+              fontFamily: 'var(--font-headings)', 
+              color: 'var(--accent-secondary)',
+              whiteSpace: 'nowrap',
+            }}>
+              {user ? (totalPortfolioValue !== null ? formatBalance(totalPortfolioValue) : formatBalance(user.balance)) : '₹0'}
+            </span>
+          </div>
+        )}
 
         {/* Logout */}
         <button
