@@ -80,7 +80,7 @@ app.get('/api', (req, res) => {
 
 // Serve frontend static files if they exist (for production deployment on same domain/subdomain)
 const fs = require('fs');
-const frontendDistPath = path.join(__dirname, '..', '..', 'frontend', 'dist');
+const frontendDistPath = path.join(__dirname, '..', 'public', 'dist');
 
 if (fs.existsSync(frontendDistPath)) {
   console.log(`Serving frontend static files from: ${frontendDistPath}`);
