@@ -201,8 +201,9 @@ export const Transactions: React.FC = () => {
           </div>
         </div>
       ) : (
-        /* TABLE */
-        <div className="table-container animate-fade-in">
+        <>
+        {/* TABLE (Desktop) */}
+        <div className="table-container desktop-only animate-fade-in">
           <table className="custom-table">
             <thead>
               <tr>
@@ -238,6 +239,31 @@ export const Transactions: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Transaction Cards */}
+        <div className="mobile-tx-cards">
+          {filteredTransactions.map((tx) => (
+            <div className="mobile-tx-card" key={`m-${tx.id}`}>
+              <div className="mobile-tx-card-header">
+                <span className={getBadgeStyle(tx.type)}>
+                  {getFormatType(tx.type)}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  {formatDate(tx.created_at)}
+                </span>
+              </div>
+              <div className="mobile-tx-card-body">
+                <span style={{ fontSize: '0.88rem', fontWeight: 500, color: 'var(--text-primary)', flex: 1 }}>
+                  {tx.description}
+                </span>
+                <span style={{ fontWeight: 600, fontSize: '0.95rem', flexShrink: 0 }}>
+                  {formatAmount(tx.amount, tx.type)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        </>
       )}
 
     </div>

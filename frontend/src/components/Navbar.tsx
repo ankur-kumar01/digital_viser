@@ -52,17 +52,16 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar 
             display: 'flex', 
             alignItems: 'center', 
             gap: '8px', 
-            background: 'rgba(16, 185, 129, 0.05)', 
-            border: '1px solid rgba(16, 185, 129, 0.25)',
-            boxShadow: '0 0 15px rgba(16, 185, 129, 0.05)',
+            background: 'var(--accent-secondary-light)', 
+            border: '1px solid var(--accent-secondary-glow)',
             borderRadius: 'var(--radius-sm)',
-            padding: '8px 16px',
+            padding: '8px 14px',
             color: 'var(--accent-secondary)'
           }}
         >
           <Wallet size={16} />
           <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Balance:</span>
-          <span style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'var(--font-headings)' }}>
+          <span style={{ fontSize: '0.9rem', fontWeight: 700, fontFamily: 'var(--font-headings)', color: 'var(--accent-secondary)' }}>
             {user ? formatBalance(user.balance) : '₹0.00'}
           </span>
         </div>

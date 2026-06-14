@@ -60,11 +60,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
               width: '36px', 
               height: '36px', 
               borderRadius: '10px', 
-              background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+              background: 'var(--accent-primary)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 15px rgba(234, 179, 8, 0.4)'
+              justifyContent: 'center'
             }}
           >
             <BarChart3 size={18} color="var(--text-primary)" />
@@ -117,7 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
                 gap: '12px',
                 width: '100%',
                 padding: '12px 16px',
-                background: isActive ? 'rgba(234, 179, 8, 0.12)' : 'transparent',
+                background: isActive ? 'var(--accent-secondary-light)' : 'transparent',
                 border: 'none',
                 borderRadius: 'var(--radius-sm)',
                 color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
@@ -126,13 +125,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
                 fontWeight: isActive ? 600 : 500,
                 fontSize: '0.95rem',
                 textAlign: 'left',
-                borderLeft: isActive ? '3px solid var(--accent-primary)' : '3px solid transparent',
+                borderLeft: isActive ? '3px solid var(--accent-secondary)' : '3px solid transparent',
                 paddingLeft: isActive ? '13px' : '16px',
                 transition: 'var(--transition)',
                 outline: 'none'
               }}
             >
-              <span style={{ color: isActive ? 'var(--accent-primary)' : 'inherit', display: 'flex', alignItems: 'center' }}>
+              <span style={{ color: isActive ? 'var(--accent-secondary)' : 'inherit', display: 'flex', alignItems: 'center' }}>
                 {item.icon}
               </span>
               {item.name}
@@ -143,7 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
 
       {/* User Profile Summary */}
       {!isAdmin && user && (
-        <div style={{ marginTop: 'auto', padding: '20px 24px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+        <div style={{ marginTop: 'auto', padding: '20px 24px', borderTop: '1px solid var(--border-card)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bg-primary)', fontWeight: 'bold', overflow: 'hidden' }}>
               {user.profile_photo ? (
@@ -153,7 +152,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
               )}
             </div>
             <div style={{ overflow: 'hidden' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#fff', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                 {user.name}
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>

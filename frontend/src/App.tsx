@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
+import { LayoutDashboard, Wallet, ArrowUpRight, BarChart3, User } from 'lucide-react';
 import { Auth } from './views/Auth';
 import { DashboardOverview } from './views/DashboardOverview';
 import { Deposit } from './views/Deposit';
@@ -225,6 +226,31 @@ export const App: React.FC = () => {
           </>
         )}
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      {!isAdmin && (
+        <nav className="mobile-bottom-nav">
+          {[
+            { id: 'dashboard', label: 'Home', icon: <LayoutDashboard size={20} /> },
+            { id: 'deposit', label: 'Deposit', icon: <Wallet size={20} /> },
+            { id: 'withdraw', label: 'Withdraw', icon: <ArrowUpRight size={20} /> },
+            { id: 'my-fdrs', label: 'FDRs', icon: <BarChart3 size={20} /> },
+            { id: 'profile', label: 'Profile', icon: <User size={20} /> },
+          ].map((item) => (
+            <button
+              key={item.id}
+              className={currentView === item.id ? 'active' : ''}
+              onClick={() => {
+                setCurrentView(item.id);
+                setSidebarOpen(false);
+              }}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      )}
     </div>
   );
 };

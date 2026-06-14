@@ -130,7 +130,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, refreshUser, onNavigate 
           </div>
 
           {/* Personal Info */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div className="profile-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div style={{ gridColumn: '1 / -1' }}>
               <label className="input-label">Full Name</label>
               <div style={{ position: 'relative' }}>
