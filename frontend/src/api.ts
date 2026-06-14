@@ -140,6 +140,9 @@ export const fdrAPI = {
 
 export const gamesAPI = {
   getGames: () => request('GET', '/games'),
+  aviatorBet: (amount: number) => request('POST', '/games/aviator/bet', { amount }),
+  aviatorCashout: (winAmount: number) => request('POST', '/games/aviator/cashout', { winAmount }),
+  colourTradingPlay: (amount: number, color: string) => request('POST', '/games/colourtrading/play', { amount, color })
 };
 
 export const adminAPI = {

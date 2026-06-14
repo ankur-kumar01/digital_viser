@@ -1,5 +1,8 @@
 const express = require('express');
-const { pool } = require('../db');
+const { pool } = require('../../db');
+
+const aviatorRoutes = require('./aviator');
+const colourTradingRoutes = require('./colourtrading');
 
 const router = express.Router();
 
@@ -13,5 +16,9 @@ router.get('/', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch games' });
   }
 });
+
+// Mount game-specific routes
+router.use('/aviator', aviatorRoutes);
+router.use('/colourtrading', colourTradingRoutes);
 
 module.exports = router;

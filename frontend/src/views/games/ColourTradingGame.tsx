@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Clock } from 'lucide-react';
+import { gamesAPI } from '../../api';
 
 interface Props {
   user: any;
@@ -14,6 +15,14 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
   const [isBettingPhase, setIsBettingPhase] = useState(true);
   const [resultColor, setResultColor] = useState<string | null>(null);
   const [history, setHistory] = useState<string[]>(['red', 'green', 'red', 'violet', 'green']);
+  
+  const selectedColorRef = useRef<string | null>(null);
+  const betAmountRef = useRef<string>('100');
+  
+  useEffect(() => {
+    selectedColorRef.current = selectedColor;
+    betAmountRef.current = betAmount;
+  }, [selectedColor, betAmount]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -22,13 +31,7 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
           if (isBettingPhase) {
             // End betting phase, roll result
             setIsBettingPhase(false);
-            const roll = Math.random();
-            let result = 'red';
-            if (roll > 0.5 && roll < 0.9) result = 'green';
-            else if (roll >= 0.9) result = 'violet';
-            
-            setResultColor(result);
-            processResult(result);
+            processGameRound();
             return 5; // 5 seconds to show result
           } else {
             // Restart betting phase
@@ -42,20 +45,37 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isBettingPhase, selectedColor, betAmount]);
+  }, [isBettingPhase]); // Removed selectedColor/betAmount from deps so timer doesn't reset
 
-  const processResult = (result: string) => {
-    setHistory((prev) => [result, ...prev].slice(0, 10));
-    if (!selectedColor) return;
+  const processGameRound = async () => {
+    const sColor = selectedColorRef.current;
+    const bAmount = betAmountRef.current;
     
-    if (selectedColor === result) {
-      const mult = result === 'violet' ? 3 : 2;
-      const win = parseFloat(betAmount) * mult;
-      alert(`You Won! Result was ${result.toUpperCase()}. Payout: ${win}`);
-    } else {
-      alert(`You Lost. Result was ${result.toUpperCase()}.`);
+    if (!sColor) {
+      // If no bet placed, just simulate a random result to show the game is active
+      const roll = Math.random();
+      let result = 'red';
+      if (roll > 0.5 && roll < 0.9) result = 'green';
+      else if (roll >= 0.9) result = 'violet';
+      setResultColor(result);
+      setHistory((prev) => [result, ...prev].slice(0, 10));
+      return;
     }
-    refreshUser();
+
+    try {
+      const res = await gamesAPI.colourTradingPlay(parseFloat(bAmount), sColor);
+      setResultColor(res.result);
+      setHistory((prev) => [res.result, ...prev].slice(0, 10));
+      
+      if (res.won) {
+        alert(`You Won! Result was ${res.result.toUpperCase()}. Payout: ${res.payout}`);
+      } else {
+        alert(`You Lost. Result was ${res.result.toUpperCase()}.`);
+      }
+      refreshUser();
+    } catch (err: any) {
+      alert(err.message || 'Failed to process game round');
+    }
   };
 
   const handleBet = (color: string) => {
@@ -76,16 +96,17 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
         <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>Colour Trading</h2>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '20px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
+        <div style={{ flex: '1 1 400px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Timer Card */}
-          <div className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-tertiary)' }}>
+          <div className="glass-card" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%)', border: '1px solid var(--accent-primary-glow)', gap: '16px' }}>
             <div>
-              <h3 style={{ color: 'var(--text-secondary)', fontSize: '1rem', marginBottom: '4px' }}>Period: 20260614001</h3>
-              <p style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{isBettingPhase ? 'Place your bets!' : 'Calculating Result...'}</p>
+              <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>Period: 20260614001</h3>
+              <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '1.2rem' }}>{isBettingPhase ? 'Place your bets!' : 'Calculating Result...'}</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '2rem', fontWeight: 700, color: isBettingPhase ? 'var(--accent-primary)' : 'var(--accent-danger)' }}>
-              <Clock size={32} /> 00:{timeLeft.toString().padStart(2, '0')}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '2.5rem', fontWeight: 800, color: isBettingPhase ? (timeLeft <= 10 ? 'var(--accent-danger)' : 'var(--accent-primary)') : 'var(--text-muted)', textShadow: isBettingPhase && timeLeft <= 10 ? '0 0 15px var(--accent-danger)' : 'none', transition: 'color 0.3s' }}>
+              <Clock size={36} className={isBettingPhase && timeLeft <= 10 ? "animate-pulse" : ""} /> 
+              <span style={{ fontVariantNumeric: 'tabular-nums' }}>00:{timeLeft.toString().padStart(2, '0')}</span>
             </div>
           </div>
 
@@ -103,47 +124,55 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
 
           {/* Betting Actions */}
           {isBettingPhase && (
-            <div className="glass-card">
-              <div style={{ marginBottom: '20px' }}>
-                <label className="input-label">Bet Amount</label>
-                <input 
-                  type="number" 
-                  className="input-field" 
-                  value={betAmount} 
-                  onChange={(e) => setBetAmount(e.target.value)} 
-                />
+            <div className="glass-card" style={{ background: 'var(--bg-card)' }}>
+              <div style={{ marginBottom: '24px' }}>
+                <label className="input-label">Bet Amount (₹)</label>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input 
+                    type="number" 
+                    className="input-field" 
+                    value={betAmount} 
+                    onChange={(e) => setBetAmount(e.target.value)}
+                    style={{ fontSize: '1.2rem', fontWeight: 700 }}
+                  />
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '12px' }}>
                 <button 
                   onClick={() => handleBet('green')}
                   className="btn" 
-                  style={{ flex: 1, height: '60px', background: selectedColor === 'green' ? '#10b981' : 'rgba(16, 185, 129, 0.2)', color: selectedColor === 'green' ? '#fff' : '#10b981', border: '1px solid #10b981', fontSize: '1.2rem', fontWeight: 600 }}
+                  style={{ height: '70px', background: selectedColor === 'green' ? '#10b981' : 'rgba(16, 185, 129, 0.1)', color: selectedColor === 'green' ? '#fff' : '#10b981', border: '2px solid #10b981', fontSize: '1.1rem', fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', borderRadius: 'var(--radius-md)' }}
                 >
-                  Join Green (2x)
+                  <span>Green</span>
+                  <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>1:2</span>
                 </button>
                 <button 
                   onClick={() => handleBet('violet')}
                   className="btn" 
-                  style={{ flex: 1, height: '60px', background: selectedColor === 'violet' ? '#8b5cf6' : 'rgba(139, 92, 246, 0.2)', color: selectedColor === 'violet' ? '#fff' : '#8b5cf6', border: '1px solid #8b5cf6', fontSize: '1.2rem', fontWeight: 600 }}
+                  style={{ height: '70px', background: selectedColor === 'violet' ? '#8b5cf6' : 'rgba(139, 92, 246, 0.1)', color: selectedColor === 'violet' ? '#fff' : '#8b5cf6', border: '2px solid #8b5cf6', fontSize: '1.1rem', fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', borderRadius: 'var(--radius-md)' }}
                 >
-                  Join Violet (3x)
+                  <span>Violet</span>
+                  <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>1:3</span>
                 </button>
                 <button 
                   onClick={() => handleBet('red')}
                   className="btn" 
-                  style={{ flex: 1, height: '60px', background: selectedColor === 'red' ? 'var(--accent-danger)' : 'var(--accent-danger-glow)', color: selectedColor === 'red' ? '#fff' : 'var(--accent-danger)', border: '1px solid var(--accent-danger)', fontSize: '1.2rem', fontWeight: 600 }}
+                  style={{ height: '70px', background: selectedColor === 'red' ? '#ef4444' : 'rgba(239, 68, 68, 0.1)', color: selectedColor === 'red' ? '#fff' : '#ef4444', border: '2px solid #ef4444', fontSize: '1.1rem', fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', borderRadius: 'var(--radius-md)' }}
                 >
-                  Join Red (2x)
+                  <span>Red</span>
+                  <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>1:2</span>
                 </button>
               </div>
-              {selectedColor && <p style={{ marginTop: '16px', textAlign: 'center', color: 'var(--accent-primary)' }}>Bet placed on: {selectedColor.toUpperCase()} for {betAmount}</p>}
+              {selectedColor && <p style={{ marginTop: '20px', textAlign: 'center', color: 'var(--text-primary)', background: 'var(--bg-tertiary)', padding: '12px', borderRadius: 'var(--radius-sm)', fontWeight: 600 }}>Bet placed on <span style={{ color: selectedColor === 'red' ? '#ef4444' : selectedColor === 'green' ? '#10b981' : '#8b5cf6', textTransform: 'uppercase' }}>{selectedColor}</span> for ₹{betAmount}</p>}
             </div>
           )}
         </div>
 
         {/* History Sidebar */}
-        <div className="glass-card">
-          <h3 style={{ marginBottom: '16px' }}>History</h3>
+        <div className="glass-card" style={{ flex: '1 1 300px', height: 'fit-content' }}>
+          <h3 style={{ marginBottom: '20px', fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Clock size={18} color="var(--accent-primary)" /> Recent Results
+          </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {history.map((color, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>

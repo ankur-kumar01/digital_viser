@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Rocket } from 'lucide-react';
-import { authAPI } from '../../api';
+import { gamesAPI } from '../../api';
 
 interface Props {
   user: any;
@@ -31,9 +31,13 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
     if (isNaN(bet) || bet <= 0) return alert('Enter a valid bet amount');
     if (bet > parseFloat(user.balance)) return alert('Insufficient balance');
 
-    // Deduct bet (Simulated frontend-only deduction for now, in a real app this hits backend immediately)
-    // For this simulation, we'll only hit backend to add/subtract at the end of the round.
-    
+    try {
+      await gamesAPI.aviatorBet(bet);
+      refreshUser(); // Update balance immediately after bet
+    } catch (err: any) {
+      return alert(err.message || 'Failed to place bet');
+    }
+
     setIsPlaying(true);
     setCrashed(false);
     setCashoutSuccess(false);
@@ -61,8 +65,8 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         setIsPlaying(false);
         isPlayingRef.current = false;
         setMultiplier(crashPoint);
-        // Process Loss (deduct bet)
-        processResult(-bet, 'Aviator Loss');
+        // Process Loss (deduct bet already done initially)
+        refreshUser();
         return;
       }
 
@@ -74,24 +78,22 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
     animationRef.current = requestAnimationFrame(animate);
   };
 
-  const handleCashout = () => {
+  const handleCashout = async () => {
     if (!isPlayingRef.current) return;
     isPlayingRef.current = false;
     setIsPlaying(false);
+    
     const win = parseFloat(betAmount) * multiplierRef.current;
-    setWinAmount(win);
-    setCashoutSuccess(true);
-    processResult(win - parseFloat(betAmount), 'Aviator Win');
-  };
-
-  const processResult = async (netAmount: number, description: string) => {
-    // We don't have a direct game endpoint yet, so we will simulate it by doing nothing 
-    // or we can add a dedicated endpoint if we want real balance changes.
-    // Since we don't have a user-facing adjust balance, we'll just log it to console for now
-    // until we implement a real backend game engine.
-    console.log(`Game Result: ${description}. Net: ${netAmount}`);
-    alert(`${description}. Net Amount: ${netAmount.toFixed(2)}`);
-    refreshUser();
+    
+    try {
+      await gamesAPI.aviatorCashout(win);
+      setWinAmount(win);
+      setCashoutSuccess(true);
+      alert(`Aviator Win! Net Amount: ${(win - parseFloat(betAmount)).toFixed(2)}`);
+      refreshUser();
+    } catch (err: any) {
+      alert(err.message || 'Failed to process cashout');
+    }
   };
 
   return (
@@ -100,50 +102,68 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         <button onClick={() => onNavigate('games')} className="btn" style={{ padding: '8px', borderRadius: '50%', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
           <ArrowLeft size={20} />
         </button>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>Aviator Simulation</h2>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>Aviator Simulator</h2>
       </div>
 
-      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '300px', justifyContent: 'center', position: 'relative', overflow: 'hidden', background: '#0a0a0f' }}>
+      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '350px', justifyContent: 'center', position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at top, #1a1a2e 0%, #0f0f1a 80%, #05050a 100%)', border: '1px solid var(--border-glass)', boxShadow: '0 10px 40px rgba(0,0,0,0.5) inset' }}>
         
+        {/* Starry Background Effect */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.3, backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '30px 30px', animation: isPlaying ? 'slideDown 2s linear infinite' : 'none' }}></div>
+        <style>{`
+          @keyframes slideDown { from { background-position: 0 0; } to { background-position: -30px 30px; } }
+          @keyframes pulseScale { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        `}</style>
+
         {/* Game Canvas / Display */}
-        <div style={{ position: 'absolute', top: '40px', fontSize: '4rem', fontWeight: 900, fontFamily: 'monospace', color: crashed ? 'var(--accent-danger)' : cashoutSuccess ? 'var(--accent-success)' : 'var(--accent-primary)', textShadow: '0 0 20px rgba(0,0,0,0.5)', zIndex: 10 }}>
+        <div style={{ position: 'absolute', top: '50px', fontSize: '5rem', fontWeight: 900, fontFamily: 'monospace', color: crashed ? 'var(--accent-danger)' : cashoutSuccess ? 'var(--accent-success)' : 'var(--accent-primary)', textShadow: crashed ? '0 0 30px var(--accent-danger)' : cashoutSuccess ? '0 0 30px var(--accent-success)' : '0 0 40px var(--accent-primary)', zIndex: 10, animation: isPlaying && !crashed ? 'pulseScale 1s ease-in-out infinite' : 'none' }}>
           {multiplier.toFixed(2)}x
         </div>
         
-        <div style={{ transform: `translateY(${crashed ? '100px' : '-20px'}) translateX(${crashed ? '100px' : '20px'}) rotate(${crashed ? '45deg' : '0deg'})`, transition: crashed ? 'all 0.5s ease-in' : 'none', position: 'absolute' }}>
-          <Rocket size={64} color={crashed ? 'var(--accent-danger)' : 'var(--accent-primary)'} />
+        {/* Rocket Animation */}
+        <div style={{ 
+          transform: `translateY(${crashed ? '150px' : isPlaying ? '-40px' : '0px'}) translateX(${crashed ? '100px' : isPlaying ? '40px' : '0px'}) rotate(${crashed ? '75deg' : isPlaying ? '15deg' : '0deg'}) scale(${crashed ? 0.8 : 1.2})`, 
+          transition: crashed ? 'all 0.6s cubic-bezier(0.5, 0, 1, 0.5)' : isPlaying ? 'all 2s ease-out' : 'all 0.5s ease', 
+          position: 'absolute',
+          filter: crashed ? 'grayscale(100%) brightness(0.5)' : 'drop-shadow(0 0 20px var(--accent-primary))'
+        }}>
+          <Rocket size={80} color={crashed ? '#ef4444' : '#3b82f6'} style={{ transform: 'rotate(45deg)' }} />
         </div>
 
-        {crashed && <div style={{ position: 'absolute', top: '120px', color: 'var(--accent-danger)', fontWeight: 700, fontSize: '1.5rem', zIndex: 10 }}>FLEW AWAY!</div>}
-        {cashoutSuccess && <div style={{ position: 'absolute', top: '120px', color: 'var(--accent-success)', fontWeight: 700, fontSize: '1.5rem', zIndex: 10 }}>YOU WON {winAmount.toFixed(2)}!</div>}
+        {crashed && <div style={{ position: 'absolute', bottom: '60px', color: '#fff', background: 'var(--accent-danger)', padding: '8px 24px', borderRadius: '30px', fontWeight: 800, fontSize: '1.2rem', zIndex: 10, letterSpacing: '2px', boxShadow: '0 0 20px var(--accent-danger)' }}>FLEW AWAY</div>}
+        {cashoutSuccess && <div style={{ position: 'absolute', bottom: '60px', color: '#000', background: 'var(--accent-success)', padding: '8px 24px', borderRadius: '30px', fontWeight: 800, fontSize: '1.2rem', zIndex: 10, letterSpacing: '1px', boxShadow: '0 0 20px var(--accent-success)' }}>CASHOUT SUCCESS!</div>}
       </div>
 
-      <div className="glass-card" style={{ marginTop: '20px', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: '200px' }}>
-          <label className="input-label">Bet Amount</label>
-          <input 
-            type="number" 
-            className="input-field" 
-            value={betAmount} 
-            onChange={(e) => setBetAmount(e.target.value)} 
-            disabled={isPlaying}
-          />
+      <div className="glass-card" style={{ marginTop: '20px', display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap', background: 'var(--bg-card)' }}>
+        <div style={{ flex: '1 1 250px' }}>
+          <label className="input-label">Bet Amount (₹)</label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={() => setBetAmount(Math.max(10, parseFloat(betAmount) - 10).toString())} className="btn" style={{ width: '46px', height: '46px', background: 'var(--bg-tertiary)' }} disabled={isPlaying}>-</button>
+            <input 
+              type="number" 
+              className="input-field" 
+              value={betAmount} 
+              onChange={(e) => setBetAmount(e.target.value)} 
+              disabled={isPlaying}
+              style={{ fontSize: '1.2rem', fontWeight: 700, textAlign: 'center' }}
+            />
+            <button onClick={() => setBetAmount((parseFloat(betAmount) + 10).toString())} className="btn" style={{ width: '46px', height: '46px', background: 'var(--bg-tertiary)' }} disabled={isPlaying}>+</button>
+          </div>
         </div>
-        <div style={{ flex: 1, minWidth: '200px', display: 'flex', alignItems: 'flex-end' }}>
+        <div style={{ flex: '1 1 250px', display: 'flex', alignItems: 'flex-end' }}>
           {!isPlaying ? (
-            <button className="btn btn-primary" onClick={startGame} style={{ width: '100%', height: '46px', fontSize: '1.1rem' }}>
-              BET
+            <button className="btn" onClick={startGame} style={{ width: '100%', height: '54px', fontSize: '1.2rem', background: 'var(--accent-primary)', color: '#fff', fontWeight: 800, letterSpacing: '1px', boxShadow: '0 0 20px var(--accent-primary-glow)' }}>
+              PLACE BET
             </button>
           ) : (
-            <button className="btn" onClick={handleCashout} style={{ width: '100%', height: '46px', fontSize: '1.1rem', background: 'var(--accent-warning)', color: '#000', border: 'none', fontWeight: 700 }}>
-              CASHOUT ({(parseFloat(betAmount) * multiplier).toFixed(2)})
+            <button className="btn" onClick={handleCashout} style={{ width: '100%', height: '54px', fontSize: '1.2rem', background: '#f59e0b', color: '#000', border: 'none', fontWeight: 800, letterSpacing: '1px', boxShadow: '0 0 20px rgba(245, 158, 11, 0.4)' }}>
+              CASHOUT (₹{(parseFloat(betAmount) * multiplier).toFixed(2)})
             </button>
           )}
         </div>
       </div>
       
-      <div style={{ marginTop: '20px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-        *Note: This is a frontend simulation. A real Aviator game requires a dedicated backend websocket engine to process bets securely and calculate provably fair multipliers.
+      <div style={{ marginTop: '20px', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+        *Note: This is a frontend simulation. Real Aviator logic requires a dedicated backend tick engine.
       </div>
     </div>
   );
