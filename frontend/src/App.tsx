@@ -12,8 +12,8 @@ import { Transactions } from './views/Transactions';
 import { Profile } from './views/Profile';
 import { Referrals } from './views/Referrals';
 import { GamesCenter } from './views/GamesCenter';
-import { AviatorGame } from './views/games/AviatorGame';
-import { ColourTradingGame } from './views/games/ColourTradingGame';
+import { AviatorGame } from './views/games/aviator';
+import { ColourTradingGame } from './views/games/colourtrading';
 import { authAPI, clearToken, getToken, adminAPI, getAdminToken, clearAdminToken } from './api';
 
 // Admin Views
