@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Wallet, LogOut, Menu } from 'lucide-react';
+import { fdrAPI } from '../api';
 
 interface NavbarProps {
   user: any;
@@ -16,6 +17,31 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar 
       maximumFractionDigits: 0
     }).format(numeric || 0);
   };
+
+  const [totalPortfolioValue, setTotalPortfolioValue] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setTotalPortfolioValue(null);
+      return;
+    }
+    
+    const loadPortfolio = async () => {
+      try {
+        const fdrs = await fdrAPI.getMyFDRs();
+        const fdrFundsTotal = fdrs.filter((fdr: any) => fdr.status === 'active').reduce((sum: number, fdr: any) => sum + parseFloat(fdr.amount), 0);
+        const interestTotal = fdrs.reduce((sum: number, fdr: any) => sum + parseFloat(fdr.accrued_interest), 0);
+        
+        const balanceNum = typeof user.balance === 'string' ? parseFloat(user.balance) : (user.balance || 0);
+        setTotalPortfolioValue(balanceNum + fdrFundsTotal + interestTotal);
+      } catch (err) {
+        const balanceNum = typeof user.balance === 'string' ? parseFloat(user.balance) : (user.balance || 0);
+        setTotalPortfolioValue(balanceNum);
+      }
+    };
+    
+    loadPortfolio();
+  }, [user]);
 
   return (
     <div className="navbar-container">
@@ -74,7 +100,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar 
             color: 'var(--accent-secondary)',
             whiteSpace: 'nowrap',
           }}>
-            {user ? formatBalance(user.balance) : '₹0'}
+            {user ? (totalPortfolioValue !== null ? formatBalance(totalPortfolioValue) : formatBalance(user.balance)) : '₹0'}
           </span>
         </div>
 
