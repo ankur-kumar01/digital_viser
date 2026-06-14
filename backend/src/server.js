@@ -5,6 +5,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const express = require('express');
 const cors = require('cors');
 const { pool } = require('./db');
+const { runMigrations } = require('./migrate');
 
 // Import route files
 const authRoutes = require('./routes/auth');
@@ -117,17 +118,19 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Start server regardless of initial DB connection so Hostinger doesn't throw 503
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Digital_Viser API Server running on port ${PORT}`);
   
-  // Verify database connection after server is running
-  pool.query('SELECT 1')
-    .then(() => {
-      console.log('✅ Database connection successful');
-    })
-    .catch((err) => {
-      console.error('❌ Failed to connect to database at startup:', err.message);
-      console.error('💡 TIP: Check your .env credentials. Visit /api/health to see live database status.');
-      // We explicitly DO NOT process.exit(1) so the server stays alive to report errors via /api/health instead of crashing
-    });
+  try {
+    // Automatically run migrations on server startup (crucial for Hostinger/Passenger deployments)
+    await runMigrations();
+    
+    // Verify database connection after server is running
+    await pool.query('SELECT 1');
+    console.log('✅ Database connection successful');
+  } catch (err) {
+    console.error('❌ Failed to run startup tasks (DB/Migrations):', err.message);
+    console.error('💡 TIP: Check your .env credentials. Visit /api/health to see live database status.');
+    // We explicitly DO NOT process.exit(1) so the server stays alive to report errors via /api/health instead of crashing
+  }
 });
