@@ -113,6 +113,19 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!window.confirm("WARNING: Are you absolutely sure you want to delete this user? This will permanently erase their account, balance, transactions, and FDRs. This action CANNOT be undone.")) return;
+    if (!window.confirm("DOUBLE CONFIRMATION: Please confirm again. Delete user data permanently?")) return;
+    
+    try {
+      await adminAPI.deleteUser(userId);
+      alert("User deleted successfully.");
+      onBack(); // go back to user list
+    } catch (err: any) {
+      alert(err.message || "Failed to delete user");
+    }
+  };
+
   if (loading || !data) return <div style={{ padding: '32px' }}>Loading user details...</div>;
 
   const formatCurrency = (val: string | number) => `₹${parseFloat(val.toString()).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
@@ -150,6 +163,7 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
       </div>
 
       {activeTab === 'overview' && (
+        <>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '24px' }}>
           <div className="glass-card">
             <h3 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -202,6 +216,28 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
             </div>
           </div>
         </div>
+        
+        {/* DANGER ZONE */}
+        <div style={{ marginTop: '30px' }} className="glass-card">
+          <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-danger)' }}>
+            <X size={18} /> Danger Zone
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
+            Deleting this user will permanently wipe their account, active FDRs, balances, and all transaction history. This action is irreversible.
+          </p>
+          <button 
+            onClick={handleDeleteUser}
+            className="btn" 
+            style={{ 
+              background: 'var(--accent-danger-glow)', 
+              color: 'var(--accent-danger)', 
+              border: '1px solid var(--accent-danger)' 
+            }}
+          >
+            Delete User Permanently
+          </button>
+        </div>
+        </>
       )}
 
       {activeTab === 'transactions' && (

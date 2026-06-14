@@ -168,4 +168,5 @@ export const adminAPI = {
   updateUpiSettings: (upi_id: string) => adminRequest('POST', '/admin/settings/upi', { upi_id }),
   getProfile: () => adminRequest('GET', '/admin/profile'),
   updateProfile: (data: any) => adminRequest('PUT', '/admin/profile', data),
+  deleteUser: (id: number) => adminRequest('DELETE', `/admin/users/${id}`),
 };

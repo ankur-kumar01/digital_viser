@@ -639,4 +639,38 @@ router.put('/profile', async (req, res) => {
   }
 });
 
+// DELETE /users/:id
+router.delete('/users/:id', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const userId = req.params.id;
+    await conn.beginTransaction();
+
+    // Check if user exists
+    const [userRows] = await conn.query('SELECT id FROM users WHERE id = ? FOR UPDATE', [userId]);
+    if (userRows.length === 0) {
+      throw new Error('User not found');
+    }
+
+    // Delete in order to respect foreign keys (even if not strictly enforced by ON DELETE CASCADE)
+    await conn.query('DELETE FROM locked_funds WHERE user_id = ?', [userId]);
+    await conn.query('DELETE FROM transactions WHERE user_id = ?', [userId]);
+    await conn.query('DELETE FROM deposits WHERE user_id = ?', [userId]);
+    await conn.query('DELETE FROM withdrawals WHERE user_id = ?', [userId]);
+    await conn.query('DELETE FROM fdrs WHERE user_id = ?', [userId]);
+    
+    // Finally delete the user
+    await conn.query('DELETE FROM users WHERE id = ?', [userId]);
+
+    await conn.commit();
+    res.json({ success: true });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Failed to delete user:', err);
+    res.status(500).json({ error: err.message || 'Failed to delete user' });
+  } finally {
+    conn.release();
+  }
+});
+
 module.exports = router;
