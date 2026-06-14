@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { adminAPI } from '../../../api';
-import { useToast } from '../../../components/Toast';
+import { adminAPI } from '../../api';
+import { useToast } from '../../components/Toast';
 import { Save, User, Lock, Mail } from 'lucide-react';
 
 export const AdminProfile: React.FC = () => {
