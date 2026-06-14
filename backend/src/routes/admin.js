@@ -174,6 +174,16 @@ router.put('/fdr-plans/:id', async (req, res) => {
   }
 });
 
+// DELETE /fdr-plans/:id
+router.delete('/fdr-plans/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM fdr_plans WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete FDR plan' });
+  }
+});
+
 // GET /requests
 router.get('/requests', async (req, res) => {
   try {

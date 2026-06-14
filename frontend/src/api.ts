@@ -148,6 +148,7 @@ export const adminAPI = {
   getFdrPlans: () => adminRequest('GET', '/admin/fdr-plans'),
   createFdrPlan: (data: any) => adminRequest('POST', '/admin/fdr-plans', data),
   updateFdrPlan: (id: number, data: any) => adminRequest('PUT', `/admin/fdr-plans/${id}`, data),
+  deleteFdrPlan: (id: number) => adminRequest('DELETE', `/admin/fdr-plans/${id}`),
   getRequests: () => adminRequest('GET', '/admin/requests'),
   approveDeposit: (id: number) => adminRequest('POST', `/admin/deposits/${id}/approve`),
   rejectDeposit: (id: number) => adminRequest('POST', `/admin/deposits/${id}/reject`),

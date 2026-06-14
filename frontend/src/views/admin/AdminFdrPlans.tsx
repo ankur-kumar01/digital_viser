@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { adminAPI } from '../../api';
-import { Plus, Power, PowerOff, Award } from 'lucide-react';
+import { Plus, Power, PowerOff, Award, Trash2 } from 'lucide-react';
 
 export const AdminFdrPlans: React.FC = () => {
   const [plans, setPlans] = useState<any[]>([]);
@@ -56,6 +56,16 @@ export const AdminFdrPlans: React.FC = () => {
       fetchData();
     } catch (err) {
       alert('Failed to update plan');
+    }
+  };
+
+  const handleDeletePlan = async (id: number) => {
+    if (!window.confirm("Are you sure you want to permanently delete this FDR plan? Existing FDRs under this plan will not be affected.")) return;
+    try {
+      await adminAPI.deleteFdrPlan(id);
+      fetchData();
+    } catch (err) {
+      alert('Failed to delete plan');
     }
   };
 
@@ -123,9 +133,14 @@ export const AdminFdrPlans: React.FC = () => {
                     </span>
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    <button onClick={() => handleTogglePlan(p.id, !!p.is_active)} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
-                      {p.is_active ? <><PowerOff size={14}/> Disable</> : <><Power size={14}/> Enable</>}
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button onClick={() => handleTogglePlan(p.id, !!p.is_active)} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
+                        {p.is_active ? <><PowerOff size={14}/> Disable</> : <><Power size={14}/> Enable</>}
+                      </button>
+                      <button onClick={() => handleDeletePlan(p.id)} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem', color: 'var(--accent-danger)' }}>
+                        <Trash2 size={14}/>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
