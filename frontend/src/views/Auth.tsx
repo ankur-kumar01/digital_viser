@@ -108,16 +108,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         }}
       />
 
-      <div 
-        className="glass-card glow-card animate-fade-in"
-        style={{
-          width: '100%',
-          maxWidth: '440px',
-          zIndex: 2,
-          padding: '40px 32px',
-          position: 'relative'
-        }}
-      >
+      <div className="glass-card glow-card animate-fade-in auth-card">
         {/* Brand Header */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div 

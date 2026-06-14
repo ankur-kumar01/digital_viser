@@ -198,6 +198,15 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
 }
 
+/* Auth Specific Card */
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  z-index: 2;
+  padding: 40px 32px;
+  position: relative;
+}
+
 /* Glowing Border Elements */
 .glow-card {
   box-shadow: var(--shadow-glow);
@@ -539,8 +548,45 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .glass-card {
+    padding: 16px;
+  }
+  
+  .auth-card {
+    padding: 30px 20px;
+    margin: 0 16px;
+  }
+
+  h2 {
+    font-size: 1.45rem !important;
+  }
+
+  h3 {
+    font-size: 1.1rem !important;
+  }
+
+  .custom-table th, .custom-table td {
+    padding: 12px 10px;
+    font-size: 0.85rem;
+  }
+  
+  .metric-val {
+    font-size: 1.5rem;
+  }
+  
+  .btn {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .responsive-two-col {
     grid-template-columns: 1fr;
   }
 }
