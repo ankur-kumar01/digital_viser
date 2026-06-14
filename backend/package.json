@@ -4,8 +4,8 @@
   "description": "Digital_Viser Investment API Server",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/preflight.js && node src/server.js",
-    "dev": "node src/preflight.js && node --watch src/server.js",
+    "start": "node src/preflight.js && node src/migrate.js && node src/server.js",
+    "dev": "node src/preflight.js && node src/migrate.js && node --watch src/server.js",
     "db:migrate": "node src/migrate.js"
   },
   "dependencies": {
