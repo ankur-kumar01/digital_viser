@@ -51,9 +51,31 @@ require('./cron');
 // Static file serving for uploads
 app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
 
-// Health check for API
+// Health check for API (Deep diagnostic)
+app.get('/api/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ 
+      status: 'success', 
+      server: 'running', 
+      database: 'connected', 
+      timestamp: new Date().toISOString() 
+    });
+  } catch (error) {
+    // We return 503 so monitoring tools know it's unhealthy, but we include the exact error in the JSON
+    res.status(503).json({ 
+      status: 'error', 
+      server: 'running', 
+      database: 'disconnected', 
+      error: error.message,
+      timestamp: new Date().toISOString() 
+    });
+  }
+});
+
+// Basic API Root
 app.get('/api', (req, res) => {
-  res.json({ message: 'Digital_Viser API Server is running.' });
+  res.json({ message: 'Digital_Viser API Server is running. Visit /api/health for diagnostic status.' });
 });
 
 // Serve frontend static files if they exist (for production deployment on same domain/subdomain)
@@ -75,6 +97,15 @@ if (fs.existsSync(frontendDistPath)) {
   });
 }
 
+// Graceful error handling to prevent silent 503 crashes on Hostinger
+process.on('uncaughtException', (err) => {
+  console.error('❌ UNCAUGHT EXCEPTION:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ UNHANDLED REJECTION at:', promise, 'reason:', reason);
+});
+
 // Start server regardless of initial DB connection so Hostinger doesn't throw 503
 app.listen(PORT, () => {
   console.log(`🚀 Digital_Viser API Server running on port ${PORT}`);
@@ -85,8 +116,8 @@ app.listen(PORT, () => {
       console.log('✅ Database connection successful');
     })
     .catch((err) => {
-      console.error('❌ Failed to connect to database:', err);
-      console.error('Please check your .env credentials on Hostinger!');
-      // We removed process.exit(1) so the server stays alive to report errors instead of crashing
+      console.error('❌ Failed to connect to database at startup:', err.message);
+      console.error('💡 TIP: Check your .env credentials. Visit /api/health to see live database status.');
+      // We explicitly DO NOT process.exit(1) so the server stays alive to report errors via /api/health instead of crashing
     });
 });
