@@ -166,4 +166,6 @@ export const adminAPI = {
   unlockUserFunds: (id: number, lockId: number) => adminRequest('POST', `/admin/users/${id}/unlock-funds/${lockId}`),
   getSettings: () => adminRequest('GET', '/admin/settings'),
   updateUpiSettings: (upi_id: string) => adminRequest('POST', '/admin/settings/upi', { upi_id }),
+  getProfile: () => adminRequest('GET', '/admin/profile'),
+  updateProfile: (data: any) => adminRequest('PUT', '/admin/profile', data),
 };

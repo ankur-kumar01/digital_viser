@@ -600,4 +600,43 @@ router.post('/settings/upi', async (req, res) => {
   }
 });
 
+// GET /profile
+router.get('/profile', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT id, name, email FROM admins WHERE id = ?', [req.admin.adminId]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Admin not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch admin profile' });
+  }
+});
+
+// PUT /profile
+router.put('/profile', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    
+    let query = 'UPDATE admins SET name = ?, email = ?';
+    let params = [name || 'Super Admin', email];
+    
+    if (password && password.trim() !== '') {
+      const hash = await bcrypt.hash(password, 10);
+      query += ', password_hash = ?';
+      params.push(hash);
+    }
+    
+    query += ' WHERE id = ?';
+    params.push(req.admin.adminId);
+    
+    await pool.query(query, params);
+    
+    const [rows] = await pool.query('SELECT id, name, email FROM admins WHERE id = ?', [req.admin.adminId]);
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update admin profile' });
+  }
+});
+
 module.exports = router;

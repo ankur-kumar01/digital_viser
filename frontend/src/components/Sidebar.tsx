@@ -31,6 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'admin-fdr-plans', name: 'FDR Plans', icon: <PlusCircle size={20} /> },
     { id: 'admin-schemes', name: 'Reward Schemes', icon: <Gift size={20} /> },
     { id: 'admin-settings', name: 'System Settings', icon: <Wallet size={20} /> },
+    { id: 'admin-profile', name: 'Admin Profile', icon: <User size={20} /> },
   ];
 
   const menuItems = isAdmin ? adminMenuItems : userMenuItems;

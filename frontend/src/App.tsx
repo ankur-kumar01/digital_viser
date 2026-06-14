@@ -24,6 +24,7 @@ import { AdminFdrPlans } from './views/admin/AdminFdrPlans';
 import { AdminSchemes } from './views/admin/AdminSchemes';
 import { AdminUserProfileDetails } from './views/admin/AdminUserProfileDetails';
 import { AdminSettings } from './views/admin/AdminSettings';
+import { AdminProfile } from './views/admin/AdminProfile';
 
 export const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -214,6 +215,7 @@ export const App: React.FC = () => {
             {currentView === 'admin-fdr-plans' && <AdminFdrPlans />}
             {currentView === 'admin-schemes' && <AdminSchemes />}
             {currentView === 'admin-settings' && <AdminSettings />}
+            {currentView === 'admin-profile' && <AdminProfile />}
             {currentView === 'admin-user-details' && selectedUserId && (
               <AdminUserProfileDetails 
                 userId={selectedUserId} 
