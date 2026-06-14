@@ -24,6 +24,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onNavigate
 }) => {
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
+  const [totalDeposited, setTotalDeposited] = useState(0);
   const [activeFDRCount, setActiveFDRCount] = useState(0);
   const [totalFDRFunds, setTotalFDRFunds] = useState(0);
   const [totalInterestEarned, setTotalInterestEarned] = useState(0);
@@ -39,6 +40,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         .filter((tx: any) => tx.type === 'withdrawal' || tx.type === 'withdrawal_approved')
         .reduce((sum: number, tx: any) => sum + parseFloat(tx.amount), 0);
       setTotalWithdrawn(withdrawalsTotal);
+      
+      const depositsTotal = txs
+        .filter((tx: any) => tx.type === 'deposit' || tx.type === 'deposit_approved')
+        .reduce((sum: number, tx: any) => sum + parseFloat(tx.amount), 0);
+      setTotalDeposited(depositsTotal);
       
       // Store top 5 recent transactions
       setRecentTransactions(txs.slice(0, 5));
@@ -145,10 +151,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           variant="primary" 
         />
         <MetricCard 
-          icon={<ArrowUpRight size={20} />} 
-          label="Total Withdrawals" 
-          value={formatCurrency(totalWithdrawn)} 
-          variant="warning" 
+          icon={<ArrowDownLeft size={20} />} 
+          label="Total Deposits" 
+          value={formatCurrency(totalDeposited)} 
+          variant="secondary" 
         />
         <MetricCard 
           icon={<PiggyBank size={20} />} 
