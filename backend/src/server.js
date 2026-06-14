@@ -93,7 +93,14 @@ if (fs.existsSync(frontendDistPath)) {
 } else {
   // Fallback health check if frontend is not built/available
   app.get('/', (req, res) => {
-    res.json({ message: 'Digital_Viser API Server is running. (Frontend build not found)' });
+    res.json({ 
+      message: 'Digital_Viser API Server is running. (Frontend build not found)',
+      diagnostic: {
+        searchedPath: frontendDistPath,
+        currentDirname: __dirname,
+        currentWorkingDirectory: process.cwd()
+      }
+    });
   });
 }
 
