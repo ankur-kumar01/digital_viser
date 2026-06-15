@@ -36,6 +36,20 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
   // Simulated Players State
   const [simPlayers, setSimPlayers] = useState<any[]>([]);
 
+  // Mobile drawer, toast, and cashout lock states
+  const [toast, setToast] = useState<string | null>(null);
+  const [showPlayersDrawer, setShowPlayersDrawer] = useState(false);
+  const [isCashoutLoading, setIsCashoutLoading] = useState(false);
+  const isCashoutLoadingRef = useRef(false);
+
+  // Toast Helper
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => {
+      setToast(prev => prev === msg ? null : prev);
+    }, 3000);
+  }, []);
+
   // Refs
   const socketRef = useRef<Socket | null>(null);
   const animationRef = useRef<number>();
@@ -375,32 +389,37 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
   };
 
   const handlePlaceBet = () => {
-    if (gameState !== 'WAITING') return alert('Wait for the next round to bet');
+    if (gameState !== 'WAITING') return showToast('Wait for the next round to bet');
     const bet = parseFloat(betAmount);
-    if (isNaN(bet) || bet <= 0) return alert('Enter a valid bet amount');
-    if (bet > parseFloat(user.balance)) return alert('Insufficient balance');
+    if (isNaN(bet) || bet <= 0) return showToast('Enter a valid bet amount');
+    if (bet > parseFloat(user.balance)) return showToast('Insufficient balance');
 
     setIsBetLoading(true);
     socketRef.current?.emit('aviator_bet', { amount: bet }, (res: any) => {
       setIsBetLoading(false);
-      if (res.error) return alert(res.error);
+      if (res.error) return showToast(res.error);
       setHasActiveBet(true);
       refreshUser();
     });
   };
 
   const handleCashout = () => {
-    if (gameStateRef.current !== 'FLYING' || !hasActiveBetRef.current) return;
+    if (gameStateRef.current !== 'FLYING' || !hasActiveBetRef.current || isCashoutLoadingRef.current) return;
+    
+    isCashoutLoadingRef.current = true;
+    setIsCashoutLoading(true);
     
     socketRef.current?.emit('aviator_cashout', {}, (res: any) => {
-      if (res.error) return alert(res.error);
+      isCashoutLoadingRef.current = false;
+      setIsCashoutLoading(false);
+      
+      if (res.error) return showToast(res.error);
       
       setHasActiveBet(false);
       setCashoutSuccess(true);
       setWinAmount(res.winAmount);
       setShowWinOverlay(true);
       refreshUser();
-
       
       setTimeout(() => setShowWinOverlay(false), 3800);
     });
@@ -422,14 +441,22 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
   return (
     <div className="av-container fade-in">
       {/* Header */}
-      <div className="av-header">
-        <button onClick={() => onNavigate('games')} className="av-back-btn">
-          <ArrowLeft size={20} />
-        </button>
-        <div>
-          <h2 className="av-title">Aviator</h2>
-          <p className="av-subtitle">Fly high, cash out before crash!</p>
+      <div className="av-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button onClick={() => onNavigate('games')} className="av-back-btn">
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h2 className="av-title">Aviator</h2>
+            <p className="av-subtitle">Fly high, cash out before crash!</p>
+          </div>
         </div>
+        
+        {/* Live Players Badge Button for Mobile Drawer */}
+        <button className="av-live-badge-btn" onClick={() => setShowPlayersDrawer(true)}>
+          <span className="av-live-dot" />
+          <span>Live: {simPlayers.length}</span>
+        </button>
       </div>
 
       {/* Crash History */}
@@ -511,8 +538,12 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
                 {hasActiveBet ? 'Waiting for Next Round...' : isBetLoading ? 'Placing Bet...' : `Place Bet — ₹${betAmount}`}
               </button>
             ) : hasActiveBet ? (
-              <button className="av-action-btn av-action-cashout" onClick={handleCashout}>
-                CASHOUT ₹{(parseFloat(betAmount) * multiplier).toFixed(2)}
+              <button 
+                className="av-action-btn av-action-cashout" 
+                onClick={handleCashout}
+                disabled={isCashoutLoading}
+              >
+                {isCashoutLoading ? 'Cashing out...' : `CASHOUT ₹${(parseFloat(betAmount) * multiplier).toFixed(2)}`}
               </button>
             ) : (
               <button className="av-action-btn" disabled style={{ background: '#374151', color: '#9ca3af' }}>
@@ -522,8 +553,8 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
           </div>
         </div>
 
-        {/* Live Multiplayer Sidebar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--bg-card)', padding: '16px', borderRadius: '20px', border: '1px solid var(--border-card)', minHeight: '300px' }}>
+        {/* Live Multiplayer Sidebar (visible on desktop) */}
+        <div className="av-sidebar">
           <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
             <span>Live Players ({simPlayers.length})</span>
           </div>
@@ -607,6 +638,73 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
             <div className="av-win-detail">at {multiplierRef.current.toFixed(2)}x multiplier</div>
             <div className="av-win-dismiss">Tap anywhere to close</div>
           </div>
+        </div>
+      )}
+
+      {/* Mobile Live Players Drawer (Bottom Sheet) */}
+      {showPlayersDrawer && (
+        <div className="av-drawer-overlay" onClick={() => setShowPlayersDrawer(false)}>
+          <div className="av-drawer-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="av-drawer-header">
+              <div className="av-drawer-handle" />
+              <h3 className="av-drawer-title">Live Betting Feed</h3>
+              <button className="av-drawer-close" onClick={() => setShowPlayersDrawer(false)}>✕</button>
+            </div>
+            
+            <div className="av-drawer-content">
+              {/* You Row */}
+              <div className="av-drawer-row" style={{
+                background: cashoutSuccess ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-tertiary)',
+                borderColor: cashoutSuccess ? 'rgba(34, 197, 94, 0.3)' : 'transparent',
+                borderWidth: '1px',
+                borderStyle: 'solid'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="av-avatar-you">
+                    {user?.name?.substring(0, 2).toUpperCase() || 'YO'}
+                  </div>
+                  <div className="av-row-name you">You</div>
+                </div>
+                {hasActiveBet && !cashoutSuccess && (
+                  <div className="av-row-bet">₹{betAmount}</div>
+                )}
+                {cashoutSuccess && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <div className="av-row-mult">{((winAmount || parseFloat(betAmount)*multiplier) / parseFloat(betAmount)).toFixed(2)}x</div>
+                    <div className="av-row-win">₹{winAmount.toFixed(2)}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sim Players */}
+              {simPlayers.map((p, i) => (
+                <div key={i} className={`av-drawer-row ${p.cashedOut ? 'win' : ''}`}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="av-avatar-sim">
+                      {p.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="av-row-name">{p.name}</div>
+                  </div>
+                  {!p.cashedOut && (
+                    <div className="av-row-bet sim">₹{p.bet}</div>
+                  )}
+                  {p.cashedOut && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                      <div className="av-row-mult">{p.targetMult.toFixed(2)}x</div>
+                      <div className="av-row-win">₹{p.winAmount.toFixed(2)}</div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating native-like Toast Alert */}
+      {toast && (
+        <div className="av-toast">
+          {toast}
         </div>
       )}
     </div>
