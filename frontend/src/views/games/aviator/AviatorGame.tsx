@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { getToken } from '../../../api';
 import './AviatorGame.css';
@@ -49,6 +49,199 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
       setToast(prev => prev === msg ? null : prev);
     }, 3000);
   }, []);
+
+  // Audio state & synthesized Web Audio API sound effects
+  const [isMuted, setIsMuted] = useState(() => {
+    return localStorage.getItem('av_muted') === 'true';
+  });
+  const isMutedRef = useRef(isMuted);
+
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const engineOscRef = useRef<OscillatorNode | null>(null);
+  const engineGainRef = useRef<GainNode | null>(null);
+
+  const initAudio = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+  };
+
+  const playCashoutSound = () => {
+    if (isMutedRef.current) return;
+    initAudio();
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+    
+    const now = ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 (major chord arpeggio)
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+      
+      gain.gain.setValueAtTime(0, now + idx * 0.08);
+      gain.gain.linearRampToValueAtTime(0.20, now + idx * 0.08 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.35);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(now + idx * 0.08);
+      osc.stop(now + idx * 0.08 + 0.4);
+    });
+  };
+
+  const playCrashSound = () => {
+    if (isMutedRef.current) return;
+    initAudio();
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+    
+    const now = ctx.currentTime;
+    
+    // Low rumble oscillator
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(90, now);
+    osc.frequency.exponentialRampToValueAtTime(8, now + 0.65);
+    
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.65);
+
+    // Filtered noise for explosion hissing
+    const bufferSize = ctx.sampleRate * 0.85;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(500, now);
+    filter.frequency.exponentialRampToValueAtTime(20, now + 0.85);
+    
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.3, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+    
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    
+    noise.start(now);
+    noise.stop(now + 0.85);
+  };
+
+  const startEngineSound = () => {
+    if (isMutedRef.current) return;
+    initAudio();
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+    
+    stopEngineSound();
+    
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(65, now); // deep engine hum
+    
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.12, now + 0.4);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start(now);
+    
+    engineOscRef.current = osc;
+    engineGainRef.current = gain;
+  };
+
+  const updateEnginePitch = (mult: number) => {
+    if (isMutedRef.current || !engineOscRef.current) return;
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+    
+    const now = ctx.currentTime;
+    const targetFreq = Math.min(270, 65 + (mult - 1) * 30);
+    engineOscRef.current.frequency.setTargetAtTime(targetFreq, now, 0.15);
+  };
+
+  const stopEngineSound = () => {
+    const osc = engineOscRef.current;
+    const gain = engineGainRef.current;
+    const ctx = audioCtxRef.current;
+    
+    if (osc && gain && ctx) {
+      const now = ctx.currentTime;
+      try {
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(gain.gain.value, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.15);
+        
+        setTimeout(() => {
+          try {
+            osc.stop();
+            osc.disconnect();
+            gain.disconnect();
+          } catch (e) {}
+        }, 180);
+      } catch (e) {}
+    }
+    
+    engineOscRef.current = null;
+    engineGainRef.current = null;
+  };
+
+  const playTickSound = () => {
+    if (isMutedRef.current) return;
+    initAudio();
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+    
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(900, now);
+    
+    gain.gain.setValueAtTime(0.06, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start(now);
+    osc.stop(now + 0.06);
+  };
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+    localStorage.setItem('av_muted', isMuted ? 'true' : 'false');
+    if (isMuted) {
+      stopEngineSound();
+    } else if (gameState === 'FLYING') {
+      startEngineSound();
+    }
+  }, [isMuted, gameState]);
 
   // Refs
   const socketRef = useRef<Socket | null>(null);
@@ -319,10 +512,12 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         generateSimulatedPlayers();
         if (animationRef.current) cancelAnimationFrame(animationRef.current);
         drawFlightPath(0, 1.0, false);
+        stopEngineSound();
       } 
       else if (data.state === 'FLYING') {
         startTimeRef.current = data.startTime;
         startFlightAnimation();
+        startEngineSound();
       } 
       else if (data.state === 'CRASHED') {
         crashPointRef.current = data.crashPoint;
@@ -339,16 +534,24 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         if (hasActiveBetRef.current && !cashoutSuccessRef.current) {
           setHasActiveBet(false); // Lost
         }
+        
+        stopEngineSound();
+        playCrashSound();
+        
         refreshUser();
       }
     });
 
     socket.on('aviator_timer', (data) => {
       setTimeLeft(data.timeLeft);
+      if (gameStateRef.current === 'WAITING' && data.timeLeft > 0) {
+        playTickSound();
+      }
     });
 
     return () => {
       socket.disconnect();
+      stopEngineSound();
     };
   }, []);
 
@@ -362,6 +565,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
       setMultiplier(currentMult);
       multiplierRef.current = currentMult;
       drawFlightPath(elapsed, currentMult, false);
+      updateEnginePitch(currentMult);
       
       // Auto cashout logic
       if (autoCashoutRef.current && hasActiveBetRef.current && !cashoutSuccessRef.current) {
@@ -421,6 +625,9 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
       setShowWinOverlay(true);
       refreshUser();
       
+      playCashoutSound();
+      stopEngineSound();
+      
       setTimeout(() => setShowWinOverlay(false), 3800);
     });
   };
@@ -452,11 +659,18 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
           </div>
         </div>
         
-        {/* Live Players Badge Button for Mobile Drawer */}
-        <button className="av-live-badge-btn" onClick={() => setShowPlayersDrawer(true)}>
-          <span className="av-live-dot" />
-          <span>Live: {simPlayers.length}</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Mute/Unmute audio button */}
+          <button className="av-audio-btn" onClick={() => setIsMuted(prev => !prev)}>
+            {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </button>
+
+          {/* Live Players Badge Button for Mobile Drawer */}
+          <button className="av-live-badge-btn" onClick={() => setShowPlayersDrawer(true)}>
+            <span className="av-live-dot" />
+            <span>Live: {simPlayers.length}</span>
+          </button>
+        </div>
       </div>
 
       {/* Crash History */}

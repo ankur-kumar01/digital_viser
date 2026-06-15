@@ -906,3 +906,25 @@
     font-size: 0.85rem;
   }
 }
+
+.av-audio-btn {
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.av-audio-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.av-audio-btn:active {
+  transform: scale(0.92);
+}
