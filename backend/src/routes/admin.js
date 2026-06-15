@@ -458,7 +458,11 @@ router.get('/users/:id/details', async (req, res) => {
 router.post('/users/:id/fdr/create', async (req, res) => {
   const conn = await pool.getConnection();
   try {
-    const { amount, start_date, plan_id } = req.body;
+    const { amount, plan_id } = req.body;
+    let start_date = req.body.start_date;
+    if (!start_date) {
+      start_date = new Date().toISOString().split('T')[0];
+    }
     const userId = req.params.id;
 
     await conn.beginTransaction();
