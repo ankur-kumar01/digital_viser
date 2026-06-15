@@ -28,7 +28,13 @@ const LOBBY_CHAT_PHRASES = [
   "all in on next round!",
   "feeling lucky today 🍀",
   "let's make some money!",
-  "auto cashout set at 2.0"
+  "auto cashout set at 2.0",
+  "bhai log, is baar flying high jayega 🚀",
+  "next round pakka 3x paar!",
+  "is baar toh 500 rs laga raha hu 💸",
+  "auto cashout 2.0x pe set kar diya",
+  "chalo shuru karte hai!",
+  "kya lagta hai dosto, is baar kitna jayega?"
 ];
 
 const FLIGHT_CHAT_PHRASES = [
@@ -39,7 +45,14 @@ const FLIGHT_CHAT_PHRASES = [
   "who is still in?",
   "holding tight...",
   "cashed out! safe play",
-  "this plane is going high!"
+  "this plane is going high!",
+  "bhai hold karo hold karo! ✈️",
+  "2x hogya, jaldi niklo sab!",
+  "arre wah! 4x paar ho gaya 📈",
+  "fly high baby, to the moon! 🚀",
+  "bhai kaun kaun abhi tak hold kar raha hai?",
+  "cashed out! safe khelna zaroori hai bhai",
+  "ye plane toh rukne ka naam nahi le raha!"
 ];
 
 const CRASH_LOW_PHRASES = [
@@ -49,7 +62,13 @@ const CRASH_LOW_PHRASES = [
   "flew away instantly 😭",
   "lost that one",
   "scary start",
-  "rip bet"
+  "rip bet",
+  "kya yaar, ye toh shuru hote hi khatam ho gaya 😭",
+  "dhoka ho gaya bhai!",
+  "1.1x pe crash? bahut bekaar",
+  "kismat hi kharab hai aaj toh",
+  "kya bekaar start tha yaar",
+  "loot gaye sab ke sab!"
 ];
 
 const CRASH_MED_PHRASES = [
@@ -58,7 +77,13 @@ const CRASH_MED_PHRASES = [
   "could be better but I'll take it",
   "saved by auto cashout",
   "missed it by a second!",
-  "fair enough, next round"
+  "fair enough, next round",
+  "bach gaye, 2.2x pe cashout kiya 🎯",
+  "phew! thoda profit toh mila",
+  "ek second late ho gaya varna 3x milta!",
+  "auto cashout ne bacha liya aaj",
+  "thik hai, agle round me cover karenge",
+  "decent run tha, par aur hold kar sakta tha"
 ];
 
 const CRASH_HIGH_PHRASES = [
@@ -67,7 +92,13 @@ const CRASH_HIGH_PHRASES = [
   "who got the 10x plus?",
   "amazing round!",
   "should have held longer",
-  "that was legendary!"
+  "that was legendary!",
+  "baap re! 15x chala gaya 🚀",
+  "kya khatarnak run tha bhai!",
+  "kis kis ne bada payout uthaya?",
+  "maza aa gaya is round me!",
+  "thoda aur hold karta toh nikal jati lottery 😂",
+  "gazab run tha yaar, historical!"
 ];
 
 const getUserColor = (username: string) => {
@@ -205,7 +236,12 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
           `let's win this together`,
           `nice! 👍`,
           `let's see what happens next`,
-          `🤞 crossing fingers`
+          `🤞 crossing fingers`,
+          `sahi baat hai bhai!`,
+          `is baar sath me jeetenge 👍`,
+          `dekhte hai kya hota hai next`,
+          `absolutely correct bro!`,
+          `good luck sabko 🤞`
         ];
         const text = botReplies[Math.floor(Math.random() * botReplies.length)];
         
