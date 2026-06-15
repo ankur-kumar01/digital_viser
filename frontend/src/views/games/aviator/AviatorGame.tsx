@@ -16,89 +16,117 @@ const CONFETTI_COLORS = ['#22c55e', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', 
 const BOT_USERNAMES = [
   'AviatorKing', 'Sanjay_99', 'RocketGirl', 'MaxBet_Pro', 'LuckyPriya', 
   'Challenger', 'FlightPro', 'WinSeeker', 'StormRider', 'HyperFlyer', 
-  'RedLine', 'RiskTaker77', 'Amit_Aviator', 'Anya_Singh', 'GamerBoy9'
+  'RedLine', 'RiskTaker77', 'Amit_Aviator', 'Anya_Singh', 'GamerBoy9',
+  'Rahul_Kumar', 'Priya_Sharma', 'Sunil_Rider', 'Vijay_143', 'Karan_Bet',
+  'Riya_Roy', 'Deepak_Flyer', 'Sachin_King', 'Arjun_999', 'Anjali_Fly',
+  'Rohan_Pro', 'Aditya_Aviator', 'Sneha_Jet', 'Vikram_Risk', 'Pooja_Lucky'
 ];
 
 const LOBBY_CHAT_PHRASES = [
-  "ready for takeoff! 🚀",
-  "let's go 5x this round",
-  "putting 200 ₹ this time",
-  "anyone holding for 10x?",
-  "last round was quick, hope this one stays longer",
-  "all in on next round!",
-  "feeling lucky today 🍀",
-  "let's make some money!",
-  "auto cashout set at 2.0",
   "bhai log, is baar flying high jayega 🚀",
   "next round pakka 3x paar!",
   "is baar toh 500 rs laga raha hu 💸",
   "auto cashout 2.0x pe set kar diya",
   "chalo shuru karte hai!",
-  "kya lagta hai dosto, is baar kitna jayega?"
+  "kya lagta hai dosto, is baar kitna jayega?",
+  "ready for takeoff! 🚀",
+  "let's go 5x this round",
+  "bhai log taiyaar ho jao badhiya profit ke liye!",
+  "pichla round jaldi crash hua, ab lamba chalega",
+  "chalo sab log ready ho jao",
+  "mere pass balance kam hai, is baar safe khelunga",
+  "bhai koi trick batao winning ki?",
+  "kuch toh bada hone wala hai",
+  "putting 200 ₹ this time",
+  "last round was quick, hope this one stays longer",
+  "sab all in mat karna dosto",
+  "kya mast chal raha hai game"
 ];
 
 const FLIGHT_CHAT_PHRASES = [
-  "looking good! keep flying ✈️",
-  "cashout guys! 2x is good",
-  "OMG 4x already!! 📈",
-  "to the moon! 🚀🚀",
-  "who is still in?",
-  "holding tight...",
-  "cashed out! safe play",
-  "this plane is going high!",
   "bhai hold karo hold karo! ✈️",
   "2x hogya, jaldi niklo sab!",
   "arre wah! 4x paar ho gaya 📈",
   "fly high baby, to the moon! 🚀",
   "bhai kaun kaun abhi tak hold kar raha hai?",
   "cashed out! safe khelna zaroori hai bhai",
-  "ye plane toh rukne ka naam nahi le raha!"
+  "ye plane toh rukne ka naam nahi le raha!",
+  "looking good! keep flying ✈️",
+  "cashout guys! 2x is good",
+  "OMG 4x already!! 📈",
+  "holding tight...",
+  "bhai ye toh 10x jayega lagta hai",
+  "arre yaar, mai nikal gaya, abhi tak fly kar raha hai!",
+  "o bhai sahab! kya run hai",
+  "chalo chalo profit book karo!",
+  "kya baat hai, maza aa gaya!",
+  "mera target 5x hai, ruko thoda",
+  "nikal lo sab log, crash hone wala hai",
+  "ab rocket ban gaya plane!",
+  "who is still in?"
 ];
 
 const CRASH_LOW_PHRASES = [
-  "oof, terrible crash",
-  "why so early??",
-  "ouch! 1.1x is brutal",
-  "flew away instantly 😭",
-  "lost that one",
-  "scary start",
-  "rip bet",
   "kya yaar, ye toh shuru hote hi khatam ho gaya 😭",
   "dhoka ho gaya bhai!",
   "1.1x pe crash? bahut bekaar",
   "kismat hi kharab hai aaj toh",
   "kya bekaar start tha yaar",
-  "loot gaye sab ke sab!"
+  "loot gaye sab ke sab!",
+  "oof, terrible crash",
+  "why so early??",
+  "ouch! 1.1x is brutal",
+  "flew away instantly 😭",
+  "aree yaar, screen click hi nahi hui time pe",
+  "paise doob gaye is baar",
+  "yeh kya mazaak hai bhaaya",
+  "chota nuksan hogya, agle round me dekhnge",
+  "mood kharab kar diya is round ne",
+  "koi baat nahi, recovery karenge",
+  "scary start",
+  "lag gaye lode 😭"
 ];
 
 const CRASH_MED_PHRASES = [
-  "phew, cashed out at 2.1x",
-  "not bad, got a decent profit",
-  "could be better but I'll take it",
-  "saved by auto cashout",
-  "missed it by a second!",
-  "fair enough, next round",
   "bach gaye, 2.2x pe cashout kiya 🎯",
   "phew! thoda profit toh mila",
   "ek second late ho gaya varna 3x milta!",
   "auto cashout ne bacha liya aaj",
   "thik hai, agle round me cover karenge",
-  "decent run tha, par aur hold kar sakta tha"
+  "decent run tha, par aur hold kar sakta tha",
+  "phew, cashed out at 2.1x",
+  "not bad, got a decent profit",
+  "saved by auto cashout",
+  "fair enough, next round",
+  "chalo profit toh hua kam se kam",
+  "3x pe nikala mai toh, badiya tha",
+  "bhai thoda aur wait kar leta toh maza aata",
+  "loss se toh bache kam se kam",
+  "dheere dheere balance badh raha hai",
+  "nice run, sabne profit banaya na?",
+  "mera 2.5x check karo!",
+  "kuch toh mila boss"
 ];
 
 const CRASH_HIGH_PHRASES = [
-  "WOW! 15x is huge!!",
-  "what an insane run 🚀",
-  "who got the 10x plus?",
-  "amazing round!",
-  "should have held longer",
-  "that was legendary!",
   "baap re! 15x chala gaya 🚀",
   "kya khatarnak run tha bhai!",
   "kis kis ne bada payout uthaya?",
   "maza aa gaya is round me!",
   "thoda aur hold karta toh nikal jati lottery 😂",
-  "gazab run tha yaar, historical!"
+  "gazab run tha yaar, historical!",
+  "WOW! 15x is huge!!",
+  "what an insane run 🚀",
+  "amazing round!",
+  "should have held longer",
+  "meri toh kismat chamak gayi aaj 💎",
+  "bhai 10x pe auto cashout hit ho gaya!",
+  "kya mast jack pot laga hai!",
+  "is baar sab ameer ban gaye",
+  "chappar faad ke paisa mila!",
+  "that was legendary!",
+  "kash mai thoda aur rukta",
+  "sach me maza aa gaya, super hit run!"
 ];
 
 const getUserColor = (username: string) => {
@@ -207,6 +235,18 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
     ].slice(-50));
   }, []);
 
+  const scheduleFlyingComments = useCallback(() => {
+    if (gameStateRef.current !== 'FLYING') return;
+    const delay = 1500 + Math.random() * 2000; // 1.5s to 3.5s
+    const t = setTimeout(() => {
+      if (gameStateRef.current === 'FLYING') {
+        addSimulatedChatMessage('FLYING');
+        scheduleFlyingComments();
+      }
+    }, delay);
+    chatTimeoutsRef.current.push(t);
+  }, [addSimulatedChatMessage]);
+
   const handleSendMessage = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!userMessage.trim()) return;
@@ -231,17 +271,16 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
       const t = setTimeout(() => {
         const botUser = BOT_USERNAMES[Math.floor(Math.random() * BOT_USERNAMES.length)];
         const botReplies = [
-          `Nice! @${user?.name || 'You'}`,
-          `agree with that!`,
-          `let's win this together`,
-          `nice! 👍`,
-          `let's see what happens next`,
-          `🤞 crossing fingers`,
           `sahi baat hai bhai!`,
-          `is baar sath me jeetenge 👍`,
-          `dekhte hai kya hota hai next`,
-          `absolutely correct bro!`,
-          `good luck sabko 🤞`
+          `agree with that! 👍`,
+          `is baar sath me jeetenge dosto`,
+          `haahaha bilkul sahi bola!`,
+          `nice! 👍`,
+          `full support hai bhai ko`,
+          `kya lagta hai next round fly karega?`,
+          `yes bro! absolutely!`,
+          `good luck sabko 🤞`,
+          `dekhte hai is baar kya hota hai`
         ];
         const text = botReplies[Math.floor(Math.random() * botReplies.length)];
         
@@ -740,16 +779,26 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         drawFlightPath(0, 1.0, false);
         stopEngineSound();
 
-        // Lobby chat comments triggers
+        // Lobby chat comments triggers (schedule multiple comments to look active)
         clearChatTimeouts();
-        const t1 = setTimeout(() => addSimulatedChatMessage('WAITING'), 1500 + Math.random() * 1000);
-        const t2 = setTimeout(() => addSimulatedChatMessage('WAITING'), 4500 + Math.random() * 1000);
-        chatTimeoutsRef.current.push(t1, t2);
+        const t1 = setTimeout(() => addSimulatedChatMessage('WAITING'), 800 + Math.random() * 800);
+        const t2 = setTimeout(() => addSimulatedChatMessage('WAITING'), 2200 + Math.random() * 1200);
+        const t3 = setTimeout(() => addSimulatedChatMessage('WAITING'), 4200 + Math.random() * 1200);
+        const t4 = setTimeout(() => {
+          if (gameStateRef.current === 'WAITING' && Math.random() < 0.8) {
+            addSimulatedChatMessage('WAITING');
+          }
+        }, 6200 + Math.random() * 1000);
+        chatTimeoutsRef.current.push(t1, t2, t3, t4);
       } 
       else if (data.state === 'FLYING') {
         startTimeRef.current = data.startTime;
         startFlightAnimation();
         startEngineSound();
+        
+        // Start a cycle of simulated flying comments
+        clearChatTimeouts();
+        scheduleFlyingComments();
       } 
       else if (data.state === 'CRASHED') {
         crashPointRef.current = data.crashPoint;
@@ -772,14 +821,17 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         
         refreshUser();
 
-        // Crash Chat comments triggers based on multiplier
+        // Crash Chat comments triggers based on multiplier (schedule 3 comments to look active)
         clearChatTimeouts();
         const crashType = data.crashPoint < 1.5 ? 'CRASH_LOW' : data.crashPoint < 5.0 ? 'CRASH_MED' : 'CRASH_HIGH';
-        const t1 = setTimeout(() => addSimulatedChatMessage(crashType), 300 + Math.random() * 300);
-        const t2 = setTimeout(() => {
-          if (Math.random() < 0.7) addSimulatedChatMessage(crashType);
-        }, 1200 + Math.random() * 600);
-        chatTimeoutsRef.current.push(t1, t2);
+        const tc1 = setTimeout(() => addSimulatedChatMessage(crashType), 200 + Math.random() * 300);
+        const tc2 = setTimeout(() => addSimulatedChatMessage(crashType), 900 + Math.random() * 500);
+        const tc3 = setTimeout(() => {
+          if (gameStateRef.current === 'CRASHED' && Math.random() < 0.75) {
+            addSimulatedChatMessage(crashType);
+          }
+        }, 1800 + Math.random() * 600);
+        chatTimeoutsRef.current.push(tc1, tc2, tc3);
       }
     });
 
@@ -810,15 +862,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
       drawFlightPath(elapsed, currentMult, false);
       updateEnginePitch(currentMult);
 
-      // Flying chat triggers
-      if (currentMult >= 2.0 && !commentedMilestonesRef.current[2]) {
-        commentedMilestonesRef.current[2] = true;
-        if (Math.random() < 0.5) addSimulatedChatMessage('FLYING');
-      }
-      if (currentMult >= 5.0 && !commentedMilestonesRef.current[5]) {
-        commentedMilestonesRef.current[5] = true;
-        if (Math.random() < 0.6) addSimulatedChatMessage('FLYING');
-      }
+      // Flying chat triggers are handled dynamically by scheduleFlyingComments
       
       // Auto cashout logic
       if (autoCashoutRef.current && hasActiveBetRef.current && !cashoutSuccessRef.current) {
