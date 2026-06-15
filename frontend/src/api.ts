@@ -136,6 +136,7 @@ export const fdrAPI = {
   getMyFDRs: () => request('GET', '/fdr/my-fdrs'),
   getActivePlans: () => request('GET', '/fdr/active-plans'),
   getPnL: () => request('GET', '/fdr/pnl'),
+  forceCloseFDR: (id: number) => request('POST', '/fdr/force-close', { id }),
 };
 
 export const gamesAPI = {

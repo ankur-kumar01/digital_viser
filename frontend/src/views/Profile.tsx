@@ -108,24 +108,14 @@ export const Profile: React.FC<ProfileProps> = ({ user, refreshUser, onNavigate 
       <div className="glass-card">
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
-          {/* Profile Photo Section */}
+          {/* Profile Photo Section (Temporarily Disabled) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', paddingBottom: '24px', borderBottom: '1px solid var(--border-glass)' }}>
-            <div style={{ position: 'relative' }}>
-              <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'var(--bg-tertiary)', border: '2px solid var(--accent-primary)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {previewPhoto ? (
-                  <img src={previewPhoto} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <User size={40} color="var(--text-muted)" />
-                )}
-              </div>
-              <label style={{ position: 'absolute', bottom: '0', right: '0', background: 'var(--accent-secondary)', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid var(--bg-primary)' }}>
-                <Camera size={16} color="#000" />
-                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
-              </label>
+            <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'var(--bg-tertiary)', border: '2px solid var(--accent-primary)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <User size={40} color="var(--text-muted)" />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 600 }}>Profile Photo</h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Upload a professional square image.</p>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 600 }}>Profile Avatar</h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Custom profile photo uploads are temporarily disabled.</p>
             </div>
           </div>
 

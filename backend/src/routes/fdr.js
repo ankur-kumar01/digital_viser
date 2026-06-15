@@ -219,4 +219,70 @@ router.get('/pnl', async (req, res) => {
   }
 });
 
+// POST /force-close
+router.post('/force-close', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const { id } = req.body;
+    const userId = req.user.userId;
+
+    if (!id) {
+      return res.status(400).json({ error: 'FDR ID is required.' });
+    }
+
+    await conn.beginTransaction();
+
+    // Verify FDR exists and belongs to user
+    const [fdrRows] = await conn.query(
+      "SELECT * FROM fdrs WHERE id = ? AND user_id = ? AND status = 'active' FOR UPDATE",
+      [id, userId]
+    );
+
+    if (fdrRows.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Active FDR not found or does not belong to you.' });
+    }
+
+    const fdr = fdrRows[0];
+    const principal = parseFloat(fdr.amount);
+
+    // 1. Update FDR status to force_closed
+    await conn.query("UPDATE fdrs SET status = 'force_closed' WHERE id = ?", [id]);
+
+    // 2. Return principal to user's wallet
+    await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [principal, userId]);
+
+    // 3. Log the transaction
+    await conn.query(
+      'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+      [userId, 'fdr_force_closed', principal, `FDR #${fdr.id} Force Closed - Principal Returned`]
+    );
+
+    // 4. Destroy any locked bonus funds tied to this FDR
+    const [lockedFunds] = await conn.query(
+      "SELECT * FROM locked_funds WHERE linked_entity_type = 'fdr' AND linked_entity_id = ? AND user_id = ? AND status = 'locked'",
+      [id, userId]
+    );
+
+    for (const locked of lockedFunds) {
+      // Deduct from the user's locked bonus balance since they are destroyed
+      await conn.query(
+        "UPDATE users SET locked_bonus_balance = locked_bonus_balance - ? WHERE id = ?",
+        [parseFloat(locked.amount), userId]
+      );
+      // Mark as cancelled or simply delete. We will mark as cancelled to keep the record
+      await conn.query("UPDATE locked_funds SET status = 'cancelled' WHERE id = ?", [locked.id]);
+    }
+
+    await conn.commit();
+    res.json({ message: 'FDR successfully force closed.', principal_returned: principal });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Force Close FDR error:', err);
+    res.status(500).json({ error: 'Server error processing force close request.' });
+  } finally {
+    conn.release();
+  }
+});
+
 module.exports = router;

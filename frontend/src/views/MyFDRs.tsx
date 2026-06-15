@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fdrAPI } from '../api';
-import { Calendar, RefreshCw, BarChart2, CheckCircle2, Coins, Banknote } from 'lucide-react';
+import { Calendar, RefreshCw, BarChart2, CheckCircle2, Coins, Banknote, AlertTriangle, X } from 'lucide-react';
 import { ShimmerLoader } from '../components/ShimmerLoader';
 import '../fdr-animations.css';
 
@@ -12,6 +12,8 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
   const [fdrs, setFdrs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [fdrToClose, setFdrToClose] = useState<number | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
 
   // Live yield simulator for active FDRs
   const LiveYieldDisplay: React.FC<{
@@ -68,6 +70,24 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
       setError(err.message || 'Failed to fetch FDR portfolio.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleForceClose = (id: number) => {
+    setFdrToClose(id);
+  };
+
+  const confirmForceClose = async () => {
+    if (!fdrToClose) return;
+    setIsClosing(true);
+    try {
+      await fdrAPI.forceCloseFDR(fdrToClose);
+      fetchFDRs();
+    } catch (err) {
+      alert('Failed to force close FDR: ' + (err as Error).message);
+    } finally {
+      setIsClosing(false);
+      setFdrToClose(null);
     }
   };
 
@@ -165,7 +185,7 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
         /* FDR LIST */
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
           {fdrs.map((fdr) => {
-            const isCompleted = fdr.status === 'completed';
+            const isCompleted = fdr.status === 'completed' || fdr.status === 'force_closed';
             const progress = isCompleted ? 100 : Math.min(100, Math.max(0, parseFloat(fdr.progress_percent) || 0));
             const principal = parseFloat(fdr.amount) || 0;
             const accrued = parseFloat(fdr.accrued_interest) || 0;
@@ -270,22 +290,121 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
 
                 {/* Footer status text */}
                 {!isCompleted && fdr.next_installment_date && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-card)', paddingTop: '10px' }}>
-                    <Calendar size={13} color="var(--accent-primary)" />
-                    <span>Next Interest Payout: <strong>{formatDate(fdr.next_installment_date)}</strong></span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-card)', paddingTop: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      <Calendar size={13} color="var(--accent-primary)" />
+                      <span>Next Interest Payout: <strong>{formatDate(fdr.next_installment_date)}</strong></span>
+                    </div>
+                    {fdr.status === 'active' && (
+                      <button 
+                        onClick={() => handleForceClose(fdr.id)}
+                        style={{ 
+                          background: 'rgba(239, 68, 68, 0.1)', 
+                          color: 'var(--accent-danger)', 
+                          border: '1px solid rgba(239, 68, 68, 0.3)', 
+                          padding: '4px 10px', 
+                          borderRadius: 'var(--radius-sm)', 
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'var(--accent-danger)';
+                          e.currentTarget.style.color = '#fff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                          e.currentTarget.style.color = 'var(--accent-danger)';
+                        }}
+                      >
+                        Force Close
+                      </button>
+                    )}
                   </div>
                 )}
 
                 {isCompleted && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--accent-info)', borderTop: '1px solid var(--border-card)', paddingTop: '10px' }}>
-                    <CheckCircle2 size={13} />
-                    <span>Principal and total yields returned to wallet.</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: fdr.status === 'force_closed' ? 'var(--text-secondary)' : 'var(--accent-info)', borderTop: '1px solid var(--border-card)', paddingTop: '10px' }}>
+                    <CheckCircle2 size={13} color={fdr.status === 'force_closed' ? 'var(--text-secondary)' : 'var(--accent-info)'} />
+                    <span>{fdr.status === 'force_closed' ? 'Force Closed - Principal Returned.' : 'Principal and total yields returned to wallet.'}</span>
                   </div>
                 )}
 
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Force Close Confirmation Modal */}
+      {fdrToClose !== null && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div className="glass-card animate-fade-in" style={{
+            maxWidth: '420px',
+            width: '100%',
+            background: 'var(--bg-secondary)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: 'var(--radius-md)',
+            overflow: 'hidden',
+            position: 'relative'
+          }}>
+            <button 
+              onClick={() => setFdrToClose(null)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+            >
+              <X size={20} />
+            </button>
+            <div style={{ padding: '24px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+                <AlertTriangle size={24} color="var(--accent-danger)" />
+              </div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
+                Force Close FDR
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '24px' }}>
+                Are you sure you want to prematurely terminate this FDR? 
+                <br /><br />
+                <strong style={{ color: 'var(--text-primary)' }}>What happens next:</strong>
+                <ul style={{ paddingLeft: '20px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <li>Your full principal will be instantly returned to your main wallet.</li>
+                  <li>You keep all previously deposited interest.</li>
+                  <li>You will <span style={{ color: 'var(--accent-danger)' }}>forfeit</span> the live unaccrued yield for the current cycle.</li>
+                  <li>Any linked locked bonus funds will be <span style={{ color: 'var(--accent-danger)' }}>destroyed</span>.</li>
+                </ul>
+              </p>
+              
+              <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
+                <button 
+                  onClick={() => setFdrToClose(null)}
+                  style={{ flex: 1, padding: '12px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-card)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 600 }}
+                  disabled={isClosing}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmForceClose}
+                  disabled={isClosing}
+                  style={{ flex: 1, padding: '12px', background: 'var(--accent-danger)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', cursor: isClosing ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  {isClosing ? <RefreshCw size={18} className="animate-spin" /> : 'Yes, Close FDR'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
