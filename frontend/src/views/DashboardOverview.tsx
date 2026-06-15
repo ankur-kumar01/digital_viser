@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { MetricCard } from '../components/MetricCard';
 import { walletAPI, fdrAPI, gamesAPI } from '../api';
-import { Wallet, Award, History, ArrowRight, ArrowUpRight, ArrowDownLeft, PiggyBank, TrendingUp, CalendarDays, Gift, Users, PlusCircle, Activity, Gamepad2 } from 'lucide-react';
+import { Wallet, Award, History, ArrowRight, ArrowUpRight, ArrowDownLeft, PiggyBank, TrendingUp, CalendarDays, Gift, Users, PlusCircle, Activity, Gamepad2, Trophy, RefreshCw, Eye, ExternalLink } from 'lucide-react';
 import { PortfolioHero } from '../components/PortfolioHero';
+import { AviatorChatWidget } from '../components/AviatorChatWidget';
 
 interface DashboardOverviewProps {
   user: {
@@ -354,6 +355,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Aviator Chat Simulation Widget */}
+      <AviatorChatWidget />
 
       {/* Offer Zone Section */}
       {activeOffers.length > 0 && (
