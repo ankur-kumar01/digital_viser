@@ -137,6 +137,7 @@ export const fdrAPI = {
   getActivePlans: () => request('GET', '/fdr/active-plans'),
   getPnL: () => request('GET', '/fdr/pnl'),
   forceCloseFDR: (id: number) => request('POST', '/fdr/force-close', { id }),
+  getActiveOffers: () => request('GET', '/fdr/offers'),
 };
 
 export const gamesAPI = {
@@ -154,6 +155,10 @@ export const adminAPI = {
   updateMethod: (id: number, data: any) => adminRequest('PUT', `/admin/methods/${id}`, data),
   deleteMethod: (id: number) => adminRequest('DELETE', `/admin/methods/${id}`),
   getFdrPlans: () => adminRequest('GET', '/admin/fdr-plans'),
+  getFdrOffers: () => adminRequest('GET', '/admin/fdr-offers'),
+  createFdrOffer: (data: any) => adminRequest('POST', '/admin/fdr-offers', data),
+  updateFdrOffer: (id: number, data: any) => adminRequest('PUT', `/admin/fdr-offers/${id}`, data),
+  deleteFdrOffer: (id: number) => adminRequest('DELETE', `/admin/fdr-offers/${id}`),
   createFdrPlan: (data: any) => adminRequest('POST', '/admin/fdr-plans', data),
   updateFdrPlan: (id: number, data: any) => adminRequest('PUT', `/admin/fdr-plans/${id}`, data),
   deleteFdrPlan: (id: number) => adminRequest('DELETE', `/admin/fdr-plans/${id}`),

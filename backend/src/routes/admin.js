@@ -184,6 +184,66 @@ router.delete('/fdr-plans/:id', async (req, res) => {
   }
 });
 
+// GET /fdr-offers
+router.get('/fdr-offers', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM fdr_offers ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch FDR offers' });
+  }
+});
+
+// POST /fdr-offers
+router.post('/fdr-offers', async (req, res) => {
+  try {
+    const { name, bonus_percent, start_time, end_time, is_active } = req.body;
+    if (!name || isNaN(parseFloat(bonus_percent)) || !start_time || !end_time) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+    const [result] = await pool.query(
+      'INSERT INTO fdr_offers (name, bonus_percent, start_time, end_time, is_active) VALUES (?, ?, ?, ?, ?)',
+      [name, parseFloat(bonus_percent), start_time, end_time, is_active !== false]
+    );
+    res.json({ id: result.insertId, name, bonus_percent });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create FDR offer' });
+  }
+});
+
+// PUT /fdr-offers/:id
+router.put('/fdr-offers/:id', async (req, res) => {
+  try {
+    const { name, bonus_percent, start_time, end_time, is_active } = req.body;
+    const updates = [];
+    const values = [];
+    if (typeof name !== 'undefined') { updates.push('name = ?'); values.push(name); }
+    if (typeof bonus_percent !== 'undefined') { updates.push('bonus_percent = ?'); values.push(parseFloat(bonus_percent)); }
+    if (typeof start_time !== 'undefined') { updates.push('start_time = ?'); values.push(start_time); }
+    if (typeof end_time !== 'undefined') { updates.push('end_time = ?'); values.push(end_time); }
+    if (typeof is_active !== 'undefined') { updates.push('is_active = ?'); values.push(is_active); }
+    if (updates.length > 0) {
+      values.push(req.params.id);
+      await pool.query(`UPDATE fdr_offers SET ${updates.join(', ')} WHERE id = ?`, values);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update FDR offer' });
+  }
+});
+
+// DELETE /fdr-offers/:id
+router.delete('/fdr-offers/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM fdr_offers WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete FDR offer' });
+  }
+});
+
 // GET /requests
 router.get('/requests', async (req, res) => {
   try {
@@ -489,10 +549,44 @@ router.post('/users/:id/fdr/create', async (req, res) => {
     const nextInstallmentDate = new Date(start_date);
     nextInstallmentDate.setDate(nextInstallmentDate.getDate() + parseInt(plan.period_days, 10));
     
-    await conn.query(
+    const [fdrResult] = await conn.query(
       'INSERT INTO fdrs (user_id, amount, start_date, end_date, interest_percent, period_days, next_installment_date, last_installment_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [userId, amount, start_date, end_date.toISOString().split('T')[0], parseFloat(plan.interest_percent), parseInt(plan.period_days, 10), nextInstallmentDate.toISOString().split('T')[0], start_date]
     );
+
+    // Apply active percentage offer if any (using actual server time)
+    const [offers] = await conn.query(
+      'SELECT * FROM fdr_offers WHERE is_active = TRUE AND NOW() BETWEEN start_time AND end_time LIMIT 1'
+    );
+    if (offers.length > 0) {
+      const offer = offers[0];
+      const bonusAmount = parseFloat(amount) * (parseFloat(offer.bonus_percent) / 100);
+      if (bonusAmount > 0) {
+        await conn.query('UPDATE users SET locked_bonus_balance = locked_bonus_balance + ? WHERE id = ?', [bonusAmount, userId]);
+        await conn.query(
+          "INSERT INTO locked_funds (user_id, wallet_type, amount, linked_entity_id, linked_entity_type) VALUES (?, 'bonus', ?, ?, 'fdr')",
+          [userId, bonusAmount, fdrResult.insertId]
+        );
+        await conn.query(
+          'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+          [userId, 'fdr_bonus_locked', bonusAmount, `Promotional FDR Bonus (${offer.bonus_percent}%) Locked`]
+        );
+      }
+    }
+
+    // Apply flat fdr bonus scheme if any
+    const [schemes] = await conn.query("SELECT * FROM reward_schemes WHERE type = 'fdr_bonus' AND is_active = true AND min_amount <= ? ORDER BY min_amount DESC LIMIT 1", [amount]);
+    if (schemes.length > 0) {
+      const bonusAmount = parseFloat(schemes[0].reward_amount);
+      if (bonusAmount > 0) {
+        await conn.query('UPDATE users SET locked_bonus_balance = locked_bonus_balance + ? WHERE id = ?', [bonusAmount, userId]);
+        await conn.query("INSERT INTO locked_funds (user_id, wallet_type, amount, linked_entity_id, linked_entity_type) VALUES (?, 'bonus', ?, ?, 'fdr')", [userId, bonusAmount, fdrResult.insertId]);
+        await conn.query(
+          'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+          [userId, 'fdr_flat_bonus_locked', bonusAmount, `Flat FDR Bonus (₹${bonusAmount}) Locked`]
+        );
+      }
+    }
 
     await conn.commit();
     res.json({ success: true });
@@ -520,6 +614,20 @@ router.post('/users/:id/fdr/:fdrId/close', async (req, res) => {
     await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [parseFloat(fdr.amount), userId]);
     await conn.query('INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)', [userId, 'fdr_closed_admin', fdr.amount, `Admin manually closed FDR #${fdr.id}`]);
     
+    // Destroy any locked bonus funds tied to this FDR (since it's being manually closed before normal maturity)
+    const [lockedFunds] = await conn.query(
+      "SELECT * FROM locked_funds WHERE linked_entity_type = 'fdr' AND linked_entity_id = ? AND user_id = ? AND status = 'locked'",
+      [fdrId, userId]
+    );
+
+    for (const locked of lockedFunds) {
+      await conn.query(
+        "UPDATE users SET locked_bonus_balance = locked_bonus_balance - ? WHERE id = ?",
+        [parseFloat(locked.amount), userId]
+      );
+      await conn.query("UPDATE locked_funds SET status = 'cancelled' WHERE id = ?", [locked.id]);
+    }
+
     await conn.commit();
     res.json({ success: true });
   } catch (err) {

@@ -81,6 +81,26 @@ router.post('/create', async (req, res) => {
       [userId, 'fdr_lock', -fdrAmount, `FDR #${fdrResult.insertId} locked`]
     );
 
+    // Check for active FDR percentage offers (validating times against actual server time)
+    const [offers] = await conn.query(
+      'SELECT * FROM fdr_offers WHERE is_active = TRUE AND NOW() BETWEEN start_time AND end_time LIMIT 1'
+    );
+    if (offers.length > 0) {
+      const offer = offers[0];
+      const bonusAmount = fdrAmount * (parseFloat(offer.bonus_percent) / 100);
+      if (bonusAmount > 0) {
+        await conn.query('UPDATE users SET locked_bonus_balance = locked_bonus_balance + ? WHERE id = ?', [bonusAmount, userId]);
+        await conn.query(
+          "INSERT INTO locked_funds (user_id, wallet_type, amount, linked_entity_id, linked_entity_type) VALUES (?, 'bonus', ?, ?, 'fdr')",
+          [userId, bonusAmount, fdrResult.insertId]
+        );
+        await conn.query(
+          'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+          [userId, 'fdr_bonus_locked', bonusAmount, `Promotional FDR Bonus (${offer.bonus_percent}%) Locked`]
+        );
+      }
+    }
+
     // Check for FDR bonus scheme
     const [schemes] = await conn.query("SELECT * FROM reward_schemes WHERE type = 'fdr_bonus' AND is_active = true AND min_amount <= ? ORDER BY min_amount DESC LIMIT 1", [fdrAmount]);
     if (schemes.length > 0) {
@@ -88,6 +108,10 @@ router.post('/create', async (req, res) => {
       if (bonusAmount > 0) {
         await conn.query('UPDATE users SET locked_bonus_balance = locked_bonus_balance + ? WHERE id = ?', [bonusAmount, userId]);
         await conn.query("INSERT INTO locked_funds (user_id, wallet_type, amount, linked_entity_id, linked_entity_type) VALUES (?, 'bonus', ?, ?, 'fdr')", [userId, bonusAmount, fdrResult.insertId]);
+        await conn.query(
+          'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+          [userId, 'fdr_flat_bonus_locked', bonusAmount, `Flat FDR Bonus (₹${bonusAmount}) Locked`]
+        );
       }
     }
 
@@ -167,6 +191,20 @@ router.get('/active-plans', async (req, res) => {
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Server error fetching FDR plans.' });
+  }
+});
+
+// GET /offers (Active offers for users)
+router.get('/offers', async (req, res) => {
+  try {
+    // Get active offers using actual server time
+    const [rows] = await pool.query(
+      'SELECT name, bonus_percent, start_time, end_time FROM fdr_offers WHERE is_active = TRUE AND NOW() BETWEEN start_time AND end_time'
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch active offers.' });
   }
 });
 

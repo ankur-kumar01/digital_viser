@@ -32,6 +32,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const [upcomingProfit30, setUpcomingProfit30] = useState(0);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [games, setGames] = useState<any[]>([]);
+  const [activeOffers, setActiveOffers] = useState<any[]>([]);
 
   const loadData = async () => {
     try {
@@ -70,6 +71,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         setGames(gamesData.filter((g: any) => g.is_active));
       } catch (e) {
         console.error('Failed to load games', e);
+      }
+      // Load active offers
+      try {
+        const offers = await fdrAPI.getActiveOffers();
+        setActiveOffers(offers);
+      } catch (e) {
+        console.error('Failed to load active offers', e);
       }
     } catch (err) {
       console.error('Failed to load dashboard statistics', err);
@@ -199,6 +207,56 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Offer Zone Section */}
+      {activeOffers.length > 0 && (
+        <div style={{ marginTop: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <Gift size={20} color="var(--accent-secondary)" />
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0 }}>Offer Zone</h3>
+          </div>
+          
+          <div 
+            className="glass-card glow-card" 
+            style={{ 
+              background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%)',
+              border: '1.5px solid rgba(251, 191, 36, 0.4)',
+              borderRadius: 'var(--radius-md)',
+              padding: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '20px',
+              boxShadow: '0 8px 30px rgba(245, 158, 11, 0.08)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: '1 1 auto' }}>
+              <div style={{ fontSize: '3rem' }}>🎁</div>
+              <div>
+                <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 6px 0' }}>
+                  {activeOffers[0].name}
+                </h4>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0, lineHeight: 1.5, maxWidth: '600px' }}>
+                  Get an instant <strong style={{ color: 'var(--accent-secondary)' }}>{parseFloat(activeOffers[0].bonus_percent)}% bonus</strong> credited to your bonus wallet on creating any Fixed Deposit. Offer ends soon, lock your FDR now!
+                </p>
+              </div>
+            </div>
+            <button 
+              className="btn" 
+              style={{ 
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, #d97706 100%)', 
+                color: '#000', 
+                fontWeight: 700,
+                padding: '12px 24px'
+              }}
+              onClick={() => onNavigate('create-fdr')}
+            >
+              Grab Offer
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Metrics Row */}
       <div className="dashboard-grid">

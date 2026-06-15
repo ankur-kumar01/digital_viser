@@ -16,13 +16,14 @@ export const CreateFDR: React.FC<CreateFDRProps> = ({ user, refreshUser }) => {
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   
   const [activePlans, setActivePlans] = useState<any[]>([]);
+  const [activeOffers, setActiveOffers] = useState<any[]>([]);
   const [isFetching, setIsFetching] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [successData, setSuccessData] = useState<any>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchPlans = async () => {
+    const fetchPlansAndOffers = async () => {
       try {
         const plans = await fdrAPI.getActivePlans();
         setActivePlans(plans);
@@ -30,13 +31,16 @@ export const CreateFDR: React.FC<CreateFDRProps> = ({ user, refreshUser }) => {
           setSelectedPlanId(plans[0].id);
           setAmount(plans[0].min_amount.toString());
         }
+        
+        const offers = await fdrAPI.getActiveOffers();
+        setActiveOffers(offers);
       } catch (err) {
-        console.error('Failed to fetch FDR plans');
+        console.error('Failed to fetch FDR plans/offers');
       } finally {
         setIsFetching(false);
       }
     };
-    fetchPlans();
+    fetchPlansAndOffers();
   }, []);
 
   const selectedPlan = activePlans.find(p => p.id === selectedPlanId);
@@ -44,8 +48,12 @@ export const CreateFDR: React.FC<CreateFDRProps> = ({ user, refreshUser }) => {
   // Perform reactive mathematical projections
   const getProjections = () => {
     const pAmt = parseFloat(amount) || 0;
+    const activeOffer = activeOffers.length > 0 ? activeOffers[0] : null;
+    const bonusPercent = activeOffer ? parseFloat(activeOffer.bonus_percent) : 0;
+    const bonusAmount = pAmt * (bonusPercent / 100);
+
     if (!selectedPlan || pAmt <= 0) {
-      return { totalDays: 0, installments: 0, interestPerInst: 0, totalInterest: 0, maturityVal: 0, roi: 0 };
+      return { totalDays: 0, installments: 0, interestPerInst: 0, totalInterest: 0, maturityVal: 0, roi: 0, bonusAmount: 0 };
     }
 
     const pDays = parseInt(selectedPlan.period_days) || 1;
@@ -58,7 +66,7 @@ export const CreateFDR: React.FC<CreateFDRProps> = ({ user, refreshUser }) => {
     const maturityVal = pAmt + totalInterest;
     const roi = pAmt > 0 ? (totalInterest / pAmt) * 100 : 0;
 
-    return { totalDays, installments, interestPerInst, totalInterest, maturityVal, roi };
+    return { totalDays, installments, interestPerInst, totalInterest, maturityVal, roi, bonusAmount };
   };
 
   const projections = getProjections();
@@ -113,6 +121,33 @@ export const CreateFDR: React.FC<CreateFDRProps> = ({ user, refreshUser }) => {
           Invest in standard Fixed Deposit plans managed by the platform administrators.
         </p>
       </div>
+
+      {/* Active Promo Offer Banner */}
+      {activeOffers.length > 0 && (
+        <div 
+          className="glass-card" 
+          style={{ 
+            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%)',
+            border: '1.5px solid rgba(251, 191, 36, 0.4)',
+            borderRadius: 'var(--radius-md)',
+            padding: '16px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            boxShadow: '0 8px 30px rgba(245, 158, 11, 0.08)'
+          }}
+        >
+          <div style={{ fontSize: '1.8rem' }}>🎁</div>
+          <div>
+            <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px 0' }}>
+              Special Promo Active: {activeOffers[0].name}
+            </h4>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
+              Create any Fixed Deposit now and get an extra <strong style={{ color: 'var(--accent-secondary)' }}>{parseFloat(activeOffers[0].bonus_percent)}% bonus amount</strong> credited to your bonus wallet. Funds will remain locked until maturity and are destroyed if closed early.
+            </p>
+          </div>
+        </div>
+      )}
 
       {successData ? (
         /* SUCCESS PAGE */
@@ -330,6 +365,13 @@ export const CreateFDR: React.FC<CreateFDRProps> = ({ user, refreshUser }) => {
                     <span style={{ color: 'var(--text-secondary)' }}>Total Estimated Interest</span>
                     <span style={{ fontWeight: 600, color: 'var(--accent-secondary)' }}>₹{projections.totalInterest.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
+
+                  {activeOffers.length > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px dashed var(--border-glass)' }}>
+                      <span style={{ color: 'var(--accent-secondary)', fontWeight: 600 }}>🎁 Promo Locked Bonus ({parseFloat(activeOffers[0].bonus_percent)}%)</span>
+                      <span style={{ fontWeight: 700, color: 'var(--accent-secondary)' }}>₹{projections.bonusAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px dashed var(--border-glass)' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Total Payout at Maturity</span>
