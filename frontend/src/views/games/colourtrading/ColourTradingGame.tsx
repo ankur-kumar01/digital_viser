@@ -284,10 +284,19 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
           <div className="ct-win-card">
             <div style={{ fontSize: '3.5rem', marginBottom: '12px' }}>🎉</div>
             <div style={{ fontSize: '0.9rem', color: '#22c55e', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '3px', marginBottom: '10px' }}>You Won!</div>
-            <div style={{ fontSize: '3.2rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1, fontFamily: "'SF Mono','Fira Code',Monaco,monospace" }}>
+            <div style={{ 
+              fontSize: '4.2rem', 
+              fontWeight: 900, 
+              lineHeight: 1.1, 
+              fontFamily: "'SF Mono','Fira Code',Monaco,monospace",
+              background: 'linear-gradient(to bottom, #ffffff 0%, #a7f3d0 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 4px 15px rgba(34, 197, 94, 0.5))'
+            }}>
               ₹{winPayout.toFixed(2)}
             </div>
-            <div style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginTop: '10px' }}>
+            <div style={{ fontSize: '1.1rem', color: '#a7f3d0', marginTop: '10px', fontWeight: 600 }}>
               on {selectedColor ? colorMap[selectedColor]?.label : ''}
             </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '24px' }}>Tap anywhere to close</div>
