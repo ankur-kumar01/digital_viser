@@ -67,6 +67,20 @@ export const AdminFdrs: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
+  const totalItems = filteredFdrs.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentFdrs = filteredFdrs.slice(indexOfFirstItem, indexOfLastItem);
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('en-IN', {
@@ -131,7 +145,7 @@ export const AdminFdrs: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredFdrs.map((fdr) => (
+            {currentFdrs.map((fdr) => (
               <tr key={fdr.id}>
                 <td style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>#{fdr.id}</td>
                 <td>
@@ -200,6 +214,109 @@ export const AdminFdrs: React.FC = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination Controls */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginTop: '20px',
+        gap: '16px',
+        flexWrap: 'wrap'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+          <span>Show</span>
+          <select 
+            value={itemsPerPage} 
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            style={{
+              background: 'var(--bg-tertiary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: '6px',
+              padding: '4px 8px',
+              outline: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+          <span>entries per page (Total: {totalItems})</span>
+        </div>
+
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button 
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="btn btn-secondary"
+              style={{ 
+                padding: '6px 12px', 
+                fontSize: '0.85rem',
+                opacity: currentPage === 1 ? 0.5 : 1,
+                cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Previous
+            </button>
+
+            {Array.from({ length: totalPages }, (_, index) => {
+              const pageNumber = index + 1;
+              const isPageVisible = 
+                pageNumber === 1 || 
+                pageNumber === totalPages || 
+                Math.abs(pageNumber - currentPage) <= 1;
+
+              if (!isPageVisible) {
+                if (pageNumber === 2 || pageNumber === totalPages - 1) {
+                  return <span key={pageNumber} style={{ color: 'var(--text-muted)', padding: '0 4px' }}>...</span>;
+                }
+                return null;
+              }
+
+              return (
+                <button
+                  key={pageNumber}
+                  onClick={() => setCurrentPage(pageNumber)}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '0.85rem',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    background: currentPage === pageNumber ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                    color: currentPage === pageNumber ? 'var(--bg-primary)' : 'var(--text-primary)',
+                    cursor: 'pointer',
+                    fontWeight: currentPage === pageNumber ? 700 : 500,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {pageNumber}
+                </button>
+              );
+            })}
+
+            <button 
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="btn btn-secondary"
+              style={{ 
+                padding: '6px 12px', 
+                fontSize: '0.85rem',
+                opacity: currentPage === totalPages ? 0.5 : 1,
+                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Edit FDR Modal */}
