@@ -363,8 +363,16 @@
 .av-quick-bets {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   margin-top: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 2px;
+}
+
+.av-quick-bets::-webkit-scrollbar {
+  display: none;
 }
 
 .av-quick-btn {
@@ -380,6 +388,7 @@
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3), 0 4px 6px rgba(0, 0, 0, 0.1);
   position: relative;
+  flex-shrink: 0;
 }
 
 .av-quick-btn::before {
@@ -559,6 +568,8 @@
   border: 1.5px solid rgba(251, 191, 36, 0.5);
   box-shadow: 0 25px 60px -10px rgba(245, 158, 11, 0.4), inset 0 0 80px rgba(251, 191, 36, 0.2);
 }
+
+
 
 /* Desktop vs Mobile sidebar display toggles */
 .av-sidebar {
@@ -808,4 +819,90 @@
 @keyframes av-toast-fade {
   from { opacity: 0; transform: translate(-50%, 20px); }
   to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ==========================================================================
+   MOBILE-FIRST SCREEN OPTIMIZATIONS (max-width: 480px)
+   ========================================================================== */
+@media (max-width: 480px) {
+  .av-container {
+    padding-bottom: 10px;
+  }
+  
+  .av-subtitle {
+    display: none !important; /* Hide long subtitles to fit header button */
+  }
+
+  .av-title {
+    font-size: 1.15rem;
+  }
+
+  .av-history-chip {
+    padding: 4px 9px;
+    font-size: 0.72rem;
+  }
+
+  .av-canvas-wrap {
+    min-height: 180px; /* Enable canvas scaling to fit standard screens */
+    border-radius: 16px;
+  }
+
+  .av-controls {
+    padding: 12px;
+    border-radius: 16px;
+    margin-top: 12px;
+  }
+
+  .av-controls-label {
+    font-size: 0.7rem;
+    margin-bottom: 8px;
+  }
+
+  .av-quick-btn {
+    min-width: 58px;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  .av-bet-input-wrap input {
+    font-size: 1.25rem;
+  }
+
+  .av-step-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 0.95rem;
+    border-radius: 10px;
+  }
+
+  .av-action-btn {
+    padding: 14px;
+    font-size: 1rem;
+    margin-top: 12px;
+    border-radius: 12px;
+  }
+
+  /* Win Popup Overlay mobile corrections */
+  .av-win-card {
+    padding: 30px 20px;
+    border-radius: 24px;
+    max-width: 85vw;
+  }
+
+  .av-win-amount {
+    font-size: 2.6rem;
+  }
+
+  .av-win-emoji {
+    font-size: 2.6rem;
+  }
+
+  .av-win-label {
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+  }
+
+  .av-win-detail {
+    font-size: 0.85rem;
+  }
 }

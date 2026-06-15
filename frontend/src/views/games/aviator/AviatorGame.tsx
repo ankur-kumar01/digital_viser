@@ -469,7 +469,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
       </div>
       <div className="av-main-grid">
         {/* Main Game Area */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, width: '100%' }}>
           {/* Game Canvas */}
           <div className={`av-canvas-wrap ${gameState === 'FLYING' ? 'playing' : ''} ${gameState === 'CRASHED' ? 'crashed' : ''}`}>
             <canvas ref={canvasRef} />

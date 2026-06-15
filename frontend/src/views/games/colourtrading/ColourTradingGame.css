@@ -502,3 +502,172 @@
   height: 10px;
   border-radius: 2px;
 }
+
+/* Flex shrink fix for swiping quick-bet chips */
+.ct-quick-btn {
+  flex-shrink: 0;
+}
+
+/* Swiping chips scroll bar rules */
+.ct-quick-bets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap !important;
+  margin-top: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 2px;
+}
+
+.ct-quick-bets::-webkit-scrollbar {
+  display: none;
+}
+
+/* ==========================================================================
+   MOBILE-FIRST SCREEN OPTIMIZATIONS (max-width: 480px)
+   ========================================================================== */
+@media (max-width: 480px) {
+  .ct-container {
+    padding-bottom: 10px;
+  }
+
+  .ct-subtitle {
+    display: none !important;
+  }
+
+  .ct-title {
+    font-size: 1.15rem;
+  }
+
+  .ct-history-strip {
+    padding: 6px 0;
+  }
+
+  .ct-history-dot {
+    width: 26px;
+    height: 26px;
+    font-size: 0.6rem;
+  }
+
+  .ct-timer-section {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .ct-timer-ring {
+    width: 56px;
+    height: 56px;
+  }
+
+  .ct-timer-ring svg {
+    width: 56px;
+    height: 56px;
+  }
+
+  .ct-timer-number {
+    font-size: 1.15rem;
+  }
+
+  .ct-timer-period {
+    font-size: 0.65rem;
+  }
+
+  .ct-timer-status {
+    font-size: 0.95rem;
+  }
+
+  .ct-timer-hint {
+    font-size: 0.72rem;
+  }
+
+  .ct-color-buttons {
+    gap: 8px;
+  }
+
+  .ct-color-btn {
+    min-width: 75px;
+    padding: 14px 6px;
+    border-radius: 12px;
+    gap: 6px;
+  }
+
+  .ct-color-orb {
+    width: 32px;
+    height: 32px;
+  }
+
+  .ct-color-label {
+    font-size: 0.85rem;
+  }
+
+  .ct-color-mult {
+    font-size: 0.7rem;
+  }
+
+  .ct-bet-section {
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
+
+  .ct-bet-label {
+    font-size: 0.68rem;
+    margin-bottom: 8px;
+  }
+
+  .ct-bet-input-wrap input {
+    font-size: 1.15rem;
+  }
+
+  .ct-bet-step-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 0.95rem;
+    border-radius: 10px;
+  }
+
+  .ct-quick-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+
+  .ct-result-section {
+    padding: 24px 14px;
+    border-radius: 16px;
+  }
+
+  .ct-result-orb {
+    width: 90px;
+    height: 90px;
+    font-size: 2rem;
+  }
+
+  .ct-result-name {
+    font-size: 1.1rem;
+    margin-top: 12px;
+  }
+
+  /* Win Card responsive resizing */
+  .ct-win-card {
+    padding: 30px 20px;
+    border-radius: 24px;
+  }
+
+  .ct-win-card div[style*="font-size: 4.2rem"] {
+    font-size: 2.6rem !important;
+  }
+
+  .ct-win-card div[style*="font-size: 3.5rem"] {
+    font-size: 2.6rem !important;
+  }
+
+  .ct-win-card div[style*="font-size: 0.9rem"] {
+    font-size: 0.8rem !important;
+  }
+
+  /* Lose Card responsive resizing */
+  .ct-lose-card {
+    padding: 30px 20px;
+    border-radius: 24px;
+  }
+}

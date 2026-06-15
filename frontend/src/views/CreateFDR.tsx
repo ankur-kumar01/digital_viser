@@ -161,7 +161,7 @@ export const CreateFDR: React.FC<CreateFDRProps> = ({ user, refreshUser }) => {
               maxWidth: '500px',
               textAlign: 'left',
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
               gap: '12px',
               fontSize: '0.9rem'
             }}
@@ -204,7 +204,7 @@ export const CreateFDR: React.FC<CreateFDRProps> = ({ user, refreshUser }) => {
                 No active FDR plans are currently configured by the administrator. Check back later.
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
                 {activePlans.map((plan) => (
                   <div 
                     key={plan.id}
@@ -223,20 +223,20 @@ export const CreateFDR: React.FC<CreateFDRProps> = ({ user, refreshUser }) => {
                       setError('');
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                       <span style={{ fontSize: '1rem', fontWeight: 700, color: selectedPlanId === plan.id ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{plan.name}</span>
                       <Award size={18} color={selectedPlanId === plan.id ? "var(--accent-primary)" : "var(--text-muted)"} />
                     </div>
                     <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid var(--border-glass)', fontSize: '0.82rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
                         <span style={{ color: 'var(--text-muted)' }}>Range:</span>
                         <strong style={{ color: 'var(--accent-secondary)' }}>₹{plan.min_amount} - ₹{plan.max_amount}</strong>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
                         <span style={{ color: 'var(--text-muted)' }}>Installment:</span>
                         <strong>{plan.interest_percent}% / {plan.period_days}d</strong>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
                         <span style={{ color: 'var(--text-muted)' }}>Matures In:</span>
                         <strong>{plan.duration_days} Days</strong>
                       </div>
@@ -275,9 +275,9 @@ export const CreateFDR: React.FC<CreateFDRProps> = ({ user, refreshUser }) => {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <label className="input-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <label className="input-label" style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
                       <span>Investment Amount</span>
-                      <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>
+                      <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                         Wallet Balance: ₹{user ? parseFloat(user.balance as string).toLocaleString('en-IN') : '0'}
                       </span>
                     </label>
