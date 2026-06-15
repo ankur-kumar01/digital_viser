@@ -76,12 +76,6 @@
   gap: 24px;
 }
 
-@media (min-width: 992px) {
-  .av-main-grid {
-    grid-template-columns: 1fr 300px;
-  }
-}
-
 .av-header {
   display: flex;
   align-items: center;
@@ -571,22 +565,17 @@
 
 
 
-/* Desktop vs Mobile sidebar display toggles */
+/* Live Players & Chat sidebar container visible below controls */
 .av-sidebar {
-  display: none;
-}
-
-@media (min-width: 992px) {
-  .av-sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    background: var(--bg-card);
-    padding: 16px;
-    border-radius: 20px;
-    border: 1px solid var(--border-card);
-    min-height: 300px;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-card);
+  padding: 20px;
+  border-radius: 20px;
+  border: 1px solid var(--border-card);
+  min-height: 300px;
+  margin-top: 16px;
 }
 
 /* Mobile Live Badge Button */
@@ -625,11 +614,7 @@
   100% { transform: scale(0.85); opacity: 0.5; }
 }
 
-@media (min-width: 992px) {
-  .av-live-badge-btn {
-    display: none;
-  }
-}
+
 
 /* Mobile bottom sheet drawer overlay */
 .av-drawer-overlay {
