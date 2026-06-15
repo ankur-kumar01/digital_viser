@@ -42,6 +42,7 @@ export const App: React.FC = () => {
 
   const handleInitialize = async () => {
     const isAdminRoute = window.location.pathname === '/admin';
+    const hashView = window.location.hash ? window.location.hash.substring(1) : null;
     
     if (isAdminRoute) {
       setShowAdminAuth(true);
@@ -53,7 +54,7 @@ export const App: React.FC = () => {
           setIsAdmin(true);
           setIsAuthenticated(true);
           setUser({ name: 'Super Admin', email: 'admin@digitalviser.com' });
-          setCurrentView('admin-dashboard');
+          setCurrentView(hashView || 'admin-dashboard');
         } catch (adminErr) {
           clearAdminToken();
         }
@@ -67,7 +68,7 @@ export const App: React.FC = () => {
           setUser(profile);
           setIsAuthenticated(true);
           setIsAdmin(false);
-          setCurrentView('dashboard');
+          setCurrentView(hashView || 'dashboard');
         } catch (err) {
           clearToken();
         }
@@ -80,6 +81,26 @@ export const App: React.FC = () => {
   useEffect(() => {
     handleInitialize();
   }, []);
+
+  // Sync currentView with hash
+  useEffect(() => {
+    if (isAuthenticated && currentView) {
+      window.location.hash = currentView;
+    }
+  }, [currentView, isAuthenticated]);
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (!isAuthenticated) return;
+      const hashView = window.location.hash.substring(1);
+      if (hashView && hashView !== currentView) {
+        setCurrentView(hashView);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [currentView, isAuthenticated]);
 
   const handleLoginSuccess = async (_token: string, userData: any, isRegistration: boolean = false) => {
     setUser(userData);
