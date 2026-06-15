@@ -766,6 +766,46 @@ router.get('/games/analytics', async (req, res) => {
   }
 });
 
+// GET /games/players
+router.get('/games/players', async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        u.id, 
+        u.name, 
+        u.email,
+        COALESCE(a.total_aviator_bets, 0) as aviator_bets_count,
+        COALESCE(a.total_aviator_wagered, 0) as aviator_wagered,
+        COALESCE(a.total_aviator_won, 0) as aviator_won,
+        (COALESCE(a.total_aviator_wagered, 0) - COALESCE(a.total_aviator_won, 0)) as aviator_pnl,
+        COALESCE(c.total_ct_bets, 0) as ct_bets_count,
+        COALESCE(c.total_ct_wagered, 0) as ct_wagered,
+        COALESCE(c.total_ct_won, 0) as ct_won,
+        (COALESCE(c.total_ct_wagered, 0) - COALESCE(c.total_ct_won, 0)) as ct_pnl,
+        (COALESCE(a.total_aviator_wagered, 0) + COALESCE(c.total_ct_wagered, 0)) as total_wagered,
+        (COALESCE(a.total_aviator_wagered, 0) + COALESCE(c.total_ct_wagered, 0) - COALESCE(a.total_aviator_won, 0) - COALESCE(c.total_ct_won, 0)) as total_pnl
+      FROM users u
+      LEFT JOIN (
+        SELECT user_id, COUNT(*) as total_aviator_bets, SUM(bet_amount) as total_aviator_wagered, SUM(win_amount) as total_aviator_won
+        FROM aviator_bets
+        GROUP BY user_id
+      ) a ON u.id = a.user_id
+      LEFT JOIN (
+        SELECT user_id, COUNT(*) as total_ct_bets, SUM(bet_amount) as total_ct_wagered, SUM(win_amount) as total_ct_won
+        FROM ct_bets
+        GROUP BY user_id
+      ) c ON u.id = c.user_id
+      WHERE COALESCE(a.total_aviator_bets, 0) > 0 OR COALESCE(c.total_ct_bets, 0) > 0
+      ORDER BY total_pnl DESC
+    `;
+    const [rows] = await pool.query(query);
+    res.json(rows);
+  } catch (err) {
+    console.error('Failed to fetch game players analytics:', err);
+    res.status(500).json({ error: 'Failed to fetch game players analytics' });
+  }
+});
+
 // PUT /games/:id
 router.put('/games/:id', async (req, res) => {
   try {
