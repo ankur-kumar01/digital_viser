@@ -15,34 +15,82 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar,
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-      maximumFractionDigits: 0
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4
     }).format(numeric || 0);
   };
 
-  const [totalPortfolioValue, setTotalPortfolioValue] = useState<number | null>(null);
+  const [basePortfolioValue, setBasePortfolioValue] = useState<number | null>(null);
+  const [livePortfolioValue, setLivePortfolioValue] = useState<number | null>(null);
+  const [globalYieldPerMs, setGlobalYieldPerMs] = useState<number>(0);
 
   useEffect(() => {
     if (!user) {
-      setTotalPortfolioValue(null);
+      setBasePortfolioValue(null);
+      setLivePortfolioValue(null);
+      setGlobalYieldPerMs(0);
       return;
     }
     
+    let isMounted = true;
+
     const loadPortfolio = async () => {
       try {
         const fdrs = await fdrAPI.getMyFDRs();
         const fdrFundsTotal = fdrs.filter((fdr: any) => fdr.status === 'active').reduce((sum: number, fdr: any) => sum + parseFloat(fdr.amount), 0);
         const interestTotal = fdrs.reduce((sum: number, fdr: any) => sum + parseFloat(fdr.accrued_interest), 0);
-        
         const balanceNum = typeof user.balance === 'string' ? parseFloat(user.balance) : (user.balance || 0);
-        setTotalPortfolioValue(balanceNum + fdrFundsTotal + interestTotal);
+        const baseTotal = balanceNum + fdrFundsTotal + interestTotal;
+
+        let totalYieldPerMs = 0;
+        let initialUnaccrued = 0;
+        const nowMs = Date.now();
+
+        fdrs.forEach((fdr: any) => {
+          if (fdr.status === 'active') {
+            const principal = parseFloat(fdr.amount);
+            const interestPercent = parseFloat(fdr.interest_percent);
+            const periodDays = parseInt(fdr.period_days, 10);
+            const yieldPerPeriod = principal * (interestPercent / 100);
+            const yieldPerMs = yieldPerPeriod / (periodDays * 24 * 60 * 60 * 1000);
+            
+            totalYieldPerMs += yieldPerMs;
+
+            const lastInstDate = fdr.last_installment_date ? fdr.last_installment_date.split('T')[0] : fdr.start_date.split('T')[0];
+            const lastInstMs = new Date(lastInstDate + 'T00:00:00').getTime();
+            if (nowMs > lastInstMs) {
+              initialUnaccrued += (nowMs - lastInstMs) * yieldPerMs;
+            }
+          }
+        });
+
+        if (isMounted) {
+          setBasePortfolioValue(baseTotal + initialUnaccrued);
+          setLivePortfolioValue(baseTotal + initialUnaccrued);
+          setGlobalYieldPerMs(totalYieldPerMs);
+        }
       } catch (err) {
-        const balanceNum = typeof user.balance === 'string' ? parseFloat(user.balance) : (user.balance || 0);
-        setTotalPortfolioValue(balanceNum);
+        if (isMounted) {
+          const balanceNum = typeof user.balance === 'string' ? parseFloat(user.balance) : (user.balance || 0);
+          setBasePortfolioValue(balanceNum);
+          setLivePortfolioValue(balanceNum);
+        }
       }
     };
     
     loadPortfolio();
+
+    return () => { isMounted = false; };
   }, [user]);
+
+  useEffect(() => {
+    if (globalYieldPerMs > 0 && livePortfolioValue !== null) {
+      const interval = setInterval(() => {
+        setLivePortfolioValue(prev => (prev || 0) + (globalYieldPerMs * 100));
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [globalYieldPerMs]);
 
   return (
     <div className="navbar-container">
@@ -101,8 +149,9 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar,
               fontFamily: 'var(--font-headings)', 
               color: 'var(--accent-secondary)',
               whiteSpace: 'nowrap',
+              fontVariantNumeric: 'tabular-nums'
             }}>
-              {user ? (totalPortfolioValue !== null ? formatBalance(totalPortfolioValue) : formatBalance(user.balance)) : '₹0'}
+              {user ? (livePortfolioValue !== null ? formatBalance(livePortfolioValue) : formatBalance(user.balance)) : '₹0'}
             </span>
           </div>
         )}

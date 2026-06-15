@@ -17,14 +17,66 @@ export const PortfolioHero: React.FC<PortfolioHeroProps> = ({ user, totalFDRFund
     else setGreeting('Good Evening');
   }, []);
 
-  const balanceNum = typeof user?.balance === 'string' ? parseFloat(user.balance) : (user?.balance || 0);
-  const totalPortfolioValue = balanceNum + totalFDRFunds + totalInterestEarned;
+  const [liveYieldIncrement, setLiveYieldIncrement] = useState(0);
 
-  const formatCurrency = (val: number) => {
+  useEffect(() => {
+    let isMounted = true;
+    const fetchFDRsAndSimulate = async () => {
+      try {
+        const { fdrAPI } = await import('../api');
+        const fdrs = await fdrAPI.getMyFDRs();
+        
+        let totalYieldPerMs = 0;
+        let initialUnaccrued = 0;
+        const nowMs = Date.now();
+
+        fdrs.forEach((fdr: any) => {
+          if (fdr.status === 'active') {
+            const principal = parseFloat(fdr.amount);
+            const interestPercent = parseFloat(fdr.interest_percent);
+            const periodDays = parseInt(fdr.period_days, 10);
+            const yieldPerPeriod = principal * (interestPercent / 100);
+            const yieldPerMs = yieldPerPeriod / (periodDays * 24 * 60 * 60 * 1000);
+            
+            totalYieldPerMs += yieldPerMs;
+
+            const lastInstDate = fdr.last_installment_date ? fdr.last_installment_date.split('T')[0] : fdr.start_date.split('T')[0];
+            const lastInstMs = new Date(lastInstDate + 'T00:00:00').getTime();
+            if (nowMs > lastInstMs) {
+              initialUnaccrued += (nowMs - lastInstMs) * yieldPerMs;
+            }
+          }
+        });
+
+        if (isMounted) {
+          setLiveYieldIncrement(initialUnaccrued);
+          
+          if (totalYieldPerMs > 0) {
+            const interval = setInterval(() => {
+              setLiveYieldIncrement(prev => prev + (totalYieldPerMs * 100));
+            }, 100);
+            return () => clearInterval(interval);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load live FDR yield for hero");
+      }
+    };
+    
+    fetchFDRsAndSimulate();
+    return () => { isMounted = false; };
+  }, []);
+
+  const balanceNum = typeof user?.balance === 'string' ? parseFloat(user.balance) : (user?.balance || 0);
+  const totalPortfolioValue = balanceNum + totalFDRFunds + totalInterestEarned + liveYieldIncrement;
+  const liveTotalInterest = totalInterestEarned + liveYieldIncrement;
+
+  const formatCurrency = (val: number, isLive = false) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-      maximumFractionDigits: 0
+      minimumFractionDigits: isLive ? 4 : 0,
+      maximumFractionDigits: isLive ? 4 : 0
     }).format(val || 0);
   };
 
@@ -64,8 +116,8 @@ export const PortfolioHero: React.FC<PortfolioHeroProps> = ({ user, totalFDRFund
             Total Portfolio Value
           </p>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, lineHeight: 1 }}>
-              {formatCurrency(totalPortfolioValue)}
+            <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+              {formatCurrency(totalPortfolioValue, true)}
             </h1>
             <div 
               style={{ 
@@ -77,11 +129,12 @@ export const PortfolioHero: React.FC<PortfolioHeroProps> = ({ user, totalFDRFund
                 padding: '4px 10px', 
                 borderRadius: '20px',
                 fontSize: '0.85rem',
-                fontWeight: 600
+                fontWeight: 600,
+                fontVariantNumeric: 'tabular-nums'
               }}
             >
               <TrendingUp size={14} />
-              <span>+{formatCurrency(totalInterestEarned)} Profit</span>
+              <span>+{formatCurrency(liveTotalInterest, true)} Profit</span>
             </div>
           </div>
         </div>
