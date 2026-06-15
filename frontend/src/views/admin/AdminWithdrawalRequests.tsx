@@ -99,20 +99,28 @@ export const AdminWithdrawalRequests: React.FC = () => {
                     <td style={{ textTransform: 'capitalize' }}>{item.payment_method.replace('_', ' ')}</td>
                     <td style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                       <div style={{ marginBottom: '4px' }}><strong>TXN:</strong> {item.transaction_id.substring(0, 12)}...</div>
-                      {item.custom_data && Object.keys(item.custom_data).length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px', padding: '8px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
-                          {Object.entries(item.custom_data).map(([key, value]: [string, any]) => (
-                            <div key={key} style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{key}:</span>
-                              {typeof value === 'string' && value.startsWith('/uploads/') ? (
-                                <a href={`/api${value}`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', fontSize: '0.8rem', wordBreak: 'break-all' }}>View Attachment</a>
-                              ) : (
-                                <span style={{ color: 'var(--text-primary)', wordBreak: 'break-all', fontWeight: 500 }}>{value}</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      {(() => {
+                        let parsedData = item.custom_data;
+                        if (typeof parsedData === 'string') {
+                          try { parsedData = JSON.parse(parsedData); } catch (e) { parsedData = null; }
+                        }
+                        if (!parsedData || typeof parsedData !== 'object' || Object.keys(parsedData).length === 0) return null;
+                        
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px', padding: '8px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
+                            {Object.entries(parsedData).map(([key, value]: [string, any]) => (
+                              <div key={key} style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{key}:</span>
+                                {typeof value === 'string' && value.startsWith('/uploads/') ? (
+                                  <a href={`/api${value}`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', fontSize: '0.8rem', wordBreak: 'break-all' }}>View Attachment</a>
+                                ) : (
+                                  <span style={{ color: 'var(--text-primary)', wordBreak: 'break-all', fontWeight: 500 }}>{value}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td style={{ textAlign: 'right', verticalAlign: 'top' }}>
                       {activeTab === 'pending' ? (
