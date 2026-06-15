@@ -671,3 +671,495 @@
     border-radius: 24px;
   }
 }
+
+/* ==========================================================================
+   COLOUR TRADING PREMIUM ENHANCEMENTS STYLING
+   ========================================================================== */
+
+/* Audio button */
+.ct-audio-btn {
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ct-audio-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ct-audio-btn:active {
+  transform: scale(0.92);
+}
+
+/* Roadmap Panel styling */
+.ct-roadmap-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 20px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.ct-roadmap-toggle {
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.88rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ct-roadmap-toggle:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ct-roadmap-content {
+  padding: 0 20px 20px 20px;
+  border-top: 1px solid var(--border-card);
+}
+
+/* Stats Progress Bars */
+.ct-stats-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 0;
+}
+
+.ct-stat-bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ct-stat-bar-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  min-width: 90px;
+}
+
+.ct-stat-bar-label.green { color: #22c55e; }
+.ct-stat-bar-label.red { color: #ef4444; }
+.ct-stat-bar-label.violet { color: #8b5cf6; }
+
+.ct-stat-bar-outer {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.ct-stat-bar-inner {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ct-stat-bar-inner.green { background: #22c55e; }
+.ct-stat-bar-inner.red { background: #ef4444; }
+.ct-stat-bar-inner.violet { background: #8b5cf6; }
+
+.ct-roadmap-info-text {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+/* Baccarat style scroll grid */
+.ct-roadmap-grid {
+  display: grid;
+  grid-template-rows: repeat(6, 26px);
+  grid-auto-flow: column;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 8px;
+  scrollbar-width: thin;
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  border: 1px solid var(--border-card);
+}
+
+.ct-roadmap-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 900;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+  animation: ct-reveal 0.35s ease forwards;
+}
+
+/* Numbers Panel */
+.ct-number-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 20px;
+  padding: 16px 20px;
+  margin-top: 12px;
+}
+
+.ct-number-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.ct-numbers-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.ct-number-btn {
+  padding: 12px 6px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.ct-number-btn:active {
+  transform: scale(0.92);
+}
+
+.ct-number-val {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.ct-number-odds {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+/* Simulated Live Bets wagers feed */
+.ct-live-wagers-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 20px;
+  padding: 16px 20px;
+  margin-top: 12px;
+}
+
+.ct-live-wagers-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border-card);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+
+.ct-live-pool-total {
+  color: #f59e0b;
+  font-weight: 800;
+}
+
+.ct-live-wagers-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 140px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.ct-live-wager-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 6px 10px;
+  border-radius: 8px;
+  border-left: 3px solid rgba(255, 255, 255, 0.1);
+  animation: ct-bet-fade-in 0.3s ease-out forwards;
+}
+
+@keyframes ct-bet-fade-in {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ct-wager-user {
+  font-weight: 600;
+  color: var(--text-primary);
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ct-wager-choice {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.ct-wager-choice-badge {
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin-left: 4px;
+  display: inline-block;
+}
+
+.ct-wager-amount {
+  font-weight: 800;
+  color: #22c55e;
+}
+
+/* Bottom Sheet Bet Slip Drawer styling */
+.ct-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+@keyframes ct-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.ct-drawer-sheet {
+  width: 100%;
+  max-width: 500px;
+  background: var(--bg-card);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  padding: 16px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: ct-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ct-drawer-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-card);
+  margin-bottom: 16px;
+}
+
+.ct-drawer-handle {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.ct-drawer-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.ct-drawer-close {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-card);
+  color: var(--text-secondary);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s;
+}
+
+.ct-drawer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 20px;
+  overflow-y: auto;
+}
+
+.ct-drawer-selection-row,
+.ct-drawer-multiplier-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ct-drawer-field-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.ct-drawer-selection-badge {
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  padding: 6px 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.ct-drawer-multipliers {
+  display: flex;
+  gap: 8px;
+}
+
+.ct-drawer-mult-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-card);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ct-drawer-mult-btn.active {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+}
+
+.ct-drawer-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-card);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.ct-drawer-total-val {
+  color: #22c55e;
+  font-size: 1.35rem;
+  font-weight: 900;
+  font-family: 'SF Mono', 'Fira Code', Monaco, monospace;
+}
+
+.ct-drawer-confirm-btn {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 14px;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+.ct-drawer-confirm-btn:active {
+  transform: scale(0.97);
+}
+
+.ct-drawer-confirm-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #4b5563 !important;
+  color: #9ca3af;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Mobile responsive styling overrides */
+@media (max-width: 480px) {
+  .ct-numbers-grid {
+    gap: 6px;
+  }
+  .ct-number-btn {
+    padding: 8px 4px;
+    border-radius: 10px;
+  }
+  .ct-number-val {
+    font-size: 1.05rem;
+  }
+  .ct-number-odds {
+    font-size: 0.58rem;
+  }
+  .ct-roadmap-grid {
+    grid-template-rows: repeat(6, 22px);
+    gap: 4px;
+  }
+  .ct-roadmap-dot {
+    width: 22px;
+    height: 22px;
+    font-size: 0.65rem;
+  }
+  .ct-live-wagers-panel {
+    padding: 12px 14px;
+  }
+  .ct-live-wager-row {
+    font-size: 0.72rem;
+    padding: 4px 6px;
+  }
+}
+
