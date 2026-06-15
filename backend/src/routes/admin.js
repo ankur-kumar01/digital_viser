@@ -956,6 +956,92 @@ router.delete('/big-wins/:id', async (req, res) => {
   }
 });
 
+// --- GAME SIMULATIONS CRUD ---
+
+// Aviator Chats
+router.get('/simulations/aviator-chats', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM simulated_aviator_chats ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+router.post('/simulations/aviator-chats', async (req, res) => {
+  const { user_name, message_type, message_text } = req.body;
+  try {
+    const [result] = await pool.query('INSERT INTO simulated_aviator_chats (user_name, message_type, message_text) VALUES (?, ?, ?)', [user_name, message_type, message_text]);
+    res.json({ success: true, id: result.insertId });
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+router.put('/simulations/aviator-chats/:id', async (req, res) => {
+  const { user_name, message_type, message_text } = req.body;
+  try {
+    await pool.query('UPDATE simulated_aviator_chats SET user_name=?, message_type=?, message_text=? WHERE id=?', [user_name, message_type, message_text, req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+router.delete('/simulations/aviator-chats/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM simulated_aviator_chats WHERE id=?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+
+// Aviator Bets
+router.get('/simulations/aviator-bets', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM simulated_aviator_bets ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+router.post('/simulations/aviator-bets', async (req, res) => {
+  const { user_name, bet_amount, target_multiplier } = req.body;
+  try {
+    const [result] = await pool.query('INSERT INTO simulated_aviator_bets (user_name, bet_amount, target_multiplier) VALUES (?, ?, ?)', [user_name, bet_amount, target_multiplier]);
+    res.json({ success: true, id: result.insertId });
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+router.put('/simulations/aviator-bets/:id', async (req, res) => {
+  const { user_name, bet_amount, target_multiplier } = req.body;
+  try {
+    await pool.query('UPDATE simulated_aviator_bets SET user_name=?, bet_amount=?, target_multiplier=? WHERE id=?', [user_name, bet_amount, target_multiplier, req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+router.delete('/simulations/aviator-bets/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM simulated_aviator_bets WHERE id=?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+
+// Colour Trading Bets
+router.get('/simulations/colour-trading-bets', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM simulated_colour_trading_bets ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+router.post('/simulations/colour-trading-bets', async (req, res) => {
+  const { user_name, bet_amount, color_choice } = req.body;
+  try {
+    const [result] = await pool.query('INSERT INTO simulated_colour_trading_bets (user_name, bet_amount, color_choice) VALUES (?, ?, ?)', [user_name, bet_amount, color_choice]);
+    res.json({ success: true, id: result.insertId });
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+router.put('/simulations/colour-trading-bets/:id', async (req, res) => {
+  const { user_name, bet_amount, color_choice } = req.body;
+  try {
+    await pool.query('UPDATE simulated_colour_trading_bets SET user_name=?, bet_amount=?, color_choice=? WHERE id=?', [user_name, bet_amount, color_choice, req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+router.delete('/simulations/colour-trading-bets/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM simulated_colour_trading_bets WHERE id=?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+
 // GET /games
 router.get('/games', async (req, res) => {
   try {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
-import { getToken } from '../../../api';
+import { getToken, gamesAPI } from '../../../api';
 import './ColourTradingGame.css';
 
 interface Props {
@@ -55,7 +55,12 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
   const [multiplierVal, setMultiplierVal] = useState(1);
   const [roadmapExpanded, setRoadmapExpanded] = useState(false);
   const [liveBets, setLiveBets] = useState<any[]>([]);
+  const [dbBets, setDbBets] = useState<any[]>([]);
   const [poolTotal, setPoolTotal] = useState(18500);
+
+  useEffect(() => {
+    gamesAPI.getColourTradingBets().then(setDbBets).catch(console.error);
+  }, []);
 
   // Sound persisted state toggle
   const [isMuted, setIsMuted] = useState(() => {
@@ -277,13 +282,24 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
     if (!isBettingPhase) return;
     
     const interval = setInterval(() => {
-      const names = ['Rahul88', 'Priya_M', 'AmanK', 'Raj_007', 'NehaS', 'Vikas12', 'Simran_X', 'AmitB', 'Vijay_Pro', 'SoniaK'];
-      const choices = ['green', 'red', 'violet', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-      const amounts = [10, 50, 100, 200, 500, 1000];
-      
-      const randomName = names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 100);
-      const randomChoice = choices[Math.floor(Math.random() * choices.length)];
-      const randomAmount = amounts[Math.floor(Math.random() * amounts.length)];
+      let randomName = '';
+      let randomChoice = '';
+      let randomAmount = 0;
+
+      if (dbBets.length > 0) {
+        const randomBet = dbBets[Math.floor(Math.random() * dbBets.length)];
+        randomName = randomBet.user_name;
+        randomChoice = randomBet.color_choice;
+        randomAmount = randomBet.bet_amount;
+      } else {
+        const names = ['Rahul88', 'Priya_M', 'AmanK', 'Raj_007', 'NehaS', 'Vikas12', 'Simran_X', 'AmitB', 'Vijay_Pro', 'SoniaK'];
+        const choices = ['green', 'red', 'violet', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        const amounts = [10, 50, 100, 200, 500, 1000];
+        
+        randomName = names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 100);
+        randomChoice = choices[Math.floor(Math.random() * choices.length)];
+        randomAmount = amounts[Math.floor(Math.random() * amounts.length)];
+      }
       
       setLiveBets(prev => [
         {
@@ -299,7 +315,7 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
     }, 1100 + Math.random() * 900);
     
     return () => clearInterval(interval);
-  }, [isBettingPhase]);
+  }, [isBettingPhase, dbBets]);
 
   // Reset simulated pool on new round starting
   useEffect(() => {

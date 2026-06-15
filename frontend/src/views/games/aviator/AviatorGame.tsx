@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
-import { getToken } from '../../../api';
+import { getToken, gamesAPI } from '../../../api';
 import './AviatorGame.css';
 
 interface Props {
@@ -165,6 +165,13 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
   
   // Simulated Players State
   const [simPlayers, setSimPlayers] = useState<any[]>([]);
+  const [dbChats, setDbChats] = useState<any[]>([]);
+  const [dbBets, setDbBets] = useState<any[]>([]);
+
+  useEffect(() => {
+    gamesAPI.getAviatorChats().then(setDbChats).catch(console.error);
+    gamesAPI.getAviatorBets().then(setDbBets).catch(console.error);
+  }, []);
 
   // Mobile drawer, toast, and cashout lock states
   const [toast, setToast] = useState<string | null>(null);
@@ -212,16 +219,26 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
   const addSimulatedChatMessage = useCallback((phraseType: 'WAITING' | 'FLYING' | 'CRASH_LOW' | 'CRASH_MED' | 'CRASH_HIGH') => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const botUser = BOT_USERNAMES[Math.floor(Math.random() * BOT_USERNAMES.length)];
     
-    let phrases: string[] = [];
-    if (phraseType === 'WAITING') phrases = LOBBY_CHAT_PHRASES;
-    else if (phraseType === 'FLYING') phrases = FLIGHT_CHAT_PHRASES;
-    else if (phraseType === 'CRASH_LOW') phrases = CRASH_LOW_PHRASES;
-    else if (phraseType === 'CRASH_MED') phrases = CRASH_MED_PHRASES;
-    else if (phraseType === 'CRASH_HIGH') phrases = CRASH_HIGH_PHRASES;
+    // Use DB data if available, fallback to hardcoded
+    let text = '';
+    let botUser = '';
     
-    const text = phrases[Math.floor(Math.random() * phrases.length)];
+    const dbPhrases = dbChats.filter(c => c.message_type === phraseType);
+    if (dbPhrases.length > 0) {
+      const randomChat = dbPhrases[Math.floor(Math.random() * dbPhrases.length)];
+      text = randomChat.message_text;
+      botUser = randomChat.user_name;
+    } else {
+      botUser = BOT_USERNAMES[Math.floor(Math.random() * BOT_USERNAMES.length)];
+      let phrases: string[] = [];
+      if (phraseType === 'WAITING') phrases = LOBBY_CHAT_PHRASES;
+      else if (phraseType === 'FLYING') phrases = FLIGHT_CHAT_PHRASES;
+      else if (phraseType === 'CRASH_LOW') phrases = CRASH_LOW_PHRASES;
+      else if (phraseType === 'CRASH_MED') phrases = CRASH_MED_PHRASES;
+      else if (phraseType === 'CRASH_HIGH') phrases = CRASH_HIGH_PHRASES;
+      text = phrases[Math.floor(Math.random() * phrases.length)];
+    }
     
     setChatMessages(prev => [
       ...prev,
@@ -233,7 +250,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         type: 'bot'
       }
     ].slice(-50));
-  }, []);
+  }, [dbChats]);
 
   const scheduleFlyingComments = useCallback(() => {
     if (gameStateRef.current !== 'FLYING') return;
@@ -730,18 +747,35 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
 
   // Generate simulated players
   const generateSimulatedPlayers = () => {
-    const names = ['Rahul88', 'Priya_M', 'AmanK', 'Raj_007', 'NehaS', 'Vikas12', 'Simran_X', 'AmitB'];
-    const count = Math.floor(Math.random() * 4) + 4; // 4 to 7 players
+    const count = Math.floor(Math.random() * 5) + 4; // 4 to 8 players
     const players = [];
-    for (let i = 0; i < count; i++) {
-      players.push({
-        id: i,
-        name: names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 100),
-        bet: QUICK_BETS[Math.floor(Math.random() * QUICK_BETS.length)],
-        targetMult: 1.2 + Math.random() * 8.0, // random cashout target
-        cashedOut: false,
-        winAmount: 0
-      });
+    
+    // Use DB bets if available
+    if (dbBets.length > 0) {
+      const shuffledBets = [...dbBets].sort(() => 0.5 - Math.random());
+      const selectedBets = shuffledBets.slice(0, count);
+      for (let i = 0; i < selectedBets.length; i++) {
+        players.push({
+          id: i,
+          name: selectedBets[i].user_name,
+          bet: selectedBets[i].bet_amount,
+          targetMult: selectedBets[i].target_multiplier,
+          cashedOut: false,
+          winAmount: 0
+        });
+      }
+    } else {
+      const names = ['Rahul88', 'Priya_M', 'AmanK', 'Raj_007', 'NehaS', 'Vikas12', 'Simran_X', 'AmitB'];
+      for (let i = 0; i < count; i++) {
+        players.push({
+          id: i,
+          name: names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 100),
+          bet: QUICK_BETS[Math.floor(Math.random() * QUICK_BETS.length)],
+          targetMult: 1.2 + Math.random() * 8.0, // random cashout target
+          cashedOut: false,
+          winAmount: 0
+        });
+      }
     }
     setSimPlayers(players);
   };

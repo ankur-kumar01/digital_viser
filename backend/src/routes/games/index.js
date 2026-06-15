@@ -28,6 +28,36 @@ router.get('/big-wins', async (req, res) => {
   }
 });
 
+// GET /api/games/simulations/aviator-chats
+router.get('/simulations/aviator-chats', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM simulated_aviator_chats');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch aviator chats' });
+  }
+});
+
+// GET /api/games/simulations/aviator-bets
+router.get('/simulations/aviator-bets', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM simulated_aviator_bets');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch aviator bets' });
+  }
+});
+
+// GET /api/games/simulations/colour-trading-bets
+router.get('/simulations/colour-trading-bets', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM simulated_colour_trading_bets');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch colour trading bets' });
+  }
+});
+
 // Mount game-specific routes
 router.use('/aviator', aviatorRoutes);
 router.use('/colourtrading', colourTradingRoutes);
