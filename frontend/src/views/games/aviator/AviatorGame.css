@@ -928,3 +928,217 @@
 .av-audio-btn:active {
   transform: scale(0.92);
 }
+
+/* ==========================================================================
+   LIVE CHAT & TAB STYLING
+   ========================================================================== */
+
+/* Tab Buttons Styling */
+.av-tabs-header {
+  display: flex;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  padding: 4px;
+  margin-bottom: 12px;
+}
+
+.av-tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.av-tab-btn.active {
+  background: var(--bg-secondary);
+  color: var(--accent-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.av-drawer-tabs {
+  display: flex;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  padding: 4px;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.av-drawer-tab-btn {
+  flex: 1;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.av-drawer-tab-btn.active {
+  background: var(--bg-secondary);
+  color: var(--accent-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Chat container inside sidebar / drawer */
+.av-chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 380px;
+  justify-content: space-between;
+}
+
+.av-drawer-content .av-chat-container {
+  height: 45vh; /* Responsive height in mobile bottom sheet */
+}
+
+.av-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+  scrollbar-width: thin;
+}
+
+.av-chat-msg-row {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 8px 12px;
+  border-radius: 12px;
+  border-left: 3px solid transparent;
+  animation: av-chat-fade-in 0.25s ease-out forwards;
+}
+
+@keyframes av-chat-fade-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.av-chat-msg-row.user {
+  background: rgba(245, 158, 11, 0.05);
+  border-left: 3px solid var(--accent-primary);
+}
+
+.av-chat-msg-row.system {
+  background: rgba(59, 130, 246, 0.05);
+  border-left: 3px solid #3b82f6;
+  font-style: italic;
+}
+
+.av-chat-msg-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.av-chat-username {
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.av-chat-time {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.av-chat-text {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.av-chat-msg-row.system .av-chat-text {
+  color: var(--text-secondary);
+}
+
+.av-chat-tag-you {
+  font-size: 0.6rem;
+  background: var(--accent-primary);
+  color: #000;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.av-chat-tag-system {
+  font-size: 0.6rem;
+  background: #3b82f6;
+  color: #fff;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+/* Chat Input Form */
+.av-chat-input-form {
+  display: flex;
+  gap: 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.av-chat-input-form input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.av-chat-input-form button {
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #d97706 100%);
+  color: #000;
+  border: none;
+  font-weight: 800;
+  font-size: 0.8rem;
+  padding: 0 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.av-chat-input-form button:hover:not(:disabled) {
+  transform: scale(1.03);
+}
+
+.av-chat-input-form button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+}
+

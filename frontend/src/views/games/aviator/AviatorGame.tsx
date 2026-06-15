@@ -13,6 +13,77 @@ interface Props {
 const QUICK_BETS = [5, 10, 20, 50, 100, 200, 500];
 const CONFETTI_COLORS = ['#22c55e', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
+const BOT_USERNAMES = [
+  'AviatorKing', 'Sanjay_99', 'RocketGirl', 'MaxBet_Pro', 'LuckyPriya', 
+  'Challenger', 'FlightPro', 'WinSeeker', 'StormRider', 'HyperFlyer', 
+  'RedLine', 'RiskTaker77', 'Amit_Aviator', 'Anya_Singh', 'GamerBoy9'
+];
+
+const LOBBY_CHAT_PHRASES = [
+  "ready for takeoff! 🚀",
+  "let's go 5x this round",
+  "putting 200 ₹ this time",
+  "anyone holding for 10x?",
+  "last round was quick, hope this one stays longer",
+  "all in on next round!",
+  "feeling lucky today 🍀",
+  "let's make some money!",
+  "auto cashout set at 2.0"
+];
+
+const FLIGHT_CHAT_PHRASES = [
+  "looking good! keep flying ✈️",
+  "cashout guys! 2x is good",
+  "OMG 4x already!! 📈",
+  "to the moon! 🚀🚀",
+  "who is still in?",
+  "holding tight...",
+  "cashed out! safe play",
+  "this plane is going high!"
+];
+
+const CRASH_LOW_PHRASES = [
+  "oof, terrible crash",
+  "why so early??",
+  "ouch! 1.1x is brutal",
+  "flew away instantly 😭",
+  "lost that one",
+  "scary start",
+  "rip bet"
+];
+
+const CRASH_MED_PHRASES = [
+  "phew, cashed out at 2.1x",
+  "not bad, got a decent profit",
+  "could be better but I'll take it",
+  "saved by auto cashout",
+  "missed it by a second!",
+  "fair enough, next round"
+];
+
+const CRASH_HIGH_PHRASES = [
+  "WOW! 15x is huge!!",
+  "what an insane run 🚀",
+  "who got the 10x plus?",
+  "amazing round!",
+  "should have held longer",
+  "that was legendary!"
+];
+
+const getUserColor = (username: string) => {
+  if (username === 'You' || username === 'System') return 'var(--accent-primary)';
+  const colors = [
+    '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', 
+    '#f43f5e', '#06b6d4', '#14b8a6', '#a855f7', '#fb923c'
+  ];
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) {
+    hash = username.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+};
+
 export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => {
   const [betAmount, setBetAmount] = useState('100');
   
@@ -41,6 +112,125 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
   const [showPlayersDrawer, setShowPlayersDrawer] = useState(false);
   const [isCashoutLoading, setIsCashoutLoading] = useState(false);
   const isCashoutLoadingRef = useRef(false);
+
+  // Tabs & Live Chat states
+  const [activeTab, setActiveTab] = useState<'players' | 'chat'>('players');
+  const [userMessage, setUserMessage] = useState('');
+  const [chatMessages, setChatMessages] = useState<any[]>(() => {
+    const initial = [];
+    const now = new Date();
+    for (let i = 4; i >= 0; i--) {
+      const msgTime = new Date(now.getTime() - i * 60000);
+      const timeStr = msgTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const botUser = BOT_USERNAMES[i % BOT_USERNAMES.length];
+      
+      let text = '';
+      if (i === 4) text = "Welcome to Aviator Live Chat! ✈️ Please keep it friendly.";
+      else if (i === 3) text = "last round was crazy, did anyone hold till 10x?";
+      else if (i === 2) text = "cashed out too early last time, playing safe now.";
+      else if (i === 1) text = "let's go guys!";
+      else text = "Next round looks promising!";
+      
+      initial.push({
+        id: `init-${i}`,
+        username: i === 4 ? 'System' : botUser,
+        text,
+        time: timeStr,
+        type: i === 4 ? 'system' : 'bot'
+      });
+    }
+    return initial;
+  });
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatTimeoutsRef = useRef<any[]>([]);
+  const commentedMilestonesRef = useRef<Record<number, boolean>>({});
+
+  const clearChatTimeouts = () => {
+    chatTimeoutsRef.current.forEach(t => clearTimeout(t));
+    chatTimeoutsRef.current = [];
+  };
+
+  const addSimulatedChatMessage = useCallback((phraseType: 'WAITING' | 'FLYING' | 'CRASH_LOW' | 'CRASH_MED' | 'CRASH_HIGH') => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const botUser = BOT_USERNAMES[Math.floor(Math.random() * BOT_USERNAMES.length)];
+    
+    let phrases: string[] = [];
+    if (phraseType === 'WAITING') phrases = LOBBY_CHAT_PHRASES;
+    else if (phraseType === 'FLYING') phrases = FLIGHT_CHAT_PHRASES;
+    else if (phraseType === 'CRASH_LOW') phrases = CRASH_LOW_PHRASES;
+    else if (phraseType === 'CRASH_MED') phrases = CRASH_MED_PHRASES;
+    else if (phraseType === 'CRASH_HIGH') phrases = CRASH_HIGH_PHRASES;
+    
+    const text = phrases[Math.floor(Math.random() * phrases.length)];
+    
+    setChatMessages(prev => [
+      ...prev,
+      {
+        id: Math.random().toString(36).substring(2, 9),
+        username: botUser,
+        text,
+        time: timeStr,
+        type: 'bot'
+      }
+    ].slice(-50));
+  }, []);
+
+  const handleSendMessage = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!userMessage.trim()) return;
+    
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    const newUserMsg = {
+      id: Math.random().toString(36).substring(2, 9),
+      username: user?.name || 'You',
+      text: userMessage.trim(),
+      time: timeStr,
+      type: 'user'
+    };
+    
+    setChatMessages(prev => [...prev, newUserMsg].slice(-50));
+    setUserMessage('');
+    
+    // Auto bot response chance
+    if (Math.random() < 0.6) {
+      const replyDelay = 1000 + Math.random() * 1500;
+      const t = setTimeout(() => {
+        const botUser = BOT_USERNAMES[Math.floor(Math.random() * BOT_USERNAMES.length)];
+        const botReplies = [
+          `Nice! @${user?.name || 'You'}`,
+          `agree with that!`,
+          `let's win this together`,
+          `nice! 👍`,
+          `let's see what happens next`,
+          `🤞 crossing fingers`
+        ];
+        const text = botReplies[Math.floor(Math.random() * botReplies.length)];
+        
+        setChatMessages(prev => [
+          ...prev,
+          {
+            id: Math.random().toString(36).substring(2, 9),
+            username: botUser,
+            text,
+            time: timeStr,
+            type: 'bot'
+          }
+        ].slice(-50));
+      }, replyDelay);
+      chatTimeoutsRef.current.push(t);
+    }
+  };
+
+  // Scroll chat messages to bottom on updates
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollTop = chatEndRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
 
   // Toast Helper
   const showToast = useCallback((msg: string) => {
@@ -513,6 +703,12 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         if (animationRef.current) cancelAnimationFrame(animationRef.current);
         drawFlightPath(0, 1.0, false);
         stopEngineSound();
+
+        // Lobby chat comments triggers
+        clearChatTimeouts();
+        const t1 = setTimeout(() => addSimulatedChatMessage('WAITING'), 1500 + Math.random() * 1000);
+        const t2 = setTimeout(() => addSimulatedChatMessage('WAITING'), 4500 + Math.random() * 1000);
+        chatTimeoutsRef.current.push(t1, t2);
       } 
       else if (data.state === 'FLYING') {
         startTimeRef.current = data.startTime;
@@ -539,6 +735,15 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         playCrashSound();
         
         refreshUser();
+
+        // Crash Chat comments triggers based on multiplier
+        clearChatTimeouts();
+        const crashType = data.crashPoint < 1.5 ? 'CRASH_LOW' : data.crashPoint < 5.0 ? 'CRASH_MED' : 'CRASH_HIGH';
+        const t1 = setTimeout(() => addSimulatedChatMessage(crashType), 300 + Math.random() * 300);
+        const t2 = setTimeout(() => {
+          if (Math.random() < 0.7) addSimulatedChatMessage(crashType);
+        }, 1200 + Math.random() * 600);
+        chatTimeoutsRef.current.push(t1, t2);
       }
     });
 
@@ -552,10 +757,12 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
     return () => {
       socket.disconnect();
       stopEngineSound();
+      clearChatTimeouts();
     };
   }, []);
 
   const startFlightAnimation = () => {
+    commentedMilestonesRef.current = {};
     const animate = () => {
       if (gameStateRef.current !== 'FLYING') return;
       
@@ -566,6 +773,16 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
       multiplierRef.current = currentMult;
       drawFlightPath(elapsed, currentMult, false);
       updateEnginePitch(currentMult);
+
+      // Flying chat triggers
+      if (currentMult >= 2.0 && !commentedMilestonesRef.current[2]) {
+        commentedMilestonesRef.current[2] = true;
+        if (Math.random() < 0.5) addSimulatedChatMessage('FLYING');
+      }
+      if (currentMult >= 5.0 && !commentedMilestonesRef.current[5]) {
+        commentedMilestonesRef.current[5] = true;
+        if (Math.random() < 0.6) addSimulatedChatMessage('FLYING');
+      }
       
       // Auto cashout logic
       if (autoCashoutRef.current && hasActiveBetRef.current && !cashoutSuccessRef.current) {
@@ -666,7 +883,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
           </button>
 
           {/* Live Players Badge Button for Mobile Drawer */}
-          <button className="av-live-badge-btn" onClick={() => setShowPlayersDrawer(true)}>
+          <button className="av-live-badge-btn" onClick={() => { setActiveTab('players'); setShowPlayersDrawer(true); }}>
             <span className="av-live-dot" />
             <span>Live: {simPlayers.length}</span>
           </button>
@@ -769,51 +986,94 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
 
         {/* Live Multiplayer Sidebar (visible on desktop) */}
         <div className="av-sidebar">
-          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-            <span>Live Players ({simPlayers.length})</span>
+          <div className="av-tabs-header">
+            <button 
+              className={`av-tab-btn ${activeTab === 'players' ? 'active' : ''}`}
+              onClick={() => setActiveTab('players')}
+            >
+              👥 Players ({simPlayers.length + 1})
+            </button>
+            <button 
+              className={`av-tab-btn ${activeTab === 'chat' ? 'active' : ''}`}
+              onClick={() => setActiveTab('chat')}
+            >
+              💬 Chat
+            </button>
           </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', maxHeight: '400px' }}>
-            {/* Player Row Template */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: cashoutSuccess ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-tertiary)', borderRadius: '12px', border: cashoutSuccess ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid transparent', transition: 'all 0.3s' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>
-                  {user?.name?.substring(0, 2).toUpperCase() || 'YOU'}
-                </div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: cashoutSuccess ? '#22c55e' : 'var(--text-primary)' }}>You</div>
-              </div>
-              {hasActiveBet && !cashoutSuccess && (
-                <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>₹{betAmount}</div>
-              )}
-              {cashoutSuccess && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#22c55e', fontWeight: 700 }}>{((winAmount || parseFloat(betAmount)*multiplier) / parseFloat(betAmount)).toFixed(2)}x</div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#22c55e' }}>₹{winAmount.toFixed(2)}</div>
-                </div>
-              )}
-            </div>
 
-            {/* Simulated Players */}
-            {simPlayers.map((p, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: p.cashedOut ? 'rgba(34, 197, 94, 0.1)' : 'var(--bg-tertiary)', borderRadius: '12px', transition: 'all 0.3s' }}>
+          {activeTab === 'players' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', maxHeight: '380px' }}>
+              {/* Player Row Template */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: cashoutSuccess ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-tertiary)', borderRadius: '12px', border: cashoutSuccess ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid transparent', transition: 'all 0.3s' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)' }}>
-                    {p.name.substring(0, 2).toUpperCase()}
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>
+                    {user?.name?.substring(0, 2).toUpperCase() || 'YOU'}
                   </div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: p.cashedOut ? '#22c55e' : 'var(--text-secondary)' }}>{p.name}</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: cashoutSuccess ? '#22c55e' : 'var(--text-primary)' }}>You</div>
                 </div>
-                {!p.cashedOut && (
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>₹{p.bet}</div>
+                {hasActiveBet && !cashoutSuccess && (
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>₹{betAmount}</div>
                 )}
-                {p.cashedOut && (
+                {cashoutSuccess && (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                     <div style={{ fontSize: '0.7rem', color: '#22c55e', fontWeight: 700 }}>{p.targetMult.toFixed(2)}x</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#22c55e' }}>₹{p.winAmount.toFixed(2)}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#22c55e', fontWeight: 700 }}>{((winAmount || parseFloat(betAmount)*multiplier) / parseFloat(betAmount)).toFixed(2)}x</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#22c55e' }}>₹{winAmount.toFixed(2)}</div>
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+
+              {/* Simulated Players */}
+              {simPlayers.map((p, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: p.cashedOut ? 'rgba(34, 197, 94, 0.1)' : 'var(--bg-tertiary)', borderRadius: '12px', transition: 'all 0.3s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                      {p.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: p.cashedOut ? '#22c55e' : 'var(--text-secondary)' }}>{p.name}</div>
+                  </div>
+                  {!p.cashedOut && (
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>₹{p.bet}</div>
+                  )}
+                  {p.cashedOut && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#22c55e', fontWeight: 700 }}>{p.targetMult.toFixed(2)}x</div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#22c55e' }}>₹{p.winAmount.toFixed(2)}</div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="av-chat-container">
+              <div className="av-chat-messages" ref={chatEndRef}>
+                {chatMessages.map((msg) => (
+                  <div key={msg.id} className={`av-chat-msg-row ${msg.type}`}>
+                    <div className="av-chat-msg-meta">
+                      <span className="av-chat-username" style={{ color: getUserColor(msg.username) }}>
+                        {msg.username}
+                        {msg.type === 'user' && <span className="av-chat-tag-you">YOU</span>}
+                        {msg.type === 'system' && <span className="av-chat-tag-system">SYSTEM</span>}
+                      </span>
+                      <span className="av-chat-time">{msg.time}</span>
+                    </div>
+                    <div className="av-chat-text">{msg.text}</div>
+                  </div>
+                ))}
+                <div ref={chatEndRef} />
+              </div>
+              
+              <form onSubmit={handleSendMessage} className="av-chat-input-form">
+                <input 
+                  type="text" 
+                  placeholder="Chat with players..." 
+                  value={userMessage}
+                  onChange={(e) => setUserMessage(e.target.value)}
+                  maxLength={80}
+                />
+                <button type="submit" disabled={!userMessage.trim()}>Send</button>
+              </form>
+            </div>
+          )}
         </div>
       </div>
 
@@ -861,55 +1121,102 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
           <div className="av-drawer-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="av-drawer-header">
               <div className="av-drawer-handle" />
-              <h3 className="av-drawer-title">Live Betting Feed</h3>
+              <div className="av-drawer-tabs">
+                <button 
+                  className={`av-drawer-tab-btn ${activeTab === 'players' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('players')}
+                >
+                  👥 Players ({simPlayers.length + 1})
+                </button>
+                <button 
+                  className={`av-drawer-tab-btn ${activeTab === 'chat' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('chat')}
+                >
+                  💬 Live Chat
+                </button>
+              </div>
               <button className="av-drawer-close" onClick={() => setShowPlayersDrawer(false)}>✕</button>
             </div>
             
             <div className="av-drawer-content">
-              {/* You Row */}
-              <div className="av-drawer-row" style={{
-                background: cashoutSuccess ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-tertiary)',
-                borderColor: cashoutSuccess ? 'rgba(34, 197, 94, 0.3)' : 'transparent',
-                borderWidth: '1px',
-                borderStyle: 'solid'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div className="av-avatar-you">
-                    {user?.name?.substring(0, 2).toUpperCase() || 'YO'}
+              {activeTab === 'players' ? (
+                <>
+                  {/* You Row */}
+                  <div className="av-drawer-row" style={{
+                    background: cashoutSuccess ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-tertiary)',
+                    borderColor: cashoutSuccess ? 'rgba(34, 197, 94, 0.3)' : 'transparent',
+                    borderWidth: '1px',
+                    borderStyle: 'solid'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div className="av-avatar-you">
+                        {user?.name?.substring(0, 2).toUpperCase() || 'YO'}
+                      </div>
+                      <div className="av-row-name you">You</div>
+                    </div>
+                    {hasActiveBet && !cashoutSuccess && (
+                      <div className="av-row-bet">₹{betAmount}</div>
+                    )}
+                    {cashoutSuccess && (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <div className="av-row-mult">{((winAmount || parseFloat(betAmount)*multiplier) / parseFloat(betAmount)).toFixed(2)}x</div>
+                        <div className="av-row-win">₹{winAmount.toFixed(2)}</div>
+                      </div>
+                    )}
                   </div>
-                  <div className="av-row-name you">You</div>
-                </div>
-                {hasActiveBet && !cashoutSuccess && (
-                  <div className="av-row-bet">₹{betAmount}</div>
-                )}
-                {cashoutSuccess && (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                    <div className="av-row-mult">{((winAmount || parseFloat(betAmount)*multiplier) / parseFloat(betAmount)).toFixed(2)}x</div>
-                    <div className="av-row-win">₹{winAmount.toFixed(2)}</div>
-                  </div>
-                )}
-              </div>
 
-              {/* Sim Players */}
-              {simPlayers.map((p, i) => (
-                <div key={i} className={`av-drawer-row ${p.cashedOut ? 'win' : ''}`}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className="av-avatar-sim">
-                      {p.name.substring(0, 2).toUpperCase()}
+                  {/* Sim Players */}
+                  {simPlayers.map((p, i) => (
+                    <div key={i} className={`av-drawer-row ${p.cashedOut ? 'win' : ''}`}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="av-avatar-sim">
+                          {p.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="av-row-name">{p.name}</div>
+                      </div>
+                      {!p.cashedOut && (
+                        <div className="av-row-bet sim">₹{p.bet}</div>
+                      )}
+                      {p.cashedOut && (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <div className="av-row-mult">{p.targetMult.toFixed(2)}x</div>
+                          <div className="av-row-win">₹{p.winAmount.toFixed(2)}</div>
+                        </div>
+                      )}
                     </div>
-                    <div className="av-row-name">{p.name}</div>
+                  ))}
+                </>
+              ) : (
+                <div className="av-chat-container">
+                  <div className="av-chat-messages" ref={chatEndRef}>
+                    {chatMessages.map((msg) => (
+                      <div key={msg.id} className={`av-chat-msg-row ${msg.type}`}>
+                        <div className="av-chat-msg-meta">
+                          <span className="av-chat-username" style={{ color: getUserColor(msg.username) }}>
+                            {msg.username}
+                            {msg.type === 'user' && <span className="av-chat-tag-you">YOU</span>}
+                            {msg.type === 'system' && <span className="av-chat-tag-system">SYSTEM</span>}
+                          </span>
+                          <span className="av-chat-time">{msg.time}</span>
+                        </div>
+                        <div className="av-chat-text">{msg.text}</div>
+                      </div>
+                    ))}
+                    <div ref={chatEndRef} />
                   </div>
-                  {!p.cashedOut && (
-                    <div className="av-row-bet sim">₹{p.bet}</div>
-                  )}
-                  {p.cashedOut && (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                      <div className="av-row-mult">{p.targetMult.toFixed(2)}x</div>
-                      <div className="av-row-win">₹{p.winAmount.toFixed(2)}</div>
-                    </div>
-                  )}
+                  
+                  <form onSubmit={handleSendMessage} className="av-chat-input-form">
+                    <input 
+                      type="text" 
+                      placeholder="Chat with players..." 
+                      value={userMessage}
+                      onChange={(e) => setUserMessage(e.target.value)}
+                      maxLength={80}
+                    />
+                    <button type="submit" disabled={!userMessage.trim()}>Send</button>
+                  </form>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
