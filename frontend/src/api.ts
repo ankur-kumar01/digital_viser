@@ -179,6 +179,7 @@ export const adminAPI = {
   updateProfile: (data: any) => adminRequest('PUT', '/admin/profile', data),
   deleteUser: (id: number) => adminRequest('DELETE', `/admin/users/${id}`),
   getGames: () => adminRequest('GET', '/admin/games'),
+  getGameAnalytics: () => adminRequest('GET', '/admin/games/analytics'),
   updateGameStatus: (id: number, is_active: boolean) => adminRequest('PUT', `/admin/games/${id}`, { is_active }),
   getSettings: () => adminRequest('GET', '/admin/settings'),
   updateSettings: (settings: any) => adminRequest('PUT', '/admin/settings', { settings }),

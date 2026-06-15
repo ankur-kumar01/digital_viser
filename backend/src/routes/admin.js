@@ -701,6 +701,71 @@ router.get('/games', async (req, res) => {
   }
 });
 
+// GET /games/analytics
+router.get('/games/analytics', async (req, res) => {
+  try {
+    // Aviator stats
+    const [aviatorBets] = await pool.query(`
+      SELECT 
+        COUNT(*) as count, 
+        SUM(bet_amount) as volume, 
+        COUNT(DISTINCT user_id) as unique_players,
+        COUNT(DISTINCT CASE WHEN DATE(created_at) = CURDATE() THEN user_id END) as daily_players 
+      FROM aviator_bets
+    `);
+    const [aviatorWins] = await pool.query('SELECT COUNT(*) as count, SUM(win_amount) as volume FROM aviator_bets WHERE status = "cashed_out"');
+    const [aviatorLosses] = await pool.query('SELECT COUNT(*) as count FROM aviator_bets WHERE status = "lost"');
+
+    // Colour Trading stats
+    const [ctBets] = await pool.query(`
+      SELECT 
+        COUNT(*) as count, 
+        SUM(bet_amount) as volume, 
+        COUNT(DISTINCT user_id) as unique_players,
+        COUNT(DISTINCT CASE WHEN DATE(created_at) = CURDATE() THEN user_id END) as daily_players 
+      FROM ct_bets
+    `);
+    const [ctWins] = await pool.query('SELECT COUNT(*) as count, SUM(win_amount) as volume FROM ct_bets WHERE status = "won"');
+    const [ctLosses] = await pool.query('SELECT COUNT(*) as count FROM ct_bets WHERE status = "lost"');
+
+    const aviator = {
+      bets_count: aviatorBets[0].count || 0,
+      bets_volume: parseFloat(aviatorBets[0].volume) || 0,
+      unique_players: aviatorBets[0].unique_players || 0,
+      daily_players: aviatorBets[0].daily_players || 0,
+      wins_count: aviatorWins[0].count || 0,
+      wins_volume: parseFloat(aviatorWins[0].volume) || 0,
+      losses_count: aviatorLosses[0].count || 0,
+      pnl: (parseFloat(aviatorBets[0].volume) || 0) - (parseFloat(aviatorWins[0].volume) || 0),
+      avg_bet: (parseFloat(aviatorBets[0].volume) || 0) / (aviatorBets[0].count || 1)
+    };
+
+    const colourTrading = {
+      bets_count: ctBets[0].count || 0,
+      bets_volume: parseFloat(ctBets[0].volume) || 0,
+      unique_players: ctBets[0].unique_players || 0,
+      daily_players: ctBets[0].daily_players || 0,
+      wins_count: ctWins[0].count || 0,
+      wins_volume: parseFloat(ctWins[0].volume) || 0,
+      losses_count: ctLosses[0].count || 0,
+      pnl: (parseFloat(ctBets[0].volume) || 0) - (parseFloat(ctWins[0].volume) || 0),
+      avg_bet: (parseFloat(ctBets[0].volume) || 0) / (ctBets[0].count || 1)
+    };
+
+    const overall = {
+      total_volume: aviator.bets_volume + colourTrading.bets_volume,
+      total_pnl: aviator.pnl + colourTrading.pnl,
+      total_players: aviator.unique_players + colourTrading.unique_players, // estimate
+      total_daily_players: aviator.daily_players + colourTrading.daily_players // estimate
+    };
+
+    res.json({ aviator, colourTrading, overall });
+  } catch (err) {
+    console.error('Failed to fetch game analytics:', err);
+    res.status(500).json({ error: 'Failed to fetch game analytics' });
+  }
+});
+
 // PUT /games/:id
 router.put('/games/:id', async (req, res) => {
   try {

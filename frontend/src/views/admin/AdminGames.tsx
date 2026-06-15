@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../../api';
-import { Gamepad2, Play, Pause, Settings, Info, X } from 'lucide-react';
+import { Gamepad2, Play, Pause, Settings, Info, X, TrendingUp, TrendingDown, Activity, Users, DollarSign } from 'lucide-react';
 
 export const AdminGames: React.FC = () => {
   const [games, setGames] = useState<any[]>([]);
@@ -9,12 +9,14 @@ export const AdminGames: React.FC = () => {
   const [aviatorHouseEdge, setAviatorHouseEdge] = useState('3');
   const [ctHouseEdge, setCtHouseEdge] = useState('30');
   const [savingSettings, setSavingSettings] = useState(false);
+  const [analytics, setAnalytics] = useState<any>(null);
 
   const fetchGames = async () => {
     try {
-      const [gamesRes, settingsRes] = await Promise.all([
+      const [gamesRes, settingsRes, analyticsRes] = await Promise.all([
         adminAPI.getGames(),
-        adminAPI.getSettings().catch(() => ({}))
+        adminAPI.getSettings().catch(() => ({})),
+        adminAPI.getGameAnalytics().catch(() => null)
       ]);
       setGames(gamesRes);
       if (settingsRes.aviator_house_edge) {
@@ -22,6 +24,9 @@ export const AdminGames: React.FC = () => {
       }
       if (settingsRes.colour_trading_house_edge) {
         setCtHouseEdge(settingsRes.colour_trading_house_edge);
+      }
+      if (analyticsRes) {
+        setAnalytics(analyticsRes);
       }
     } catch (err) {
       console.error('Failed to fetch games', err);
@@ -76,6 +81,99 @@ export const AdminGames: React.FC = () => {
         </div>
       </div>
 
+
+      {analytics && (
+        <div style={{ marginBottom: '40px' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Activity size={20} color="var(--accent-primary)" />
+            System Performance (PnL)
+          </h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            <div className="glass-card" style={{ padding: '20px', borderLeft: '4px solid var(--accent-primary)' }}>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '8px' }}>Overall System PnL</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 700, color: analytics.overall.total_pnl >= 0 ? 'var(--accent-secondary)' : 'var(--accent-danger)' }}>
+                {analytics.overall.total_pnl >= 0 ? '+' : ''}₹{analytics.overall.total_pnl.toFixed(2)}
+              </div>
+            </div>
+            <div className="glass-card" style={{ padding: '20px', borderLeft: '4px solid #3b82f6' }}>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '8px' }}>Total Wagered Volume</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                ₹{analytics.overall.total_volume.toFixed(2)}
+              </div>
+            </div>
+            <div className="glass-card" style={{ padding: '20px', borderLeft: '4px solid #f59e0b' }}>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '8px' }}>Total Unique Players</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                {analytics.overall.total_players}
+              </div>
+            </div>
+            <div className="glass-card" style={{ padding: '20px', borderLeft: '4px solid #8b5cf6' }}>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '8px' }}>Daily Active Players</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                {analytics.overall.total_daily_players}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
+            {/* Aviator Analytics */}
+            <div className="glass-card">
+              <h4 style={{ fontSize: '1.1rem', marginBottom: '16px', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-glass)', paddingBottom: '10px' }}>Aviator Analytics</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Game PnL</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 600, color: analytics.aviator.pnl >= 0 ? 'var(--accent-secondary)' : 'var(--accent-danger)' }}>{analytics.aviator.pnl >= 0 ? '+' : ''}₹{analytics.aviator.pnl.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Avg Bet Size</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>₹{analytics.aviator.avg_bet.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Win / Loss Ratio</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>
+                    <span style={{ color: 'var(--accent-secondary)' }}>{analytics.aviator.wins_count}</span> / <span style={{ color: 'var(--accent-danger)' }}>{analytics.aviator.losses_count}</span>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Total Volume</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>₹{analytics.aviator.bets_volume.toFixed(2)}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Colour Trading Analytics */}
+            <div className="glass-card">
+              <h4 style={{ fontSize: '1.1rem', marginBottom: '16px', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-glass)', paddingBottom: '10px' }}>Colour Trading Analytics</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Game PnL</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 600, color: analytics.colourTrading.pnl >= 0 ? 'var(--accent-secondary)' : 'var(--accent-danger)' }}>{analytics.colourTrading.pnl >= 0 ? '+' : ''}₹{analytics.colourTrading.pnl.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Avg Bet Size</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>₹{analytics.colourTrading.avg_bet.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Win / Loss Ratio</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>
+                    <span style={{ color: 'var(--accent-secondary)' }}>{analytics.colourTrading.wins_count}</span> / <span style={{ color: 'var(--accent-danger)' }}>{analytics.colourTrading.losses_count}</span>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Total Volume</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>₹{analytics.colourTrading.bets_volume.toFixed(2)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Settings size={20} color="var(--accent-primary)" />
+        Game Configurations
+      </h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
         {games.length === 0 ? (
           <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-lg)' }}>
