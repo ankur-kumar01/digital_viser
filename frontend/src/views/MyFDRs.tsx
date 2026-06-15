@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { fdrAPI } from '../api';
-import { Calendar, RefreshCw, BarChart2, CheckCircle2 } from 'lucide-react';
+import { Calendar, RefreshCw, BarChart2, CheckCircle2, Coins, Banknote } from 'lucide-react';
 import { ShimmerLoader } from '../components/ShimmerLoader';
+import '../fdr-animations.css';
 
 interface MyFDRsProps {
   onNavigate: (view: string) => void;
@@ -127,14 +128,26 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
             return (
               <div 
                 key={fdr.id} 
-                className="glass-card glow-card animate-fade-in"
+                className={`glass-card glow-card animate-fade-in ${!isCompleted ? 'mining-card' : ''}`}
                 style={{ 
                   display: 'flex', 
                   flexDirection: 'column', 
                   gap: '16px',
-                  border: isCompleted ? '1px solid var(--accent-info-glow)' : '1px solid var(--accent-primary-glow)'
+                  border: isCompleted ? '1px solid var(--accent-info-glow)' : '1px solid var(--accent-primary-glow)',
+                  position: 'relative'
                 }}
               >
+                {!isCompleted && (
+                  <>
+                    <div className="scan-line" />
+                    <div className="money-particle particle-1">+₹</div>
+                    <div className="money-particle particle-2"><Coins size={14} /></div>
+                    <div className="money-particle particle-3"><Banknote size={16} /></div>
+                    <div className="money-particle particle-4">$</div>
+                    <div className="money-particle particle-5"><Coins size={14} /></div>
+                    <div className="money-particle particle-6">+₹</div>
+                  </>
+                )}
                 {/* Header row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -190,7 +203,7 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
                   </div>
                   <div>
                     <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.75rem' }}>Yield Accrued:</span>
-                    <strong style={{ color: 'var(--accent-secondary)' }}>
+                    <strong className={!isCompleted ? "money-generating" : ""} style={{ color: isCompleted ? 'var(--accent-secondary)' : undefined }}>
                       ₹{accrued.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </strong>
                   </div>

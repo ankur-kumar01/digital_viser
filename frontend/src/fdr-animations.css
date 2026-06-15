@@ -1,0 +1,92 @@
+/* FDR Money Generation Effects */
+
+@keyframes money-pulse {
+  0% { text-shadow: 0 0 4px rgba(16, 185, 129, 0.4); }
+  50% { text-shadow: 0 0 12px rgba(16, 185, 129, 0.6), 0 0 20px rgba(184, 134, 11, 0.4); transform: scale(1.05); color: var(--accent-primary) !important; }
+  100% { text-shadow: 0 0 4px rgba(16, 185, 129, 0.4); }
+}
+
+.money-generating {
+  animation: money-pulse 2.5s infinite ease-in-out;
+  color: var(--accent-secondary) !important;
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+
+@keyframes rgb-border-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.mining-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-card);
+  z-index: 1;
+}
+
+/* Colorful Animated Border Wrapper */
+.mining-card::after {
+  content: '';
+  position: absolute;
+  top: -2px; left: -2px; right: -2px; bottom: -2px;
+  background: linear-gradient(45deg, #ff007a, #7a00ff, #00f0ff, #00ff7a, #f0c040, #ff007a);
+  background-size: 300% 300%;
+  animation: rgb-border-flow 6s ease infinite;
+  z-index: -2;
+  border-radius: inherit;
+}
+
+/* Inner Background to hollow out the border */
+.mining-card::before {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px; right: 2px; bottom: 2px;
+  background: var(--bg-card);
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: inset 0 0 20px rgba(240, 192, 64, 0.1);
+}
+
+/* Scanning Light Beam */
+.mining-card .scan-line {
+  position: absolute;
+  top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(to right, transparent, rgba(16, 185, 129, 0.15), transparent);
+  transform: skewX(-20deg);
+  animation: shine 2.5s infinite linear;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes shine {
+  0% { left: -100%; }
+  20% { left: 200%; }
+  100% { left: 200%; }
+}
+
+@keyframes float-up-fade {
+  0% { transform: translateY(10px) scale(0.6) rotate(0deg); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 0.8; }
+  100% { transform: translateY(-50px) scale(1.4) rotate(360deg); opacity: 0; }
+}
+
+.money-particle {
+  position: absolute;
+  color: var(--accent-secondary);
+  font-weight: 800;
+  font-size: 18px;
+  pointer-events: none;
+  opacity: 0;
+  text-shadow: 0 0 5px var(--accent-secondary-glow);
+  z-index: 10;
+}
+
+.particle-1 { animation: float-up-fade 2.2s infinite linear; left: 15%; bottom: 10%; animation-delay: 0s; }
+.particle-2 { animation: float-up-fade 2.8s infinite linear; left: 45%; bottom: 5%; animation-delay: 0.6s; }
+.particle-3 { animation: float-up-fade 2.4s infinite linear; right: 25%; bottom: 15%; animation-delay: 1.3s; }
+.particle-4 { animation: float-up-fade 3.0s infinite linear; left: 75%; bottom: 8%; animation-delay: 0.9s; }
+.particle-5 { animation: float-up-fade 2.5s infinite linear; right: 10%; bottom: 20%; animation-delay: 1.8s; }
+.particle-6 { animation: float-up-fade 2.7s infinite linear; left: 30%; bottom: 15%; animation-delay: 1.1s; }
