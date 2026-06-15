@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { adminAPI } from '../../api';
-import { Plus, Power, PowerOff, Award, Trash2, Percent, Calendar, Clock } from 'lucide-react';
+import { Plus, Power, PowerOff, Award, Trash2, Percent, Calendar, Clock, Edit, X } from 'lucide-react';
 
 export const AdminFdrPlans: React.FC = () => {
   const [plans, setPlans] = useState<any[]>([]);
@@ -16,6 +16,9 @@ export const AdminFdrPlans: React.FC = () => {
     interest_percent: '',
     duration_days: ''
   });
+
+  // Edit Plan State
+  const [editingPlan, setEditingPlan] = useState<any | null>(null);
 
   // Offers State
   const [offers, setOffers] = useState<any[]>([]);
@@ -76,6 +79,26 @@ export const AdminFdrPlans: React.FC = () => {
       fetchData();
     } catch (err) {
       alert('Failed to create FDR plan');
+    }
+  };
+
+  const handleUpdatePlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPlan) return;
+    try {
+      await adminAPI.updateFdrPlan(editingPlan.id, {
+        name: editingPlan.name,
+        min_amount: parseFloat(editingPlan.min_amount),
+        max_amount: parseFloat(editingPlan.max_amount),
+        period_days: parseInt(editingPlan.period_days),
+        interest_percent: parseFloat(editingPlan.interest_percent),
+        duration_days: parseInt(editingPlan.duration_days),
+        is_active: !!editingPlan.is_active
+      });
+      setEditingPlan(null);
+      fetchData();
+    } catch (err) {
+      alert('Failed to update FDR plan');
     }
   };
 
@@ -255,6 +278,9 @@ export const AdminFdrPlans: React.FC = () => {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <button onClick={() => setEditingPlan(p)} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
+                          <Edit size={14}/> Edit
+                        </button>
                         <button onClick={() => handleTogglePlan(p.id, !!p.is_active)} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
                           {p.is_active ? <><PowerOff size={14}/> Disable</> : <><Power size={14}/> Enable</>}
                         </button>
@@ -346,6 +372,54 @@ export const AdminFdrPlans: React.FC = () => {
               </table>
             </div>
           )}
+        </div>
+      )}
+      {editingPlan && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '500px', padding: '32px', position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Edit FDR Plan</h3>
+              <button onClick={() => setEditingPlan(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdatePlan} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div>
+                <label className="input-label">Plan Name</label>
+                <input className="input-field" value={editingPlan.name} onChange={e => setEditingPlan({...editingPlan, name: e.target.value})} required />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label className="input-label">Min Amount</label>
+                  <input type="number" className="input-field" value={editingPlan.min_amount} onChange={e => setEditingPlan({...editingPlan, min_amount: e.target.value})} required />
+                </div>
+                <div>
+                  <label className="input-label">Max Amount</label>
+                  <input type="number" className="input-field" value={editingPlan.max_amount} onChange={e => setEditingPlan({...editingPlan, max_amount: e.target.value})} required />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label className="input-label">Duration (Days)</label>
+                  <input type="number" className="input-field" value={editingPlan.duration_days} onChange={e => setEditingPlan({...editingPlan, duration_days: e.target.value})} required />
+                </div>
+                <div>
+                  <label className="input-label">Interest %</label>
+                  <input type="number" step="0.01" className="input-field" value={editingPlan.interest_percent} onChange={e => setEditingPlan({...editingPlan, interest_percent: e.target.value})} required />
+                </div>
+              </div>
+              <div>
+                <label className="input-label">Installment Period (Days)</label>
+                <input type="number" className="input-field" value={editingPlan.period_days} onChange={e => setEditingPlan({...editingPlan, period_days: e.target.value})} required />
+              </div>
+              
+              <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                <button type="button" className="btn" style={{ flex: 1, background: 'var(--bg-tertiary)' }} onClick={() => setEditingPlan(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save Changes</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

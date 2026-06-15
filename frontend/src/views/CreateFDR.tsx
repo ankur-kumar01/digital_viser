@@ -11,6 +11,77 @@ interface CreateFDRProps {
   refreshUser: () => Promise<void>;
 }
 
+const OfferTimer: React.FC<{ endTime: string; onExpire?: () => void }> = ({ endTime, onExpire }) => {
+  const calculateTimeLeft = () => {
+    const difference = +new Date(endTime) - +new Date();
+    let timeLeft = {
+      days: '00',
+      hours: '00',
+      minutes: '00',
+      seconds: '00',
+      expired: true
+    };
+
+    if (difference > 0) {
+      const d = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const h = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const m = Math.floor((difference / 1000 / 60) % 60);
+      const s = Math.floor((difference / 1000) % 60);
+
+      timeLeft = {
+        days: d.toString().padStart(2, '0'),
+        hours: h.toString().padStart(2, '0'),
+        minutes: m.toString().padStart(2, '0'),
+        seconds: s.toString().padStart(2, '0'),
+        expired: false
+      };
+    }
+
+    return timeLeft;
+  };
+
+  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const updated = calculateTimeLeft();
+      setTimeLeft(updated);
+      if (updated.expired) {
+        clearInterval(timer);
+        if (onExpire) onExpire();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [endTime]);
+
+  if (timeLeft.expired) {
+    return <span style={{ color: 'var(--accent-danger)', fontWeight: 700, fontSize: '0.85rem' }}>Offer Expired!</span>;
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '10px' }}>
+      <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'rgba(251, 191, 36, 0.9)', fontWeight: 700, letterSpacing: '0.05em' }}>Ends In:</span>
+      <div style={{ display: 'flex', gap: '4px' }}>
+        {parseInt(timeLeft.days) > 0 && (
+          <span style={{ background: 'rgba(251, 191, 36, 0.15)', border: '1px solid rgba(251, 191, 36, 0.35)', borderRadius: '6px', padding: '4px 8px', fontSize: '0.75rem', fontWeight: 800, color: 'var(--accent-secondary)', fontFamily: 'monospace' }}>
+            {timeLeft.days}d
+          </span>
+        )}
+        <span style={{ background: 'rgba(251, 191, 36, 0.15)', border: '1px solid rgba(251, 191, 36, 0.35)', borderRadius: '6px', padding: '4px 8px', fontSize: '0.75rem', fontWeight: 800, color: 'var(--accent-secondary)', fontFamily: 'monospace' }}>
+          {timeLeft.hours}h
+        </span>
+        <span style={{ background: 'rgba(251, 191, 36, 0.15)', border: '1px solid rgba(251, 191, 36, 0.35)', borderRadius: '6px', padding: '4px 8px', fontSize: '0.75rem', fontWeight: 800, color: 'var(--accent-secondary)', fontFamily: 'monospace' }}>
+          {timeLeft.minutes}m
+        </span>
+        <span style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.35)', borderRadius: '6px', padding: '4px 8px', fontSize: '0.75rem', fontWeight: 800, color: '#f87171', fontFamily: 'monospace' }}>
+          {timeLeft.seconds}s
+        </span>
+      </div>
+    </div>
+  );
+};
+
 export const CreateFDR: React.FC<CreateFDRProps> = ({ user, refreshUser }) => {
   const [amount, setAmount] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
@@ -124,20 +195,8 @@ export const CreateFDR: React.FC<CreateFDRProps> = ({ user, refreshUser }) => {
 
       {/* Active Promo Offer Banner */}
       {activeOffers.length > 0 && (
-        <div 
-          className="glass-card" 
-          style={{ 
-            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%)',
-            border: '1.5px solid rgba(251, 191, 36, 0.4)',
-            borderRadius: 'var(--radius-md)',
-            padding: '16px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            boxShadow: '0 8px 30px rgba(245, 158, 11, 0.08)'
-          }}
-        >
-          <div style={{ fontSize: '1.8rem' }}>🎁</div>
+        <div className="glass-card promo-offer-banner">
+          <div className="emoji" style={{ fontSize: '1.8rem', flexShrink: 0 }}>🎁</div>
           <div>
             <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px 0' }}>
               Special Promo Active: {activeOffers[0].name}
@@ -145,6 +204,7 @@ export const CreateFDR: React.FC<CreateFDRProps> = ({ user, refreshUser }) => {
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
               Create any Fixed Deposit now and get an extra <strong style={{ color: 'var(--accent-secondary)' }}>{parseFloat(activeOffers[0].bonus_percent)}% bonus amount</strong> credited to your bonus wallet. Funds will remain locked until maturity and are destroyed if closed early.
             </p>
+            <OfferTimer endTime={activeOffers[0].end_time} onExpire={() => setActiveOffers([])} />
           </div>
         </div>
       )}

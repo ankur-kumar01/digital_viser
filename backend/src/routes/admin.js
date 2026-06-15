@@ -166,10 +166,18 @@ router.post('/fdr-plans', async (req, res) => {
 // PUT /fdr-plans/:id
 router.put('/fdr-plans/:id', async (req, res) => {
   try {
-    const { is_active } = req.body;
-    await pool.query('UPDATE fdr_plans SET is_active = ? WHERE id = ?', [is_active, req.params.id]);
+    const { name, min_amount, max_amount, period_days, interest_percent, duration_days, is_active } = req.body;
+    if (typeof name !== 'undefined') {
+      await pool.query(
+        'UPDATE fdr_plans SET name = ?, min_amount = ?, max_amount = ?, period_days = ?, interest_percent = ?, duration_days = ?, is_active = ? WHERE id = ?',
+        [name, min_amount, max_amount, period_days, interest_percent, duration_days, is_active, req.params.id]
+      );
+    } else {
+      await pool.query('UPDATE fdr_plans SET is_active = ? WHERE id = ?', [is_active, req.params.id]);
+    }
     res.json({ success: true });
   } catch (err) {
+    console.error('Failed to update FDR plan:', err);
     res.status(500).json({ error: 'Failed to update FDR plan' });
   }
 });
@@ -633,6 +641,99 @@ router.post('/users/:id/fdr/:fdrId/close', async (req, res) => {
   } catch (err) {
     await conn.rollback();
     res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
+// GET /fdrs
+router.get('/fdrs', async (req, res) => {
+  try {
+    const [fdrs] = await pool.query(`
+      SELECT f.*, u.name as user_name, u.email as user_email 
+      FROM fdrs f 
+      JOIN users u ON f.user_id = u.id 
+      ORDER BY f.created_at DESC
+    `);
+    
+    const result = fdrs.map((fdr) => ({
+      ...fdr,
+      amount: parseFloat(fdr.amount),
+      interest_percent: parseFloat(fdr.interest_percent),
+      accrued_interest: parseFloat(fdr.accrued_interest)
+    }));
+    
+    res.json(result);
+  } catch (err) {
+    console.error('Failed to fetch global FDR list:', err);
+    res.status(500).json({ error: 'Failed to fetch global FDR list' });
+  }
+});
+
+// PUT /fdrs/:id
+router.put('/fdrs/:id', async (req, res) => {
+  try {
+    const { amount, interest_percent, period_days, start_date, end_date, next_installment_date, status } = req.body;
+    await pool.query(
+      `UPDATE fdrs 
+       SET amount = ?, interest_percent = ?, period_days = ?, start_date = ?, end_date = ?, next_installment_date = ?, status = ? 
+       WHERE id = ?`,
+      [
+        parseFloat(amount),
+        parseFloat(interest_percent),
+        parseInt(period_days, 10),
+        start_date,
+        end_date,
+        next_installment_date,
+        status,
+        req.params.id
+      ]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to update running FDR:', err);
+    res.status(500).json({ error: 'Failed to update FDR' });
+  }
+});
+
+// POST /fdrs/:id/close
+router.post('/fdrs/:id/close', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const fdrId = req.params.id;
+    await conn.beginTransaction();
+
+    const [fdrRows] = await conn.query('SELECT * FROM fdrs WHERE id = ? AND status = "active" FOR UPDATE', [fdrId]);
+    if (fdrRows.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Active FDR not found' });
+    }
+    const fdr = fdrRows[0];
+    const userId = fdr.user_id;
+
+    await conn.query('UPDATE fdrs SET status = "completed" WHERE id = ?', [fdrId]);
+    await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [parseFloat(fdr.amount), userId]);
+    await conn.query('INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)', [userId, 'fdr_closed_admin', parseFloat(fdr.amount), `Admin manually closed FDR #${fdr.id}`]);
+    
+    const [lockedFunds] = await conn.query(
+      "SELECT * FROM locked_funds WHERE linked_entity_type = 'fdr' AND linked_entity_id = ? AND user_id = ? AND status = 'locked'",
+      [fdrId, userId]
+    );
+
+    for (const locked of lockedFunds) {
+      await conn.query(
+        "UPDATE users SET locked_bonus_balance = locked_bonus_balance - ? WHERE id = ?",
+        [parseFloat(locked.amount), userId]
+      );
+      await conn.query("UPDATE locked_funds SET status = 'cancelled' WHERE id = ?", [locked.id]);
+    }
+
+    await conn.commit();
+    res.json({ success: true });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Failed to manually close FDR:', err);
+    res.status(500).json({ error: err.message || 'Failed to close FDR' });
   } finally {
     conn.release();
   }

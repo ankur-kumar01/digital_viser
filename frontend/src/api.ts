@@ -30,7 +30,7 @@ export function isLoggedIn(): boolean {
   return !!getToken();
 }
 
-async function request(method: 'GET' | 'POST' | 'PUT', path: string, body?: any) {
+async function request(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: any) {
   const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -59,7 +59,7 @@ async function request(method: 'GET' | 'POST' | 'PUT', path: string, body?: any)
   return data;
 }
 
-async function adminRequest(method: 'GET' | 'POST' | 'PUT', path: string, body?: any) {
+async function adminRequest(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: any) {
   const token = getAdminToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -190,4 +190,7 @@ export const adminAPI = {
   updateGameStatus: (id: number, is_active: boolean) => adminRequest('PUT', `/admin/games/${id}`, { is_active }),
   getSettings: () => adminRequest('GET', '/admin/settings'),
   updateSettings: (settings: any) => adminRequest('PUT', '/admin/settings', { settings }),
+  getAdminFdrs: () => adminRequest('GET', '/admin/fdrs'),
+  updateAdminFdr: (id: number, data: any) => adminRequest('PUT', `/admin/fdrs/${id}`, data),
+  closeAdminFdr: (id: number) => adminRequest('POST', `/admin/fdrs/${id}/close`),
 };

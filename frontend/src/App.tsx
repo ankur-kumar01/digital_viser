@@ -30,6 +30,7 @@ import { AdminSettings } from './views/admin/AdminSettings';
 import { AdminProfile } from './views/admin/AdminProfile';
 import { AdminGames } from './views/admin/AdminGames';
 import { AdminPlayerAnalytics } from './views/admin/AdminPlayerAnalytics';
+import { AdminFdrs } from './views/admin/AdminFdrs';
 
 export const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -249,6 +250,7 @@ export const App: React.FC = () => {
             {currentView === 'admin-withdrawal-requests' && <AdminWithdrawalRequests />}
             {currentView === 'admin-methods' && <AdminPaymentMethods />}
             {currentView === 'admin-fdr-plans' && <AdminFdrPlans />}
+            {currentView === 'admin-fdrs' && <AdminFdrs />}
             {currentView === 'admin-schemes' && <AdminSchemes />}
             {currentView === 'admin-settings' && <AdminSettings />}
             {currentView === 'admin-profile' && <AdminProfile />}
