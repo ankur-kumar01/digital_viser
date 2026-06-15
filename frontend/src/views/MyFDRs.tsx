@@ -133,7 +133,8 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
                   display: 'flex', 
                   flexDirection: 'column', 
                   gap: '16px',
-                  border: isCompleted ? '1px solid var(--accent-info-glow)' : '1px solid var(--accent-primary-glow)',
+                  border: isCompleted ? '1px solid var(--accent-info-glow)' : '1px solid var(--accent-secondary)',
+                  boxShadow: !isCompleted ? '0 0 15px var(--accent-secondary-light)' : 'none',
                   position: 'relative'
                 }}
               >
