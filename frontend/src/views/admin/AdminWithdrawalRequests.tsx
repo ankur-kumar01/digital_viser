@@ -32,10 +32,6 @@ export const AdminWithdrawalRequests: React.FC = () => {
     }
   };
 
-  if (isLoading) return <div style={{ padding: '32px' }}>Loading withdrawal requests...</div>;
-
-  const filteredWithdrawals = withdrawals.filter(w => w.status === activeTab);
-
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
@@ -43,6 +39,10 @@ export const AdminWithdrawalRequests: React.FC = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab]);
+
+  if (isLoading) return <div style={{ padding: '32px' }}>Loading withdrawal requests...</div>;
+
+  const filteredWithdrawals = withdrawals.filter(w => w.status === activeTab);
 
   const totalItems = filteredWithdrawals.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -111,9 +111,9 @@ export const AdminWithdrawalRequests: React.FC = () => {
                     <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                       ₹{parseFloat(item.amount).toFixed(2)}
                     </td>
-                    <td style={{ textTransform: 'capitalize' }}>{item.payment_method.replace('_', ' ')}</td>
+                    <td style={{ textTransform: 'capitalize' }}>{item.payment_method ? item.payment_method.replace('_', ' ') : 'N/A'}</td>
                     <td style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      <div style={{ marginBottom: '4px' }}><strong>TXN:</strong> {item.transaction_id.substring(0, 12)}...</div>
+                      <div style={{ marginBottom: '4px' }}><strong>TXN:</strong> {item.transaction_id ? item.transaction_id.substring(0, 12) + '...' : 'N/A'}</div>
                       {(() => {
                         let parsedData = item.custom_data;
                         if (typeof parsedData === 'string') {
