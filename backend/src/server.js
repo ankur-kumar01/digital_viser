@@ -10,6 +10,7 @@ const jwt = require('jsonwebtoken');
 const { pool } = require('./db');
 const { runMigrations } = require('./migrate');
 const AviatorGameLogic = require('./services/aviatorLogic');
+const ColourTradingLogic = require('./services/colourTradingLogic');
 
 // Import route files
 const authRoutes = require('./routes/auth');
@@ -42,8 +43,9 @@ const io = new Server(server, {
   }
 });
 
-// Initialize Aviator Game Logic
+// Initialize Game Engines
 const aviatorEngine = new AviatorGameLogic(io);
+const ctEngine = new ColourTradingLogic(io);
 
 // Socket.io Authentication Middleware
 io.use((socket, next) => {
@@ -86,6 +88,23 @@ io.on('connection', (socket) => {
         multiplier: res.multiplier,
         winAmount: res.winAmount
       });
+    } catch (err) {
+      if (typeof callback === 'function') callback({ error: err.message });
+    }
+  });
+
+  // --- Colour Trading Sockets ---
+  socket.emit('ct_state', {
+    state: ctEngine.state,
+    timeLeft: ctEngine.timeLeft,
+    periodNumber: ctEngine.periodNumber,
+    history: ctEngine.history
+  });
+
+  socket.on('ct_bet', async (data, callback) => {
+    try {
+      const res = await ctEngine.handleBet(socket.user.userId, data.amount, data.color);
+      if (typeof callback === 'function') callback({ success: true, newBalance: res.newBalance });
     } catch (err) {
       if (typeof callback === 'function') callback({ error: err.message });
     }

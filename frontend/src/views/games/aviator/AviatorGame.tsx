@@ -10,7 +10,7 @@ interface Props {
   onNavigate: (view: string) => void;
 }
 
-const QUICK_BETS = [50, 100, 200, 500, 1000];
+const QUICK_BETS = [5, 10, 20, 50, 100, 200, 500];
 const CONFETTI_COLORS = ['#22c55e', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
 export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => {

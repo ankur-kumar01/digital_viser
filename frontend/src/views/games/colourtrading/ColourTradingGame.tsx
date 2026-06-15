@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { gamesAPI } from '../../../api';
+import { io, Socket } from 'socket.io-client';
+import { getToken } from '../../../api';
 import './ColourTradingGame.css';
 
 interface Props {
@@ -9,7 +10,7 @@ interface Props {
   onNavigate: (view: string) => void;
 }
 
-const QUICK_BETS = [50, 100, 200, 500, 1000];
+const QUICK_BETS = [5, 10, 20, 50, 100, 200, 500];
 const CONFETTI_COLORS = ['#22c55e', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
 const colorMap: Record<string, { bg: string; glow: string; label: string; mult: string }> = {
@@ -30,13 +31,14 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
     { color: 'green', period: 995 }, { color: 'red', period: 994 }, { color: 'violet', period: 993 },
     { color: 'green', period: 992 },
   ]);
-  const [periodCount, setPeriodCount] = useState(1002);
+  const [periodCount, setPeriodCount] = useState(0);
   const [showWinOverlay, setShowWinOverlay] = useState(false);
   const [winPayout, setWinPayout] = useState(0);
   const [showLoseOverlay, setShowLoseOverlay] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [revealReady, setRevealReady] = useState(false);
 
+  const socketRef = useRef<Socket | null>(null);
   const selectedColorRef = useRef<string | null>(null);
   const betAmountRef = useRef<string>('100');
 
@@ -46,73 +48,85 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
   }, [selectedColor, betAmount]);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          if (isBettingPhase) {
-            setIsBettingPhase(false);
-            processGameRound();
-            return 5;
-          } else {
-            setIsBettingPhase(true);
-            setResultColor(null);
-            setSelectedColor(null);
-            setRevealReady(false);
-            setPeriodCount(p => p + 1);
-            return 30;
-          }
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isBettingPhase]);
+    const token = getToken();
+    const socketUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    
+    const socket = io(socketUrl, {
+      auth: { token }
+    });
+    
+    socketRef.current = socket;
 
-  const processGameRound = async () => {
-    const sColor = selectedColorRef.current;
-    const bAmount = betAmountRef.current;
-    setIsProcessing(true);
-
-    await new Promise(r => setTimeout(r, 900));
-    setRevealReady(true);
-
-    if (!sColor) {
-      const roll = Math.random();
-      let result = 'red';
-      if (roll > 0.5 && roll < 0.9) result = 'green';
-      else if (roll >= 0.9) result = 'violet';
-      setResultColor(result);
-      setHistory(prev => [{ color: result, period: periodCount }, ...prev].slice(0, 15));
-      setIsProcessing(false);
-      return;
-    }
-
-    try {
-      const res = await gamesAPI.colourTradingPlay(parseFloat(bAmount), sColor);
-      setResultColor(res.result);
-      setHistory(prev => [{ color: res.result, period: periodCount }, ...prev].slice(0, 15));
-
-      if (res.won) {
-        setWinPayout(res.payout);
-        setTimeout(() => setShowWinOverlay(true), 700);
-        setTimeout(() => setShowWinOverlay(false), 4200);
-      } else {
-        setTimeout(() => setShowLoseOverlay(true), 700);
-        setTimeout(() => setShowLoseOverlay(false), 2800);
+    socket.on('ct_state', (data) => {
+      setPeriodCount(data.periodNumber || 0);
+      setTimeLeft(data.timeLeft);
+      setHistory(data.history || []);
+      
+      if (data.state === 'BETTING') {
+        setIsBettingPhase(true);
+        setIsProcessing(false);
+        setResultColor(null);
+        setSelectedColor(null);
+        setRevealReady(false);
+      } else if (data.state === 'PROCESSING') {
+        setIsBettingPhase(false);
+        setIsProcessing(true);
       }
-      refreshUser();
-    } catch (err: any) {
-      alert(err.message || 'Failed to process game round');
-    }
-    setIsProcessing(false);
-  };
+    });
+
+    socket.on('ct_timer', (data) => {
+      setTimeLeft(data.timeLeft);
+      if (data.timeLeft <= 0) {
+        setIsProcessing(true);
+        setIsBettingPhase(false);
+      }
+    });
+
+    socket.on('ct_result', (data) => {
+      setPeriodCount(data.periodNumber);
+      setResultColor(data.resultColor);
+      setHistory(data.history);
+      
+      setIsProcessing(true);
+      setTimeout(() => setRevealReady(true), 900);
+
+      // Check if user won
+      const currentSelectedColor = selectedColorRef.current;
+      const currentBetAmount = betAmountRef.current;
+      
+      if (currentSelectedColor) {
+        if (currentSelectedColor === data.resultColor) {
+          const mult = data.resultColor === 'violet' ? 3 : 2;
+          const payout = parseFloat(currentBetAmount) * mult;
+          setWinPayout(payout);
+          setTimeout(() => setShowWinOverlay(true), 1600);
+          setTimeout(() => setShowWinOverlay(false), 5800);
+        } else {
+          setTimeout(() => setShowLoseOverlay(true), 1600);
+          setTimeout(() => setShowLoseOverlay(false), 4400);
+        }
+        refreshUser();
+      }
+      
+      setTimeout(() => setIsProcessing(false), 3000);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const handleBet = (color: string) => {
     if (!isBettingPhase || selectedColor !== null) return;
     const bet = parseFloat(betAmount);
     if (isNaN(bet) || bet <= 0) return alert('Enter a valid bet amount');
     if (bet > parseFloat(user.balance)) return alert('Insufficient balance');
-    setSelectedColor(color);
+
+    socketRef.current?.emit('ct_bet', { amount: bet, color }, (res: any) => {
+      if (res.error) return alert(res.error);
+      setSelectedColor(color);
+      refreshUser();
+    });
   };
 
   const timerPercent = isBettingPhase ? (timeLeft / 30) * 100 : (timeLeft / 5) * 100;
