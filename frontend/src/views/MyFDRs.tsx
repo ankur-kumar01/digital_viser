@@ -13,6 +13,51 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Live yield simulator for active FDRs
+  const LiveYieldDisplay: React.FC<{
+    baseAccrued: number;
+    principal: number;
+    interestPercent: number;
+    periodDays: number;
+    isCompleted: boolean;
+    lastInstDate: string;
+  }> = ({ baseAccrued, principal, interestPercent, periodDays, isCompleted, lastInstDate }) => {
+    const [liveYield, setLiveYield] = useState(baseAccrued);
+
+    useEffect(() => {
+      if (isCompleted) {
+        setLiveYield(baseAccrued);
+        return;
+      }
+
+      const yieldPerPeriod = principal * (interestPercent / 100);
+      const yieldPerMs = yieldPerPeriod / (periodDays * 24 * 60 * 60 * 1000);
+
+      let initialUnaccrued = 0;
+      if (lastInstDate) {
+        const lastInstMs = new Date(lastInstDate + 'T00:00:00').getTime();
+        const nowMs = Date.now();
+        if (nowMs > lastInstMs) {
+          initialUnaccrued = (nowMs - lastInstMs) * yieldPerMs;
+        }
+      }
+
+      setLiveYield(baseAccrued + initialUnaccrued);
+
+      const interval = setInterval(() => {
+        setLiveYield(prev => prev + (yieldPerMs * 100));
+      }, 100);
+
+      return () => clearInterval(interval);
+    }, [baseAccrued, principal, interestPercent, periodDays, isCompleted, lastInstDate]);
+
+    return (
+      <strong className={!isCompleted ? "money-generating" : ""} style={{ color: isCompleted ? 'var(--accent-secondary)' : undefined, fontVariantNumeric: 'tabular-nums' }}>
+        ₹{isCompleted ? baseAccrued.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : liveYield.toLocaleString('en-IN', { minimumFractionDigits: 6, maximumFractionDigits: 6 })}
+      </strong>
+    );
+  };
+
   const fetchFDRs = async () => {
     setIsLoading(true);
     setError('');
@@ -204,9 +249,14 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
                   </div>
                   <div>
                     <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.75rem' }}>Yield Accrued:</span>
-                    <strong className={!isCompleted ? "money-generating" : ""} style={{ color: isCompleted ? 'var(--accent-secondary)' : undefined }}>
-                      ₹{accrued.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </strong>
+                    <LiveYieldDisplay 
+                      baseAccrued={accrued} 
+                      principal={principal} 
+                      interestPercent={parseFloat(fdr.interest_percent)} 
+                      periodDays={parseInt(fdr.period_days, 10)} 
+                      isCompleted={isCompleted} 
+                      lastInstDate={fdr.last_installment_date ? fdr.last_installment_date.split('T')[0] : fdr.start_date.split('T')[0]}
+                    />
                   </div>
                   <div>
                     <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.75rem' }}>Start Date:</span>
