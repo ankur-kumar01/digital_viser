@@ -56,7 +56,7 @@ export const Transactions: React.FC = () => {
       currency: 'INR'
     }).format(Math.abs(amount));
 
-    if (type.includes('withdrawal') || type === 'fdr_lock' || type === 'deposit_rejected') {
+    if (amount < 0 || type.includes('withdrawal') || type === 'fdr_lock' || type === 'deposit_rejected' || type === 'game_bet') {
       return <span style={{ color: 'var(--accent-danger)', fontWeight: 600 }}>-{formatted}</span>;
     }
     
@@ -64,10 +64,10 @@ export const Transactions: React.FC = () => {
   };
 
   const getBadgeStyle = (type: string) => {
-    if (type.includes('approved') || type === 'deposit' || type === 'interest' || type === 'fdr_maturity') {
+    if (type.includes('approved') || type === 'deposit' || type === 'interest' || type === 'fdr_maturity' || type === 'game_win') {
       return 'badge badge-completed';
     }
-    if (type.includes('rejected') || type === 'fdr_lock' || type.includes('withdrawal_approved')) {
+    if (type.includes('rejected') || type === 'fdr_lock' || type.includes('withdrawal_approved') || type === 'game_bet') {
       return 'badge badge-danger';
     }
     if (type.includes('pending')) {
