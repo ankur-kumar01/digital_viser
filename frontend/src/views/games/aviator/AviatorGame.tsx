@@ -353,7 +353,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
     osc.frequency.setValueAtTime(65, now); // deep engine hum
     
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.12, now + 0.4);
+    gain.gain.linearRampToValueAtTime(0.35, now + 0.4);
     
     osc.connect(gain);
     gain.connect(ctx.destination);
