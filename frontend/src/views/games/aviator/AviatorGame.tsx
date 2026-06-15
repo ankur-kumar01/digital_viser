@@ -1121,21 +1121,23 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
           <div className="av-drawer-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="av-drawer-header">
               <div className="av-drawer-handle" />
-              <div className="av-drawer-tabs">
-                <button 
-                  className={`av-drawer-tab-btn ${activeTab === 'players' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('players')}
-                >
-                  👥 Players ({simPlayers.length + 1})
-                </button>
-                <button 
-                  className={`av-drawer-tab-btn ${activeTab === 'chat' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('chat')}
-                >
-                  💬 Live Chat
-                </button>
-              </div>
+              <h3 className="av-drawer-title">Community & Live Feed</h3>
               <button className="av-drawer-close" onClick={() => setShowPlayersDrawer(false)}>✕</button>
+            </div>
+
+            <div className="av-drawer-tabs">
+              <button 
+                className={`av-drawer-tab-btn ${activeTab === 'players' ? 'active' : ''}`}
+                onClick={() => setActiveTab('players')}
+              >
+                👥 Players ({simPlayers.length + 1})
+              </button>
+              <button 
+                className={`av-drawer-tab-btn ${activeTab === 'chat' ? 'active' : ''}`}
+                onClick={() => setActiveTab('chat')}
+              >
+                💬 Live Chat
+              </button>
             </div>
             
             <div className="av-drawer-content">
