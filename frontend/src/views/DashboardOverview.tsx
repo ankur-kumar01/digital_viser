@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MetricCard } from '../components/MetricCard';
-import { walletAPI, fdrAPI } from '../api';
-import { Wallet, Award, History, ArrowRight, ArrowUpRight, ArrowDownLeft, PiggyBank, TrendingUp, CalendarDays, Gift, Users, PlusCircle, Activity } from 'lucide-react';
+import { walletAPI, fdrAPI, gamesAPI } from '../api';
+import { Wallet, Award, History, ArrowRight, ArrowUpRight, ArrowDownLeft, PiggyBank, TrendingUp, CalendarDays, Gift, Users, PlusCircle, Activity, Gamepad2 } from 'lucide-react';
 import { PortfolioHero } from '../components/PortfolioHero';
 
 interface DashboardOverviewProps {
@@ -31,6 +31,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const [upcomingProfit7, setUpcomingProfit7] = useState(0);
   const [upcomingProfit30, setUpcomingProfit30] = useState(0);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  const [games, setGames] = useState<any[]>([]);
 
   const loadData = async () => {
     try {
@@ -62,6 +63,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       setTotalInterestEarned(interestTotal);
       setUpcomingProfit7(pnl.upcoming_profit_7d);
       setUpcomingProfit30(pnl.upcoming_profit_30d);
+
+      // Load games
+      try {
+        const gamesData = await gamesAPI.getGames();
+        setGames(gamesData.filter((g: any) => g.is_active));
+      } catch (e) {
+        console.error('Failed to load games', e);
+      }
     } catch (err) {
       console.error('Failed to load dashboard statistics', err);
     }
@@ -122,6 +131,73 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           <PlusCircle size={18} />
           Create FDR
         </button>
+      </div>
+
+      {/* Gaming Zone Section */}
+      <div style={{ marginTop: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Gamepad2 size={20} color="var(--accent-primary)" />
+            Gaming Zone
+          </h3>
+          <button 
+            className="btn btn-text" 
+            style={{ padding: '4px 8px', fontSize: '0.85rem' }}
+            onClick={() => onNavigate('games')}
+          >
+            View All <ArrowRight size={14} />
+          </button>
+        </div>
+        
+        <div 
+          className="hide-scrollbar" 
+          style={{ 
+            display: 'flex', 
+            gap: '16px', 
+            overflowX: 'auto', 
+            paddingBottom: '10px',
+            scrollSnapType: 'x mandatory'
+          }}
+        >
+          {games.length === 0 ? (
+            <div style={{ padding: '20px', color: 'var(--text-muted)' }}>Loading games...</div>
+          ) : (
+            games.map((g: any) => (
+              <div 
+                key={g.id} 
+                className="glass-card" 
+                style={{ 
+                  flex: '0 0 auto', 
+                  width: '240px', 
+                  padding: '0', 
+                  overflow: 'hidden', 
+                  cursor: 'pointer', 
+                  scrollSnapAlign: 'start',
+                  border: '1px solid var(--border-glass)',
+                  transition: 'transform 0.2s ease'
+                }}
+                onClick={() => onNavigate(`game-${g.slug}`)}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <div style={{ height: '100px', background: 'var(--accent-secondary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                  {g.image_url ? (
+                    <img src={g.image_url} alt={g.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <Gamepad2 size={36} color="var(--accent-secondary)" opacity={0.5} />
+                  )}
+                  <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', padding: '2px 8px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>Play</span>
+                  </div>
+                </div>
+                <div style={{ padding: '12px' }}>
+                  <h4 style={{ fontSize: '1rem', marginBottom: '4px', color: 'var(--text-primary)' }}>{g.name}</h4>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.description}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Metrics Row */}
