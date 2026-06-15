@@ -97,7 +97,7 @@ export const AdminWithdrawalRequests: React.FC = () => {
                       ₹{parseFloat(item.amount).toFixed(2)}
                     </td>
                     <td style={{ textTransform: 'capitalize' }}>{item.payment_method.replace('_', ' ')}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    <td style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '280px' }}>
                       <div style={{ marginBottom: '4px' }}><strong>TXN:</strong> {item.transaction_id.substring(0, 12)}...</div>
                       {item.custom_data && Object.keys(item.custom_data).length > 0 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '8px', padding: '8px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
@@ -105,9 +105,9 @@ export const AdminWithdrawalRequests: React.FC = () => {
                             <div key={key} style={{ display: 'flex', flexDirection: 'column' }}>
                               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{key}:</span>
                               {typeof value === 'string' && value.startsWith('/uploads/') ? (
-                                <a href={`/api${value}`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', fontSize: '0.8rem', wordBreak: 'break-all' }}>View Attachment</a>
+                                <a href={`/api${value}`} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-primary)', fontSize: '0.8rem', overflowWrap: 'anywhere' }}>View Attachment</a>
                               ) : (
-                                <span style={{ color: 'var(--text-primary)', wordBreak: 'break-all' }}>{value}</span>
+                                <span style={{ color: 'var(--text-primary)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{value}</span>
                               )}
                             </div>
                           ))}
