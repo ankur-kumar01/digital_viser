@@ -90,6 +90,71 @@ const OfferTimer: React.FC<{ endTime: string; onExpire?: () => void }> = ({ endT
   );
 };
 
+const BigWinsTicker: React.FC<{ wins: any[] }> = ({ wins }) => {
+  const [currentWin, setCurrentWin] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    if (!wins || wins.length === 0) return;
+    const interval = setInterval(() => {
+      setIsVisible(false);
+      setTimeout(() => {
+        setCurrentWin((prev) => Math.floor(Math.random() * wins.length));
+        setIsVisible(true);
+      }, 500); // 500ms fade out
+    }, 4500); // Change every 4.5 seconds
+
+    return () => clearInterval(interval);
+  }, [wins]);
+
+  if (!wins || wins.length === 0) return null;
+
+  const win = wins[currentWin];
+
+  return (
+    <div style={{ 
+      background: 'rgba(16, 185, 129, 0.05)', 
+      border: '1px solid rgba(16, 185, 129, 0.2)', 
+      borderRadius: '8px', 
+      padding: '12px 16px', 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: '12px',
+      overflow: 'hidden',
+      marginTop: '10px'
+    }}>
+      <div style={{ 
+        background: 'rgba(16, 185, 129, 0.2)', 
+        borderRadius: '50%', 
+        padding: '6px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0
+      }}>
+        <Award size={18} color="var(--accent-secondary)" />
+      </div>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '6px', 
+        fontSize: '0.9rem',
+        transition: 'opacity 0.5s ease',
+        opacity: isVisible ? 1 : 0,
+        flexWrap: 'wrap'
+      }}>
+        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>🎉 Live Win:</span>
+        <span style={{ color: 'var(--text-secondary)' }}>User</span>
+        <strong style={{ color: 'var(--text-primary)' }}>{win.user_name}</strong>
+        <span style={{ color: 'var(--text-secondary)' }}>just won</span>
+        <strong style={{ color: 'var(--accent-secondary)', fontSize: '1rem' }}>{win.amount}</strong>
+        <span style={{ color: 'var(--text-secondary)' }}>on</span>
+        <strong style={{ color: win.game_color }}>{win.game_name}</strong>!
+      </div>
+    </div>
+  );
+};
+
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   user,
   onNavigate
@@ -104,6 +169,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [games, setGames] = useState<any[]>([]);
   const [activeOffers, setActiveOffers] = useState<any[]>([]);
+  const [bigWins, setBigWins] = useState<any[]>([]);
 
   const loadData = async () => {
     try {
@@ -149,6 +215,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         setActiveOffers(offers);
       } catch (e) {
         console.error('Failed to load active offers', e);
+      }
+      // Load big wins
+      try {
+        const bw = await gamesAPI.getBigWins();
+        setBigWins(bw);
+      } catch (e) {
+        console.error('Failed to load big wins', e);
       }
     } catch (err) {
       console.error('Failed to load dashboard statistics', err);
@@ -211,6 +284,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           Create FDR
         </button>
       </div>
+
+      {/* Global Big Wins Ticker */}
+      <BigWinsTicker wins={bigWins} />
 
       {/* Gaming Zone Section */}
       <div style={{ marginTop: '10px' }}>

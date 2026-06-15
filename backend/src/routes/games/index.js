@@ -17,6 +17,17 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/games/big-wins (Returns big wins for ticker)
+router.get('/big-wins', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM big_wins ORDER BY created_at DESC LIMIT 50');
+    res.json(rows);
+  } catch (err) {
+    console.error('Failed to fetch big wins:', err);
+    res.status(500).json({ error: 'Failed to fetch big wins' });
+  }
+});
+
 // Mount game-specific routes
 router.use('/aviator', aviatorRoutes);
 router.use('/colourtrading', colourTradingRoutes);

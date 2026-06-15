@@ -904,6 +904,58 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
+// --- BIG WINS TICKER CRUD ---
+
+// GET /admin/big-wins
+router.get('/big-wins', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM big_wins ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch big wins' });
+  }
+});
+
+// POST /admin/big-wins
+router.post('/big-wins', async (req, res) => {
+  const { user_name, amount, game_name, game_color } = req.body;
+  try {
+    const [result] = await pool.query(
+      'INSERT INTO big_wins (user_name, amount, game_name, game_color) VALUES (?, ?, ?, ?)',
+      [user_name, amount, game_name, game_color]
+    );
+    res.json({ success: true, id: result.insertId });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create big win' });
+  }
+});
+
+// PUT /admin/big-wins/:id
+router.put('/big-wins/:id', async (req, res) => {
+  const { id } = req.params;
+  const { user_name, amount, game_name, game_color } = req.body;
+  try {
+    await pool.query(
+      'UPDATE big_wins SET user_name = ?, amount = ?, game_name = ?, game_color = ? WHERE id = ?',
+      [user_name, amount, game_name, game_color, id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update big win' });
+  }
+});
+
+// DELETE /admin/big-wins/:id
+router.delete('/big-wins/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM big_wins WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete big win' });
+  }
+});
+
 // GET /games
 router.get('/games', async (req, res) => {
   try {

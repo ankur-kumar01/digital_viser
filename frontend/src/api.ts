@@ -142,6 +142,7 @@ export const fdrAPI = {
 
 export const gamesAPI = {
   getGames: () => request('GET', '/games'),
+  getBigWins: () => request('GET', '/games/big-wins'),
   aviatorBet: (amount: number) => request('POST', '/games/aviator/bet', { amount }),
   aviatorCashout: (winAmount: number) => request('POST', '/games/aviator/cashout', { winAmount }),
   colourTradingPlay: (amount: number, color: string) => request('POST', '/games/colourtrading/play', { amount, color })
@@ -193,4 +194,8 @@ export const adminAPI = {
   getAdminFdrs: () => adminRequest('GET', '/admin/fdrs'),
   updateAdminFdr: (id: number, data: any) => adminRequest('PUT', `/admin/fdrs/${id}`, data),
   closeAdminFdr: (id: number) => adminRequest('POST', `/admin/fdrs/${id}/close`),
+  getBigWins: () => adminRequest('GET', '/admin/big-wins'),
+  createBigWin: (data: any) => adminRequest('POST', '/admin/big-wins', data),
+  updateBigWin: (id: number, data: any) => adminRequest('PUT', `/admin/big-wins/${id}`, data),
+  deleteBigWin: (id: number) => adminRequest('DELETE', `/admin/big-wins/${id}`),
 };
