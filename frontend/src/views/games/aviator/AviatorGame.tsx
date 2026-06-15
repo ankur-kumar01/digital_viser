@@ -139,7 +139,9 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
   // Socket Connection
   useEffect(() => {
     const token = getToken();
-    const socketUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    let socketUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : '';
+    if (!socketUrl) socketUrl = isLocalhost ? 'http://localhost:5000' : window.location.origin;
     
     const socket = io(socketUrl, {
       auth: { token }
