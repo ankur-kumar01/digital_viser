@@ -516,16 +516,6 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
         }
       `}</style>
 
-      {/* Header */}
-      <div className="sw-title-header">
-        <Gift size={28} color="#f59e0b" style={{ filter: 'drop-shadow(0 0 8px rgba(245,158,11,0.5))' }} />
-        <h3 className="sw-title-text">
-          Daily Spin Wheel
-        </h3>
-        {status?.can_spin && (
-          <span className="sw-ready-badge">READY!</span>
-        )}
-      </div>
 
       <div className="sw-card-container">
         {/* Decorative background sparkles */}
