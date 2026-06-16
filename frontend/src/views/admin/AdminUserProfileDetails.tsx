@@ -218,6 +218,33 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
                 <span style={{ color: 'var(--text-muted)' }}>Joined:</span>
                 <span style={{ fontWeight: 600 }}>{formatGlobalDate(data.user.created_at, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-glass)', paddingTop: '12px', marginTop: '4px', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Invited By:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: 600, color: data.user.invited_by_name ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
+                    {data.user.invited_by_name ? `${data.user.invited_by_name} (#${data.user.invited_by})` : 'None (Direct)'}
+                  </span>
+                  <button 
+                    onClick={async () => {
+                      const input = window.prompt("Enter the User ID of the new referrer (or 0 to clear):", data.user.invited_by || "0");
+                      if (input === null) return;
+                      const newId = parseInt(input);
+                      if (isNaN(newId) || newId < 0) return alert("Invalid User ID");
+                      try {
+                        await adminAPI.updateUserReferrer(data.user.id, newId === 0 ? null : newId);
+                        alert("Referrer updated successfully!");
+                        loadUser(); // Refresh the user data
+                      } catch(err: any) {
+                        alert(err.message || "Failed to update referrer");
+                      }
+                    }}
+                    className="btn" 
+                    style={{ padding: '2px 8px', fontSize: '0.75rem', background: 'var(--bg-tertiary)' }}
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 

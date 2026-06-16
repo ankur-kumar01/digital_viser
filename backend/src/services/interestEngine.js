@@ -18,6 +18,10 @@ async function processDailyFinancials() {
     // Get all active FDRs globally
     const [activeFdrs] = await conn.query("SELECT * FROM fdrs WHERE status = 'active' FOR UPDATE");
 
+    // Fetch dynamic FDR referral percent
+    const [schemes] = await conn.query("SELECT reward_amount FROM reward_schemes WHERE type = 'fdr_referral_percent' AND is_active = true");
+    const monthlyReferralPercent = schemes.length > 0 ? parseFloat(schemes[0].reward_amount) : 0;
+
     for (const fdr of activeFdrs) {
       const userId = fdr.user_id;
       let nextInstDate = fdr.next_installment_date
@@ -82,6 +86,52 @@ async function processDailyFinancials() {
           await conn.query("INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)", [locked.user_id, 'bonus_unlocked', locked.amount, `FDR Bonus Unlocked from FDR #${fdr.id}`]);
         }
       }
+
+      // Process Referral Commission Daily
+      if (monthlyReferralPercent > 0) {
+        let lastRefCommDate = fdr.last_referral_commission_date
+          ? (typeof fdr.last_referral_commission_date === 'string'
+            ? fdr.last_referral_commission_date.split('T')[0]
+            : new Date(fdr.last_referral_commission_date).toISOString().split('T')[0])
+          : (typeof fdr.start_date === 'string'
+            ? fdr.start_date.split('T')[0]
+            : new Date(fdr.start_date).toISOString().split('T')[0]);
+
+        let refInstDate = addDays(lastRefCommDate, 1);
+        let refProcessed = false;
+
+        // Process all pending daily referral commissions up to current date
+        while (refInstDate <= currentDate && refInstDate <= endDate) {
+          // Find who invited the FDR owner
+          const [userRows] = await conn.query("SELECT invited_by FROM users WHERE id = ?", [fdr.user_id]);
+          if (userRows.length > 0 && userRows[0].invited_by) {
+            const invitedBy = userRows[0].invited_by;
+            const dailyCommissionPercent = monthlyReferralPercent / 30;
+            const dailyCommissionAmount = (fdrAmount * dailyCommissionPercent) / 100;
+            
+            await conn.query(
+              "UPDATE users SET locked_referral_balance = locked_referral_balance + ? WHERE id = ?",
+              [dailyCommissionAmount, invitedBy]
+            );
+            
+            await conn.query(
+              "INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)",
+              [invitedBy, 'fdr_referral_commission', dailyCommissionAmount, `${dailyCommissionPercent.toFixed(4)}% daily recurring commission from referred user's active FDR #${fdr.id}`]
+            );
+          }
+          lastRefCommDate = refInstDate;
+          refInstDate = addDays(refInstDate, 1);
+          refProcessed = true;
+        }
+
+        if (refProcessed) {
+          await conn.query(
+            "UPDATE fdrs SET last_referral_commission_date = ? WHERE id = ?",
+            [lastRefCommDate, fdr.id]
+          );
+        }
+      }
+
       processedFdrs++;
     }
 

@@ -388,7 +388,7 @@ router.post('/withdrawals/:id/reject', async (req, res) => {
 // GET /users
 router.get('/users', async (req, res) => {
   try {
-    const [users] = await pool.query('SELECT id, name, email, phone_number, address, city, state, pin_code, balance, created_at FROM users ORDER BY created_at DESC');
+    const [users] = await pool.query('SELECT u.id, u.name, u.email, u.phone_number, u.address, u.city, u.state, u.pin_code, u.balance, u.created_at, u.invited_by, i.name as invited_by_name FROM users u LEFT JOIN users i ON u.invited_by = i.id ORDER BY u.created_at DESC');
     res.json(users);
   } catch (err) {
     console.error('Failed to fetch users:', err);
@@ -408,6 +408,36 @@ router.put('/users/:id', async (req, res) => {
   } catch (err) {
     console.error('Failed to update user:', err);
     res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+// PUT /users/:id/invited-by
+router.put('/users/:id/invited-by', async (req, res) => {
+  try {
+    const { invited_by } = req.body;
+    // invited_by can be null/empty to remove referrer, or a valid user ID.
+    const newInvitedBy = invited_by ? parseInt(invited_by) : null;
+    
+    if (newInvitedBy && newInvitedBy === parseInt(req.params.id)) {
+      return res.status(400).json({ error: 'User cannot invite themselves' });
+    }
+
+    if (newInvitedBy) {
+      // verify the referrer exists
+      const [referrer] = await pool.query('SELECT id FROM users WHERE id = ?', [newInvitedBy]);
+      if (referrer.length === 0) {
+        return res.status(400).json({ error: 'Referrer ID not found' });
+      }
+    }
+
+    await pool.query(
+      'UPDATE users SET invited_by = ? WHERE id = ?',
+      [newInvitedBy, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to update invited_by:', err);
+    res.status(500).json({ error: 'Failed to update referrer' });
   }
 });
 
@@ -502,10 +532,28 @@ router.put('/schemes/:id', async (req, res) => {
   }
 });
 
+// DELETE /schemes/:id
+router.delete('/schemes/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM reward_schemes WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete scheme' });
+  }
+});
+
 // GET /users/:id/details
 router.get('/users/:id/details', async (req, res) => {
   try {
-    const [userRows] = await pool.query('SELECT id, name, email, balance, bonus_balance, referral_balance, gaming_bonus_balance, locked_balance, locked_bonus_balance, locked_referral_balance, phone_number, address, city, state, pin_code, created_at FROM users WHERE id = ?', [req.params.id]);
+    const [userRows] = await pool.query(
+      `SELECT u.id, u.name, u.email, u.balance, u.bonus_balance, u.referral_balance, u.gaming_bonus_balance, 
+              u.locked_balance, u.locked_bonus_balance, u.locked_referral_balance, u.phone_number, u.address, 
+              u.city, u.state, u.pin_code, u.created_at, u.invited_by, i.name as invited_by_name 
+       FROM users u 
+       LEFT JOIN users i ON u.invited_by = i.id 
+       WHERE u.id = ?`, 
+      [req.params.id]
+    );
     if (userRows.length === 0) return res.status(404).json({ error: 'User not found' });
     
     const [transactions] = await pool.query('SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC', [req.params.id]);
@@ -1319,6 +1367,90 @@ router.get('/spin-stats', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch spin stats' });
+  }
+});
+
+// GET /referrals/stats
+router.get('/referrals/stats', async (req, res) => {
+  try {
+    // Total users who have referred someone
+    const [referrersRows] = await pool.query('SELECT COUNT(DISTINCT invited_by) as count FROM users WHERE invited_by IS NOT NULL');
+    
+    // Total users who were referred
+    const [referredRows] = await pool.query('SELECT COUNT(*) as count FROM users WHERE invited_by IS NOT NULL');
+    
+    // Total 1st deposit commissions paid
+    const [firstDepRows] = await pool.query("SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'referral_commission'");
+    
+    // Total FDR recurring commissions currently locked
+    const [lockedFdrRows] = await pool.query("SELECT COALESCE(SUM(locked_referral_balance), 0) as total FROM users");
+    
+    // Total FDR recurring commissions released historically
+    const [releasedFdrRows] = await pool.query("SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'funds_unlocked_manual' AND description LIKE '%referral%'");
+
+    // Top Referrers
+    const [topReferrers] = await pool.query(`
+      SELECT u.id, u.name, COUNT(r.id) as total_referrals, COALESCE(SUM(t.amount), 0) as total_earned
+      FROM users u
+      LEFT JOIN users r ON r.invited_by = u.id
+      LEFT JOIN transactions t ON t.user_id = u.id AND t.type IN ('referral_commission', 'fdr_referral_commission')
+      WHERE u.id IN (SELECT DISTINCT invited_by FROM users WHERE invited_by IS NOT NULL)
+      GROUP BY u.id
+      ORDER BY total_referrals DESC
+      LIMIT 10
+    `);
+
+    res.json({
+      total_referrers: referrersRows[0].count,
+      total_referred: referredRows[0].count,
+      total_first_deposit_paid: parseFloat(firstDepRows[0].total),
+      total_fdr_locked: parseFloat(lockedFdrRows[0].total),
+      total_fdr_released: parseFloat(releasedFdrRows[0].total),
+      top_referrers: topReferrers
+    });
+  } catch (err) {
+    console.error('Failed to fetch referral stats:', err);
+    res.status(500).json({ error: 'Failed to fetch referral stats' });
+  }
+});
+
+
+
+// POST /referrals/release-locked
+router.post('/referrals/release-locked', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Select all users with > 0 locked referral balance
+    const [usersWithLockedFunds] = await conn.query("SELECT id, locked_referral_balance FROM users WHERE locked_referral_balance > 0 FOR UPDATE");
+
+    let totalReleased = 0;
+
+    for (const u of usersWithLockedFunds) {
+      const amount = parseFloat(u.locked_referral_balance);
+      
+      await conn.query(
+        "UPDATE users SET locked_referral_balance = 0, referral_balance = referral_balance + ? WHERE id = ?",
+        [amount, u.id]
+      );
+
+      await conn.query(
+        "INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)",
+        [u.id, 'funds_unlocked_manual', amount, `Admin released monthly recurring FDR referral commission`]
+      );
+
+      totalReleased += amount;
+    }
+
+    await conn.commit();
+    res.json({ success: true, total_released: totalReleased, users_affected: usersWithLockedFunds.length });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Failed to release locked funds:', err);
+    res.status(500).json({ error: 'Failed to release funds' });
+  } finally {
+    conn.release();
   }
 });
 

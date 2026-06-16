@@ -29,6 +29,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'admin-deposit-requests', name: 'Deposit Requests', icon: <Receipt size={20} /> },
     { id: 'admin-withdrawal-requests', name: 'Withdrawal Requests', icon: <Receipt size={20} /> },
     { id: 'admin-methods', name: 'Payment Channels', icon: <Wallet size={20} /> },
+    { id: 'admin-referrals', name: 'Referral Program', icon: <Users size={20} /> },
     { id: 'admin-fdr-plans', name: 'FDR Plans', icon: <PlusCircle size={20} /> },
     { id: 'admin-fdrs', name: 'Manage FDRs', icon: <BarChart3 size={20} /> },
     { id: 'admin-schemes', name: 'Reward Schemes', icon: <Gift size={20} /> },

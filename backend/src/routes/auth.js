@@ -168,4 +168,59 @@ router.put('/profile', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /referral-stats (protected)
+router.get('/referral-stats', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // 1. Get total lifetime referral earnings
+    const [earningsRows] = await pool.query(
+      `SELECT IFNULL(SUM(amount), 0) AS lifetime_earnings 
+       FROM transactions 
+       WHERE user_id = ? AND type IN ('referral_commission', 'fdr_referral_commission')`,
+      [userId]
+    );
+    const lifetimeEarnings = earningsRows[0].lifetime_earnings;
+
+    // 2. Get referred users
+    const [referredUsers] = await pool.query(
+      `SELECT id, name, created_at FROM users WHERE invited_by = ? ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    const detailedReferrals = [];
+    for (const u of referredUsers) {
+      // Check if they deposited
+      const [depRows] = await pool.query(
+        `SELECT COUNT(*) as count FROM transactions WHERE user_id = ? AND type = 'deposit' AND status = 'completed'`,
+        [u.id]
+      );
+      const hasDeposited = depRows[0].count > 0;
+
+      // Get their total active FDR principal
+      const [fdrRows] = await pool.query(
+        `SELECT IFNULL(SUM(amount), 0) as total_fdr FROM fdrs WHERE user_id = ? AND status = 'active'`,
+        [u.id]
+      );
+      const activeFdrTotal = parseFloat(fdrRows[0].total_fdr);
+
+      detailedReferrals.push({
+        id: u.id,
+        name: u.name,
+        joined_at: u.created_at,
+        has_deposited: hasDeposited,
+        active_fdr_total: activeFdrTotal
+      });
+    }
+
+    res.json({
+      lifetime_earnings: parseFloat(lifetimeEarnings),
+      referrals: detailedReferrals
+    });
+  } catch (err) {
+    console.error('Referral stats error:', err);
+    res.status(500).json({ error: 'Server error fetching referral stats.' });
+  }
+});
+
 module.exports = router;

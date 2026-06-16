@@ -5,7 +5,7 @@ import { Plus, Check, X, Gift } from 'lucide-react';
 export const AdminSchemes: React.FC = () => {
   const [schemes, setSchemes] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({ type: 'fdr_bonus', min_amount: '', reward_amount: '' });
+  const [formData, setFormData] = useState({ type: 'referral_percent', min_amount: '', reward_amount: '' });
 
   useEffect(() => {
     loadSchemes();
@@ -29,7 +29,7 @@ export const AdminSchemes: React.FC = () => {
         reward_amount: parseFloat(formData.reward_amount),
       });
       setShowModal(false);
-      setFormData({ type: 'fdr_bonus', min_amount: '', reward_amount: '' });
+      setFormData({ type: 'referral_percent', min_amount: '', reward_amount: '' });
       loadSchemes();
     } catch (err) {
       alert('Failed to create scheme');
@@ -42,6 +42,16 @@ export const AdminSchemes: React.FC = () => {
       loadSchemes();
     } catch (err) {
       alert('Failed to update status');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this scheme?')) return;
+    try {
+      await adminAPI.deleteScheme(id);
+      loadSchemes();
+    } catch (err) {
+      alert('Failed to delete scheme');
     }
   };
 
@@ -74,26 +84,33 @@ export const AdminSchemes: React.FC = () => {
             {schemes.map((scheme) => (
               <tr key={scheme.id} style={{ borderBottom: '1px solid var(--border-glass)' }}>
                 <td style={{ padding: '16px 24px' }}>
-                  {scheme.type === 'fdr_bonus' ? 'FDR Creation Bonus' : scheme.type === 'referral_percent' ? '1st Deposit Referral Commission' : 'Referral Bonus'}
+                  {scheme.type === 'fdr_bonus' ? 'FDR Creation Bonus' : scheme.type === 'referral_percent' ? '1st Deposit Referral Commission' : scheme.type === 'fdr_referral_percent' ? 'FDR Recurring Commission' : 'Referral Bonus'}
                 </td>
                 <td style={{ padding: '16px 24px' }}>
-                  {scheme.type === 'fdr_bonus' ? `₹${scheme.min_amount} FDR` : '1st Approved Deposit'}
+                  {scheme.type === 'fdr_bonus' ? `₹${scheme.min_amount} FDR` : scheme.type === 'referral_percent' ? '1st Approved Deposit' : 'Monthly FDR Active Volume'}
                 </td>
                 <td style={{ padding: '16px 24px', fontWeight: 600, color: 'var(--accent-primary)' }}>
-                  {scheme.type === 'referral_percent' ? `${scheme.reward_amount}%` : `₹${scheme.reward_amount}`}
+                  {scheme.type === 'referral_percent' || scheme.type === 'fdr_referral_percent' ? `${scheme.reward_amount}%` : `₹${scheme.reward_amount}`}
                 </td>
                 <td style={{ padding: '16px 24px' }}>
                   <span className={`badge ${scheme.is_active ? 'badge-success' : 'badge-danger'}`}>
                     {scheme.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                <td style={{ padding: '16px 24px', textAlign: 'right', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                   <button 
                     onClick={() => toggleStatus(scheme.id, scheme.is_active)}
                     className="btn" 
                     style={{ padding: '6px 12px', fontSize: '0.85rem', background: 'var(--bg-tertiary)' }}
                   >
                     {scheme.is_active ? 'Disable' : 'Enable'}
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(scheme.id)}
+                    className="btn" 
+                    style={{ padding: '6px 12px', fontSize: '0.85rem', background: 'var(--accent-danger)', color: 'white', border: 'none' }}
+                  >
+                    Delete
                   </button>
                 </td>
               </tr>
@@ -128,27 +145,14 @@ export const AdminSchemes: React.FC = () => {
                   onChange={(e) => setFormData({...formData, type: e.target.value})}
                   required
                 >
-                  <option value="fdr_bonus">FDR Creation Bonus (Fixed Amount)</option>
                   <option value="referral_percent">Referral Commission (Percentage of 1st Deposit)</option>
+                  <option value="fdr_referral_percent">FDR Recurring Commission (Monthly Percentage)</option>
                 </select>
               </div>
 
-              {formData.type === 'fdr_bonus' && (
-                <div>
-                  <label className="input-label">Minimum FDR Amount required</label>
-                  <input 
-                    type="number" 
-                    className="input-field" 
-                    value={formData.min_amount} 
-                    onChange={(e) => setFormData({...formData, min_amount: e.target.value})}
-                    required
-                  />
-                </div>
-              )}
-
               <div>
                 <label className="input-label">
-                  {formData.type === 'referral_percent' ? 'Reward Bonus Percentage (%)' : 'Reward Bonus Amount (₹)'}
+                  {formData.type === 'referral_percent' || formData.type === 'fdr_referral_percent' ? 'Reward Bonus Percentage (%)' : 'Reward Bonus Amount (₹)'}
                 </label>
                 <input 
                   type="number" 
@@ -157,7 +161,7 @@ export const AdminSchemes: React.FC = () => {
                   onChange={(e) => setFormData({...formData, reward_amount: e.target.value})}
                   required
                   min="0"
-                  max={formData.type === 'referral_percent' ? "100" : undefined}
+                  max={formData.type === 'referral_percent' || formData.type === 'fdr_referral_percent' ? "100" : undefined}
                 />
               </div>
 

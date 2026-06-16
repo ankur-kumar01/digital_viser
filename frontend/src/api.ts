@@ -122,6 +122,7 @@ export const authAPI = {
   login: (credentials: any) => request('POST', '/auth/login', credentials),
   getProfile: () => request('GET', '/auth/profile'),
   updateProfile: (data: any) => request('PUT', '/auth/profile', data),
+  getReferralStats: () => request('GET', '/auth/referral-stats'),
 };
 
 export const walletAPI = {
@@ -177,6 +178,7 @@ export const adminAPI = {
   rejectWithdrawal: (id: number) => adminRequest('POST', `/admin/withdrawals/${id}/reject`),
   getUsers: () => adminRequest('GET', '/admin/users'),
   updateUser: (id: number, data: any) => adminRequest('PUT', `/admin/users/${id}`, data),
+  updateUserReferrer: (id: number, invited_by: number | null) => adminRequest('PUT', `/admin/users/${id}/invited-by`, { invited_by }),
   adjustBalance: (id: number, action: 'add' | 'subtract', amount: number, description: string, wallet_type: 'main' | 'bonus' | 'referral' = 'main') => 
     adminRequest('POST', `/admin/users/${id}/balance`, { action, amount, description, wallet_type }),
   getSchemes: () => adminRequest('GET', '/admin/schemes'),
@@ -225,6 +227,8 @@ export const adminAPI = {
   getSpinHistory: () => adminRequest('GET', '/admin/spin-history'),
   deleteSpinHistory: (id: number) => adminRequest('DELETE', `/admin/spin-history/${id}`),
   getSpinStats: () => adminRequest('GET', '/admin/spin-stats'),
+  getReferralStats: () => adminRequest('GET', '/admin/referrals/stats'),
+  releaseLockedReferral: () => adminRequest('POST', '/admin/referrals/release-locked'),
 };
 
 export const spinAPI = {
