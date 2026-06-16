@@ -352,57 +352,56 @@ export const AdminSpinWheel: React.FC = () => {
 
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div className="input-group">
-                <label>Label (shown on wheel)</label>
-                <input type="text" value={formData.label} onChange={e => setFormData({ ...formData, label: e.target.value })} placeholder="e.g. ₹50 Gaming Bonus" required />
+                <label className="input-label">Label (shown on wheel)</label>
+                <input type="text" className="input-field" value={formData.label} onChange={e => setFormData({ ...formData, label: e.target.value })} placeholder="e.g. ₹50 Gaming Bonus" required />
               </div>
 
               <div className="input-group">
-                <label>Prize Type</label>
-                <select value={formData.prize_type} onChange={e => setFormData({ ...formData, prize_type: e.target.value })}
-                  style={{ padding: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', outline: 'none' }} required>
+                <label className="input-label">Prize Type</label>
+                <select className="input-field" value={formData.prize_type} onChange={e => setFormData({ ...formData, prize_type: e.target.value })} required>
                   {PRIZE_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
 
               {formData.prize_type === 'gaming_bonus' && (
                 <div className="input-group">
-                  <label>Prize Amount (₹)</label>
-                  <input type="number" min="0" step="0.01" value={formData.prize_amount} onChange={e => setFormData({ ...formData, prize_amount: e.target.value })} placeholder="e.g. 50" required />
+                  <label className="input-label">Prize Amount (₹)</label>
+                  <input type="number" className="input-field" min="0" step="0.01" value={formData.prize_amount} onChange={e => setFormData({ ...formData, prize_amount: e.target.value })} placeholder="e.g. 50" required />
                 </div>
               )}
 
               <div className="input-group">
-                <label>Probability Weight <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(higher = more likely)</span></label>
-                <input type="number" min="1" max="100" value={formData.probability} onChange={e => setFormData({ ...formData, probability: e.target.value })} placeholder="e.g. 15" required />
+                <label className="input-label">Probability Weight <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(higher = more likely)</span></label>
+                <input type="number" className="input-field" min="1" max="100" value={formData.probability} onChange={e => setFormData({ ...formData, probability: e.target.value })} placeholder="e.g. 15" required />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-grid-2">
                 <div className="input-group">
-                  <label>Segment Color</label>
+                  <label className="input-label">Segment Color</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <input type="color" value={formData.bg_color} onChange={e => setFormData({ ...formData, bg_color: e.target.value })}
                       style={{ width: '48px', height: '40px', border: 'none', background: 'none', cursor: 'pointer' }} />
-                    <input type="text" value={formData.bg_color} onChange={e => setFormData({ ...formData, bg_color: e.target.value })} style={{ flex: 1 }} />
+                    <input type="text" className="input-field" value={formData.bg_color} onChange={e => setFormData({ ...formData, bg_color: e.target.value })} style={{ flex: 1 }} />
                   </div>
                 </div>
                 <div className="input-group">
-                  <label>Text Color</label>
+                  <label className="input-label">Text Color</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <input type="color" value={formData.text_color} onChange={e => setFormData({ ...formData, text_color: e.target.value })}
                       style={{ width: '48px', height: '40px', border: 'none', background: 'none', cursor: 'pointer' }} />
-                    <input type="text" value={formData.text_color} onChange={e => setFormData({ ...formData, text_color: e.target.value })} style={{ flex: 1 }} />
+                    <input type="text" className="input-field" value={formData.text_color} onChange={e => setFormData({ ...formData, text_color: e.target.value })} style={{ flex: 1 }} />
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-grid-2">
                 <div className="input-group">
-                  <label>Emoji</label>
-                  <input type="text" value={formData.emoji} onChange={e => setFormData({ ...formData, emoji: e.target.value })} placeholder="🎁" maxLength={4} />
+                  <label className="input-label">Emoji</label>
+                  <input type="text" className="input-field" value={formData.emoji} onChange={e => setFormData({ ...formData, emoji: e.target.value })} placeholder="🎁" maxLength={4} />
                 </div>
                 <div className="input-group">
-                  <label>Sort Order</label>
-                  <input type="number" min="0" value={formData.sort_order} onChange={e => setFormData({ ...formData, sort_order: e.target.value })} placeholder="0" />
+                  <label className="input-label">Sort Order</label>
+                  <input type="number" className="input-field" min="0" value={formData.sort_order} onChange={e => setFormData({ ...formData, sort_order: e.target.value })} placeholder="0" />
                 </div>
               </div>
 

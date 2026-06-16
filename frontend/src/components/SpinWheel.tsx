@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { spinAPI } from '../api';
 import { Gift, Clock, Zap, Star, RotateCcw } from 'lucide-react';
 
@@ -466,7 +467,7 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
               style={{
                 background: isSpinning
                   ? 'var(--bg-tertiary)'
-                  : '#3b82f6',
+                  : '#10b981',
                 color: '#fff',
                 border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: '50px',
@@ -475,7 +476,7 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
                 fontWeight: 700,
                 cursor: isSpinning ? 'not-allowed' : 'pointer',
                 letterSpacing: '0.02em',
-                boxShadow: isSpinning ? 'none' : '0 6px 20px rgba(59,130,246,0.4)',
+                boxShadow: isSpinning ? 'none' : '0 6px 20px rgba(16,185,129,0.4)',
                 transition: 'all 0.3s',
                 display: 'flex', alignItems: 'center', gap: '10px',
                 transform: isSpinning ? 'scale(0.98)' : 'scale(1)',
@@ -524,13 +525,13 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
         </div>
       </div>
 
-      {/* Result Modal */}
-      {showResult && result && (
+      {/* Result Modal using React Portal */}
+      {showResult && result && createPortal(
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+          background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 2000, padding: '20px'
+          zIndex: 9999, padding: '20px'
         }}>
           <div className="glass-card" style={{
             width: '100%', maxWidth: '400px', padding: '40px 32px',
@@ -560,12 +561,12 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
               </>
             ) : (
               <>
-                <h2 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '8px', color: '#f59e0b' }}>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '8px', color: '#ef4444' }}>
                   {result.is_streak_bonus ? '🔥 STREAK BONUS! 🔥' : '🎉 You Won!'}
                 </h2>
                 <div style={{
-                  fontSize: '3rem', fontWeight: 900, color: '#f59e0b',
-                  textShadow: '0 0 20px rgba(245,158,11,0.8)', marginBottom: '8px'
+                  fontSize: '3rem', fontWeight: 900, color: '#ef4444',
+                  textShadow: '0 0 20px rgba(239,68,68,0.8)', marginBottom: '8px'
                 }}>
                   +₹{parseFloat(result.segment.prize_amount).toFixed(2)}
                 </div>
@@ -597,7 +598,8 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
               {result.segment.prize_type === 'try_again' ? 'OK, See You Tomorrow!' : 'Play Now! 🎮'}
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

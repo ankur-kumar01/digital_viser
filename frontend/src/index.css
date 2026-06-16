@@ -248,6 +248,18 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--bg-input-focus);
 }
 
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
 .input-label {
   display: block;
   font-family: var(--font-headings);
