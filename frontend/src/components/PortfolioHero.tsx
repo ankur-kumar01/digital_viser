@@ -68,7 +68,8 @@ export const PortfolioHero: React.FC<PortfolioHeroProps> = ({ user, totalFDRFund
   }, []);
 
   const balanceNum = typeof user?.balance === 'string' ? parseFloat(user.balance) : (user?.balance || 0);
-  const totalPortfolioValue = balanceNum + totalFDRFunds + totalInterestEarned + liveYieldIncrement;
+  const gamingBonusNum = typeof user?.gaming_bonus_balance === 'string' ? parseFloat(user.gaming_bonus_balance) : (user?.gaming_bonus_balance || 0);
+  const totalPortfolioValue = balanceNum + gamingBonusNum + totalFDRFunds + totalInterestEarned + liveYieldIncrement;
   const liveTotalInterest = totalInterestEarned + liveYieldIncrement;
 
   const formatCurrency = (val: number, isLive = false) => {
@@ -143,6 +144,11 @@ export const PortfolioHero: React.FC<PortfolioHeroProps> = ({ user, totalFDRFund
           <div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Wallet Balance</p>
             <p style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)' }}>{formatCurrency(balanceNum)}</p>
+          </div>
+          <div style={{ width: '1px', background: 'var(--border-card)', height: 'auto' }} />
+          <div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Gaming Bonus</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent-secondary)' }}>{formatCurrency(gamingBonusNum)}</p>
           </div>
           <div style={{ width: '1px', background: 'var(--border-card)', height: 'auto' }} />
           <div>

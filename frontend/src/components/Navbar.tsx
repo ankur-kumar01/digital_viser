@@ -40,7 +40,8 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar,
         const fdrFundsTotal = fdrs.filter((fdr: any) => fdr.status === 'active').reduce((sum: number, fdr: any) => sum + parseFloat(fdr.amount), 0);
         const interestTotal = fdrs.reduce((sum: number, fdr: any) => sum + parseFloat(fdr.accrued_interest), 0);
         const balanceNum = typeof user.balance === 'string' ? parseFloat(user.balance) : (user.balance || 0);
-        const baseTotal = balanceNum + fdrFundsTotal + interestTotal;
+        const gamingBonusNum = typeof user.gaming_bonus_balance === 'string' ? parseFloat(user.gaming_bonus_balance) : (user.gaming_bonus_balance || 0);
+        const baseTotal = balanceNum + gamingBonusNum + fdrFundsTotal + interestTotal;
 
         let totalYieldPerMs = 0;
         let initialUnaccrued = 0;
@@ -72,8 +73,9 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar,
       } catch (err) {
         if (isMounted) {
           const balanceNum = typeof user.balance === 'string' ? parseFloat(user.balance) : (user.balance || 0);
-          setBasePortfolioValue(balanceNum);
-          setLivePortfolioValue(balanceNum);
+          const gamingBonusNum = typeof user.gaming_bonus_balance === 'string' ? parseFloat(user.gaming_bonus_balance) : (user.gaming_bonus_balance || 0);
+          setBasePortfolioValue(balanceNum + gamingBonusNum);
+          setLivePortfolioValue(balanceNum + gamingBonusNum);
         }
       }
     };
