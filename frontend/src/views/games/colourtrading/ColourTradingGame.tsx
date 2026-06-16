@@ -58,6 +58,18 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
   const [dbBets, setDbBets] = useState<any[]>([]);
   const [poolTotal, setPoolTotal] = useState(18500);
 
+  const rouletteItemsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    if (!isBettingPhase) {
+      const items = [];
+      for (let i = 0; i < 40; i++) {
+        items.push(Math.floor(Math.random() * 10).toString());
+      }
+      rouletteItemsRef.current = items;
+    }
+  }, [isBettingPhase]);
+
   useEffect(() => {
     gamesAPI.getColourTradingBets().then(setDbBets).catch(console.error);
   }, []);
@@ -91,7 +103,7 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
       osc.type = 'sine';
       osc.frequency.setValueAtTime(850, ctx.currentTime);
       
-      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
       
       osc.connect(gain);
@@ -489,22 +501,54 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
         </div>
       </div>
 
-      {/* Result Display */}
-      {!isBettingPhase && resultColor && (
+      {/* Result Display / Cinematic Roulette Reveal */}
+      {!isBettingPhase && (
         <div className="ct-result-section">
-          <div className="ct-result-label">Winning Result</div>
-          <div
-            className={`ct-result-orb ${revealReady ? 'reveal' : ''}`}
-            style={{
-              background: resultNumber !== null ? numberColors[resultNumber.toString()] : colorMap[resultColor]?.bg,
-              boxShadow: `0 0 40px ${colorMap[resultColor]?.glow}, 0 0 80px ${colorMap[resultColor]?.glow}`,
-            }}
-          >
-            {resultNumber !== null ? resultNumber : resultColor.toUpperCase()[0]}
+          <div className="ct-result-label">
+            {!revealReady ? 'Drawing Result...' : 'Winning Result'}
           </div>
-          <div className="ct-result-name" style={{ color: colorMap[resultColor]?.bg }}>
-            {colorMap[resultColor]?.label} {resultNumber !== null ? `(Number ${resultNumber})` : ''}
+          
+          <div className="ct-roulette-container">
+            <div className={`ct-roulette-strip ${revealReady ? 'stopped' : 'spinning'}`}>
+              {rouletteItemsRef.current.map((dummyNum, i) => {
+                const isWinningOrb = i === 39;
+                
+                let renderNum: string | number = dummyNum;
+                let renderColor = dummyNum === '0' || dummyNum === '5' ? 'violet' : (parseInt(dummyNum) % 2 === 0 ? 'red' : 'green');
+                
+                if (isWinningOrb && resultColor && resultNumber !== null) {
+                  renderNum = resultNumber;
+                  renderColor = resultColor;
+                } else if (isWinningOrb && resultColor) {
+                  renderNum = resultColor.toUpperCase()[0];
+                  renderColor = resultColor;
+                }
+                
+                const showWinningState = revealReady && isWinningOrb;
+
+                return (
+                  <div
+                    key={i}
+                    className={`ct-result-orb ${showWinningState ? 'winner reveal' : ''}`}
+                    style={{
+                      background: typeof renderNum === 'number' || !isNaN(parseInt(renderNum as string)) ? numberColors[renderNum.toString()] : colorMap[renderColor]?.bg,
+                      boxShadow: showWinningState ? `0 0 40px ${colorMap[renderColor]?.glow}, 0 0 80px ${colorMap[renderColor]?.glow}` : 'none',
+                      opacity: showWinningState || !revealReady ? 1 : 0.3
+                    }}
+                  >
+                    {renderNum}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="ct-roulette-cursor"></div>
           </div>
+          
+          {revealReady && resultColor && (
+            <div className="ct-result-name fade-in" style={{ color: colorMap[resultColor]?.bg }}>
+              {colorMap[resultColor]?.label} {resultNumber !== null ? `(Number ${resultNumber})` : ''}
+            </div>
+          )}
         </div>
       )}
 

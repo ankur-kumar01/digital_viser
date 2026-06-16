@@ -512,7 +512,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
     osc.type = 'sine';
     osc.frequency.setValueAtTime(900, now);
     
-    gain.gain.setValueAtTime(0.06, now);
+    gain.gain.setValueAtTime(0.18, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
     
     osc.connect(gain);
