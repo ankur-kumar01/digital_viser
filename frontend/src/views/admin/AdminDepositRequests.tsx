@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminAPI } from '../../api';
 import { Check, X, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { formatGlobalDate } from '../../utils/dateFormatter';
 
 export const AdminDepositRequests: React.FC = () => {
   const [deposits, setDeposits] = useState<any[]>([]);
@@ -103,7 +104,7 @@ export const AdminDepositRequests: React.FC = () => {
               <tbody>
                 {currentDeposits.map((item) => (
                   <tr key={item.id}>
-                    <td style={{ fontSize: '0.85rem' }}>{new Date(item.created_at).toLocaleString()}</td>
+                    <td style={{ fontSize: '0.85rem' }}>{formatGlobalDate(item.created_at)}</td>
                     <td>
                       <div style={{ fontWeight: 600 }}>{item.user_name}</div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{item.user_email}</div>

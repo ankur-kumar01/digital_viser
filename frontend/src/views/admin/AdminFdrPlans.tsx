@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminAPI } from '../../api';
-import { Plus, Power, PowerOff, Award, Trash2, Percent, Calendar, Clock, Edit, X } from 'lucide-react';
+import { Percent, Clock, Plus, Trash2, Calendar, Edit, Power, PowerOff, Award, X } from 'lucide-react';
+import { formatGlobalDate, parseAdminInputDateToGlobalUTC } from '../../utils/dateFormatter';
 
 export const AdminFdrPlans: React.FC = () => {
   const [plans, setPlans] = useState<any[]>([]);
@@ -127,8 +128,8 @@ export const AdminFdrPlans: React.FC = () => {
       await adminAPI.createFdrOffer({
         name: newOffer.name,
         bonus_percent: parseFloat(newOffer.bonus_percent),
-        start_time: newOffer.start_time,
-        end_time: newOffer.end_time,
+        start_time: parseAdminInputDateToGlobalUTC(newOffer.start_time),
+        end_time: parseAdminInputDateToGlobalUTC(newOffer.end_time),
         is_active: true
       });
       setNewOffer({ name: '', bonus_percent: '', start_time: '', end_time: '' });
@@ -168,10 +169,11 @@ export const AdminFdrPlans: React.FC = () => {
     return { label: 'Active', class: 'badge-active' };
   };
 
-  const formatDateTime = (dtStr: string) => {
-    return new Date(dtStr).toLocaleString('en-IN', {
-      day: 'numeric',
+  const formatDate = (dtStr: string) => {
+    return formatGlobalDate(dtStr, {
+      year: 'numeric',
       month: 'short',
+      day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });

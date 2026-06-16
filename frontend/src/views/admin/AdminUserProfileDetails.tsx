@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { adminAPI } from '../../api';
 import { ArrowLeft, User, Wallet, Lock, Activity, Clock, Plus, X, Check, FileText, Calendar } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { formatGlobalDate } from '../../utils/dateFormatter';
 
 interface Props {
   userId: number;
@@ -215,7 +216,7 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Joined:</span>
-                <span style={{ fontWeight: 600 }}>{new Date(data.user.created_at).toLocaleDateString()}</span>
+                <span style={{ fontWeight: 600 }}>{formatGlobalDate(data.user.created_at, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
               </div>
             </div>
           </div>
@@ -309,7 +310,7 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
               <tbody>
                 {data.transactions.map((tx: any) => (
                   <tr key={tx.id}>
-                    <td>{new Date(tx.created_at).toLocaleString()}</td>
+                    <td>{formatGlobalDate(tx.created_at)}</td>
                     <td><span className="badge badge-active">{tx.type}</span></td>
                     <td style={{ fontWeight: 600 }}>{formatCurrency(tx.amount)}</td>
                     <td style={{ color: 'var(--text-secondary)' }}>{tx.description}</td>
@@ -340,7 +341,7 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
                     <td>{fdr.interest_percent}%</td>
                     <td style={{ fontWeight: 600 }}>{formatCurrency(fdr.amount)}</td>
                     <td><span className={`badge ${fdr.status === 'active' ? 'badge-active' : 'badge-completed'}`}>{fdr.status}</span></td>
-                    <td>{new Date(fdr.start_date).toLocaleDateString()}</td>
+                    <td>{formatGlobalDate(fdr.start_date, { year: 'numeric', month: 'short', day: 'numeric' })}</td>
                     <td>
                       {fdr.status === 'active' && (
                         <button onClick={() => handleCloseFdr(fdr.id)} className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.8rem', color: 'var(--accent-danger)' }}>
@@ -373,7 +374,7 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
                   <tr key={lf.id}>
                     <td style={{textTransform:'capitalize'}}>{lf.wallet_type}</td>
                     <td style={{ fontWeight: 600 }}>{formatCurrency(lf.amount)}</td>
-                    <td>{lf.unlock_date ? new Date(lf.unlock_date).toLocaleDateString() : 'Indefinite'}</td>
+                    <td>{lf.unlock_date ? formatGlobalDate(lf.unlock_date, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Indefinite'}</td>
                     <td><span className={`badge ${lf.status === 'locked' ? 'badge-danger' : 'badge-active'}`}>{lf.status}</span></td>
                     <td>
                       {lf.status === 'locked' && (

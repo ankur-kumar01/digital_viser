@@ -268,7 +268,7 @@ export const AdminSpinWheel: React.FC = () => {
                   ) : (
                     history.map((h: any) => (
                       <tr key={h.id}>
-                        <td style={{ fontSize: '0.85rem' }}>{new Date(h.spun_at).toLocaleString()}</td>
+                        <td style={{ fontSize: '0.85rem' }}>{formatGlobalDate(h.spun_at)}</td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{h.user_name}</div>
                           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{h.user_email}</div>

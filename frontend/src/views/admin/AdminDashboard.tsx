@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminAPI } from '../../api';
 import { Users, Wallet, PiggyBank, Clock } from 'lucide-react';
+import { formatGlobalDate } from '../../utils/dateFormatter';
 
 export const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
@@ -72,9 +73,8 @@ export const AdminDashboard: React.FC = () => {
             <span style={{ color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', fontSize: '0.85rem' }}>Cron Last Run</span>
           </div>
           <div className="metric-val" style={{ fontSize: '1.2rem' }}>
-            {stats?.cronLastRun ? new Date(stats.cronLastRun).toLocaleString('en-IN', {
-              dateStyle: 'medium',
-              timeStyle: 'short'
+            {stats?.cronLastRun ? formatGlobalDate(stats.cronLastRun, {
+              hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short'
             }) : 'Never'}
           </div>
         </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { walletAPI } from '../api';
 import { Receipt, Search, Filter, RefreshCw } from 'lucide-react';
+import { formatGlobalDate } from '../utils/dateFormatter';
 
 export const Transactions: React.FC = () => {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -81,9 +82,7 @@ export const Transactions: React.FC = () => {
   };
 
   const formatDate = (dateStr: string) => {
-    if (!dateStr) return 'N/A';
-    const date = new Date(dateStr);
-    return date.toLocaleString('en-IN', {
+    return formatGlobalDate(dateStr, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

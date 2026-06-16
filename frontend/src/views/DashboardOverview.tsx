@@ -5,6 +5,7 @@ import { Wallet, Award, History, ArrowRight, ArrowUpRight, ArrowDownLeft, PiggyB
 import { PortfolioHero } from '../components/PortfolioHero';
 import { AviatorChatWidget } from '../components/AviatorChatWidget';
 import { SpinWheel } from '../components/SpinWheel';
+import { formatGlobalDate } from '../utils/dateFormatter';
 
 interface DashboardOverviewProps {
   user: {
@@ -517,7 +518,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                     </div>
                     <div>
                       <p style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>{tx.description}</p>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(tx.created_at).toLocaleDateString()}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{formatGlobalDate(tx.created_at, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                   </div>
                   <div style={{ fontWeight: 600, fontSize: '0.9rem', color: tx.type.includes('deposit') ? 'var(--accent-secondary)' : 'var(--text-primary)' }}>

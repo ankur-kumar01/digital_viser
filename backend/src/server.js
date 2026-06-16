@@ -143,6 +143,20 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/games', gamesRoutes);
 app.use('/api/spin', spinRoutes);
 
+// Public Config Endpoint
+app.get('/api/config', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT setting_key, setting_value FROM system_settings');
+    const settings = rows.reduce((acc, row) => ({ ...acc, [row.setting_key]: row.setting_value }), {});
+    
+    res.json({
+      global_timezone: settings.global_timezone || 'UTC'
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch config' });
+  }
+});
+
 // Initialize Cron Jobs
 require('./cron');
 

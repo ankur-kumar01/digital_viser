@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminAPI } from '../../api';
 import { Search, Calendar, Edit, PowerOff, X, BarChart3, User, Mail, DollarSign } from 'lucide-react';
+import { formatGlobalDate } from '../../utils/dateFormatter';
 
 export const AdminFdrs: React.FC = () => {
   const [fdrs, setFdrs] = useState<any[]>([]);
@@ -82,8 +83,7 @@ export const AdminFdrs: React.FC = () => {
   const currentFdrs = filteredFdrs.slice(indexOfFirstItem, indexOfLastItem);
 
   const formatDate = (dateStr: string) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-IN', {
+    return formatGlobalDate(dateStr, {
       day: 'numeric',
       month: 'short',
       year: 'numeric'

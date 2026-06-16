@@ -14,7 +14,8 @@ import { Referrals } from './views/Referrals';
 import { GamesCenter } from './views/GamesCenter';
 import { AviatorGame } from './views/games/aviator';
 import { ColourTradingGame } from './views/games/colourtrading';
-import { authAPI, clearToken, getToken, adminAPI, getAdminToken, clearAdminToken } from './api';
+import { authAPI, clearToken, getToken, adminAPI, getAdminToken, clearAdminToken, globalConfigAPI } from './api';
+import { setGlobalTimeZone } from './utils/dateFormatter';
 
 // Admin Views
 import { AdminAuth } from './views/admin/AdminAuth';
@@ -46,6 +47,15 @@ export const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleInitialize = async () => {
+    try {
+      const config = await globalConfigAPI.getConfig();
+      if (config && config.global_timezone) {
+        setGlobalTimeZone(config.global_timezone);
+      }
+    } catch (err) {
+      console.error('Failed to fetch global config', err);
+    }
+
     const isAdminRoute = window.location.pathname === '/admin';
     const hashView = window.location.hash ? window.location.hash.substring(1) : null;
     

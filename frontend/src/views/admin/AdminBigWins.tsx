@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminAPI } from '../../api';
 import { Plus, Edit2, Trash2, X, Award } from 'lucide-react';
+import { formatGlobalDate } from '../../utils/dateFormatter';
 
 export const AdminBigWins: React.FC = () => {
   const [wins, setWins] = useState<any[]>([]);
@@ -154,7 +155,7 @@ export const AdminBigWins: React.FC = () => {
                         }}></span>
                         <code style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{item.game_color}</code>
                       </td>
-                      <td style={{ fontSize: '0.85rem' }}>{new Date(item.created_at).toLocaleString()}</td>
+                      <td style={{ fontSize: '0.85rem' }}>{formatGlobalDate(item.created_at)}</td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                           <button 

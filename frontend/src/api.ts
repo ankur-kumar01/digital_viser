@@ -113,6 +113,10 @@ export const uploadFile = async (file: File, folder: 'admin' | 'deposits' | 'wit
   return data.url;
 }
 
+export const globalConfigAPI = {
+  getConfig: () => request('GET', '/config'),
+};
+
 export const authAPI = {
   register: (userData: any) => request('POST', '/auth/register', userData),
   login: (credentials: any) => request('POST', '/auth/login', credentials),

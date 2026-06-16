@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { adminAPI } from '../../api';
 import { Users, Edit2, Check, X, Plus, Minus, DollarSign, Eye } from 'lucide-react';
+import { formatGlobalDate } from '../../utils/dateFormatter';
 
 interface Props {
   onNavigate?: (view: string) => void;
@@ -143,7 +144,7 @@ export const AdminUsers: React.FC<Props> = ({ onNavigate, onSelectUser }) => {
                     </span>
                   </td>
                   <td style={{ fontSize: '0.85rem' }}>
-                    {new Date(user.created_at).toLocaleDateString()}
+                    {formatGlobalDate(user.created_at, { year: 'numeric', month: 'short', day: 'numeric' })}
                   </td>
                   <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
