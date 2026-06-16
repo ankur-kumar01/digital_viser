@@ -28,7 +28,7 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
   const [lockLoading, setLockLoading] = useState(false);
 
   const [showAdjustModal, setShowAdjustModal] = useState(false);
-  const [adjustWalletType, setAdjustWalletType] = useState<'main' | 'bonus' | 'referral'>('main');
+  const [adjustWalletType, setAdjustWalletType] = useState<'main' | 'bonus' | 'referral' | 'gaming_bonus'>('main');
   const [adjustAction, setAdjustAction] = useState<'add' | 'subtract'>('add');
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustDescription, setAdjustDescription] = useState('');
@@ -261,6 +261,18 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
                   ± Adjust
                 </button>
               </div>
+              <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: 'var(--radius-sm)', position: 'relative' }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Gaming Bonus Balance</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f59e0b', margin: '8px 0' }}>{formatCurrency(data.user.gaming_bonus_balance)}</div>
+                <div style={{ color: 'var(--accent-danger)', fontSize: '0.8rem' }}><Lock size={12} style={{display:'inline'}}/> Locked: ₹0.00</div>
+                <button 
+                  onClick={() => { setAdjustWalletType('gaming_bonus'); setShowAdjustModal(true); }}
+                  className="btn btn-secondary" 
+                  style={{ position: 'absolute', top: '16px', right: '16px', padding: '6px 12px', fontSize: '0.8rem', borderRadius: 'var(--radius-full)' }}
+                >
+                  ± Adjust
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -439,7 +451,7 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '20px' }}>
           <div className="glass-card" style={{ maxWidth: '400px', width: '100%', padding: '24px', position: 'relative' }}>
             <button onClick={() => setShowAdjustModal(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={24} /></button>
-            <h3 style={{ marginBottom: '20px', textTransform: 'capitalize' }}>Adjust {adjustWalletType} Balance</h3>
+            <h3 style={{ marginBottom: '20px', textTransform: 'capitalize' }}>Adjust {adjustWalletType.replace('_', ' ')} Balance</h3>
             <form onSubmit={handleAdjustBalance} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label className="input-label">Action</label>
@@ -455,6 +467,15 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
               <div>
                 <label className="input-label">Description / Reason</label>
                 <input type="text" className="input-field" value={adjustDescription} onChange={e => setAdjustDescription(e.target.value)} placeholder="e.g. Bonus adjustment" />
+              </div>
+              <div style={{ marginTop: '4px' }}>
+                <label className="input-label">Wallet Type</label>
+                <select className="input-field" value={adjustWalletType} onChange={e => setAdjustWalletType(e.target.value as any)} required>
+                  <option value="main">Main Balance</option>
+                  <option value="bonus">Deposit Bonus</option>
+                  <option value="referral">Referral Balance</option>
+                  <option value="gaming_bonus">Gaming Bonus</option>
+                </select>
               </div>
               <button type="submit" className="btn btn-primary" disabled={adjustLoading} style={{ marginTop: '10px' }}>
                 {adjustLoading ? 'Processing...' : 'Confirm Adjustment'}

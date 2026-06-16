@@ -424,7 +424,8 @@ router.post('/users/:id/balance', async (req, res) => {
     const columnMap = {
       'main': 'balance',
       'bonus': 'bonus_balance',
-      'referral': 'referral_balance'
+      'referral': 'referral_balance',
+      'gaming_bonus': 'gaming_bonus_balance'
     };
 
     const targetColumn = columnMap[wallet_type] || 'balance';
@@ -504,7 +505,7 @@ router.put('/schemes/:id', async (req, res) => {
 // GET /users/:id/details
 router.get('/users/:id/details', async (req, res) => {
   try {
-    const [userRows] = await pool.query('SELECT id, name, email, balance, bonus_balance, referral_balance, locked_balance, locked_bonus_balance, locked_referral_balance, phone_number, address, city, state, pin_code, created_at FROM users WHERE id = ?', [req.params.id]);
+    const [userRows] = await pool.query('SELECT id, name, email, balance, bonus_balance, referral_balance, gaming_bonus_balance, locked_balance, locked_bonus_balance, locked_referral_balance, phone_number, address, city, state, pin_code, created_at FROM users WHERE id = ?', [req.params.id]);
     if (userRows.length === 0) return res.status(404).json({ error: 'User not found' });
     
     const [transactions] = await pool.query('SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC', [req.params.id]);
