@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { gamesAPI } from '../api';
 import { Gamepad2, PlayCircle } from 'lucide-react';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 interface Props {
   onNavigate: (view: string, props?: any) => void;
@@ -24,7 +25,7 @@ export const GamesCenter: React.FC<Props> = ({ onNavigate }) => {
     fetchGames();
   }, []);
 
-  if (loading) return <div style={{ padding: '20px', color: 'var(--text-secondary)' }}>Loading games...</div>;
+  if (loading) return <LoadingSpinner message="Loading games listing..." />;
 
   return (
     <div className="fade-in">

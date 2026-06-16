@@ -17,6 +17,7 @@ import { ColourTradingGame } from './views/games/colourtrading';
 import { FruitSlasherGame } from './views/games/fruitslasher';
 import { authAPI, clearToken, getToken, adminAPI, getAdminToken, clearAdminToken, globalConfigAPI } from './api';
 import { setGlobalTimeZone } from './utils/dateFormatter';
+import { LoadingSpinner } from './components/LoadingSpinner';
 
 // Admin Views
 import { AdminAuth } from './views/admin/AdminAuth';
@@ -160,20 +161,7 @@ export const App: React.FC = () => {
 
   if (isInitializing) {
     return (
-      <div 
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'var(--bg-primary)',
-          color: 'var(--text-secondary)',
-          fontFamily: 'var(--font-headings)',
-          fontSize: '1.2rem'
-        }}
-      >
-        <span>Loading Digital_Viser Secure Gateway...</span>
-      </div>
+      <LoadingSpinner message="Checking secure gateway credentials..." fullPage />
     );
   }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fdrAPI } from '../api';
 import { Award, CheckCircle2, TrendingUp, Info } from 'lucide-react';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 interface CreateFDRProps {
   user: {
@@ -294,7 +295,7 @@ export const CreateFDR: React.FC<CreateFDRProps> = ({ user, refreshUser }) => {
               Select Active Plan
             </h4>
             {isFetching ? (
-              <div style={{ padding: '20px', color: 'var(--text-secondary)' }}>Loading FDR plans...</div>
+              <LoadingSpinner message="Loading investment plans..." />
             ) : activePlans.length === 0 ? (
               <div style={{ padding: '20px', color: 'var(--text-muted)', border: '1px dashed var(--border-glass)', borderRadius: 'var(--radius-md)' }}>
                 No active FDR plans are currently configured by the administrator. Check back later.

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { walletAPI } from '../api';
 import { Receipt, Search, Filter, RefreshCw } from 'lucide-react';
 import { formatGlobalDate } from '../utils/dateFormatter';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 export const Transactions: React.FC = () => {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -176,9 +177,7 @@ export const Transactions: React.FC = () => {
       </div>
 
       {isLoading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0', color: 'var(--text-secondary)' }}>
-          <span>Loading ledger audits...</span>
-        </div>
+        <LoadingSpinner message="Loading ledger audits..." />
       ) : filteredTransactions.length === 0 ? (
         <div 
           className="glass-card" 

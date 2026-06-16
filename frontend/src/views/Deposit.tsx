@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { walletAPI, uploadFile } from '../api';
 import { CheckCircle2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 interface DepositProps {
   user: {
@@ -131,7 +132,7 @@ export const Deposit: React.FC<DepositProps> = () => {
             )}
 
             {isFetching ? (
-              <div>Loading payment channels...</div>
+              <LoadingSpinner message="Loading deposit methods..." />
             ) : paymentChannels.length === 0 ? (
               <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 No active deposit channels available. Please contact support.

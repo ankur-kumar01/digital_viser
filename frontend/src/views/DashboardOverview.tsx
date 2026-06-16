@@ -6,6 +6,7 @@ import { PortfolioHero } from '../components/PortfolioHero';
 import { AviatorChatWidget } from '../components/AviatorChatWidget';
 import { SpinWheel } from '../components/SpinWheel';
 import { formatGlobalDate } from '../utils/dateFormatter';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 interface DashboardOverviewProps {
   user: {
@@ -319,7 +320,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           }}
         >
           {games.length === 0 ? (
-            <div style={{ padding: '20px', color: 'var(--text-muted)' }}>Loading games...</div>
+            <LoadingSpinner message="Loading interactive games..." />
           ) : (
             games.map((g: any) => (
               <div 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { spinAPI } from '../api';
 import { Gift, Clock, Zap, Star, RotateCcw } from 'lucide-react';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface SpinSegment {
   id: number;
@@ -285,9 +286,7 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
 
   if (isLoading) {
     return (
-      <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-        Loading spin wheel...
-      </div>
+      <LoadingSpinner message="Loading fortune wheel options..." />
     );
   }
 

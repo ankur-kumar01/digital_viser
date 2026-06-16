@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { walletAPI, uploadFile } from '../api';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 interface WithdrawProps {
   user: {
@@ -150,7 +151,7 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
             )}
 
             {isFetching ? (
-              <div>Loading payment channels...</div>
+              <LoadingSpinner message="Loading payment channels..." />
             ) : paymentChannels.length === 0 ? (
               <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 No active withdrawal channels available. Please contact support.
