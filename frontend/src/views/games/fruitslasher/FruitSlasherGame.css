@@ -1,0 +1,1022 @@
+/* FruitSlasherGame.css */
+
+.fruitslasher-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px;
+  animation: fadeIn 0.4s ease-out;
+  color: var(--text-primary);
+}
+
+.fruitslasher-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+}
+
+@media (max-width: 968px) {
+  .fruitslasher-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .fruitslasher-sidebar {
+    max-width: 440px;
+    width: 100%;
+    margin: 0 auto;
+  }
+}
+
+/* Canvas Area */
+.fruitslasher-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: radial-gradient(circle at center, #1e1b4b 0%, #09090b 100%);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 40px rgba(99, 102, 241, 0.15);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.fruitslasher-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* UI Overlay HUD */
+.fruitslasher-hud {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.fruitslasher-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.fruitslasher-hud-card {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.fruitslasher-hud-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fruitslasher-hud-val {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-family: var(--font-headings);
+  color: var(--accent-primary);
+}
+
+.fruitslasher-hud-val.multiplier {
+  color: #38bdf8;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+  animation: pulse-glow 2s infinite alternate;
+}
+
+.fruitslasher-hearts {
+  display: flex;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  align-items: center;
+  height: fit-content;
+}
+
+.fruitslasher-heart-icon {
+  color: #ef4444;
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.fruitslasher-heart-icon.lost {
+  color: #3f3f46;
+  filter: none;
+  opacity: 0.3;
+  transform: scale(0.8);
+}
+
+/* Glassmorphic Screens Overlays */
+.fruitslasher-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(9, 9, 11, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 20;
+  text-align: center;
+  padding: 24px;
+}
+
+.fruitslasher-overlay.win {
+  background: rgba(15, 23, 42, 0.85);
+  border: 2px solid #22c55e;
+  box-shadow: inset 0 0 50px rgba(34, 197, 94, 0.15);
+}
+
+.fruitslasher-overlay.lost {
+  background: rgba(15, 23, 42, 0.9);
+  border: 2px solid #ef4444;
+  box-shadow: inset 0 0 50px rgba(239, 68, 68, 0.15);
+}
+
+.fruitslasher-banner-title {
+  font-size: 2.5rem;
+  font-weight: 900;
+  font-family: var(--font-headings);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fruitslasher-overlay.win .fruitslasher-banner-title {
+  color: #22c55e;
+  text-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+}
+
+.fruitslasher-overlay.lost .fruitslasher-banner-title {
+  color: #ef4444;
+  text-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+}
+
+/* Game Info/Instructions screen */
+.fruitslasher-instruction-card {
+  max-width: 440px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  margin-bottom: 24px;
+}
+
+.fruitslasher-instruction-card p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.fruitslasher-instruction-card ul {
+  text-align: left;
+  padding-left: 20px;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.fruitslasher-instruction-card li {
+  margin-bottom: 6px;
+}
+
+/* Sidebar panel */
+.fruitslasher-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+}
+
+.fruitslasher-wallet-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fruitslasher-wallet-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.fruitslasher-wallet-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-glass);
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.fruitslasher-wallet-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.fruitslasher-wallet-btn.active {
+  background: var(--accent-primary-glow);
+  border-color: var(--accent-primary);
+}
+
+.fruitslasher-wallet-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.fruitslasher-wallet-amount {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+.fruitslasher-bet-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fruitslasher-bet-presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.fruitslasher-preset-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-glass);
+  padding: 6px;
+  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.fruitslasher-preset-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+/* Start / Cashout Buttons */
+.fruitslasher-action-btn {
+  width: 100%;
+  padding: 16px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+  font-family: var(--font-headings);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fruitslasher-action-btn.start {
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #3b82f6 100%);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+}
+
+.fruitslasher-action-btn.start:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.6);
+}
+
+.fruitslasher-action-btn.cashout {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+  animation: pulse-green 1.5s infinite;
+}
+
+.fruitslasher-action-btn.cashout:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+}
+
+.fruitslasher-action-btn.crashed-active {
+  background: #3f3f46;
+  color: #a1a1aa;
+  cursor: not-allowed;
+}
+
+/* Tab Selection */
+.fruitslasher-tab-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--bg-tertiary);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-glass);
+}
+
+.fruitslasher-tab-btn {
+  background: transparent;
+  border: none;
+  padding: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fruitslasher-tab-btn.active {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Info Banner under controls */
+.fruitslasher-banner {
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  color: #f59e0b;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+/* Animations */
+@keyframes pulse-glow {
+  0% {
+    text-shadow: 0 0 5px rgba(56, 189, 248, 0.3);
+  }
+  100% {
+    text-shadow: 0 0 15px rgba(56, 189, 248, 0.7), 0 0 25px rgba(56, 189, 248, 0.5);
+  }
+}
+
+@keyframes pulse-green {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* Shake Animation for Screen and Hearts */
+.fruitslasher-shake {
+  animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  10%, 30%, 50%, 70%, 90% { transform: translate(-4px, 2px); }
+  20%, 40%, 60%, 80% { transform: translate(4px, -2px); }
+}
+
+/* Slow Motion Overlay Transition */
+.fruitslasher-slow-mo {
+  animation: fadeToGrayscale 0.6s forwards;
+}
+
+@keyframes fadeToGrayscale {
+  0% { filter: grayscale(0%) contrast(100%); }
+  100% { filter: grayscale(40%) contrast(110%) sepia(20%); }
+}
+
+/* Audio control toggle floating */
+.fruitslasher-audio-btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.fruitslasher-audio-btn:hover {
+  color: var(--text-primary);
+  background: rgba(15, 23, 42, 0.9);
+  transform: scale(1.05);
+}
+
+.fruitslasher-bet-input {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex: 1 1 0%;
+  min-width: 0;
+  padding: 4px;
+  outline: none;
+}
+
+@media (max-width: 576px) {
+  .fruitslasher-container {
+    gap: 12px;
+    padding: 6px;
+  }
+  
+  .fruitslasher-layout {
+    gap: 14px;
+  }
+
+  .fruitslasher-hud {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+  }
+
+  .fruitslasher-hud-card {
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+  }
+
+  .fruitslasher-hud-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.02em;
+  }
+
+  .fruitslasher-hud-val {
+    font-size: 1.1rem;
+  }
+
+  .fruitslasher-hearts {
+    padding: 4px 8px;
+    gap: 4px;
+    border-radius: var(--radius-sm);
+  }
+
+  .fruitslasher-heart-icon {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  .fruitslasher-audio-btn {
+    bottom: 10px;
+    right: 10px;
+    padding: 6px;
+  }
+
+  .fruitslasher-canvas-wrapper {
+    aspect-ratio: auto !important;
+    height: 330px !important;
+  }
+
+  /* Overlay Responsive Changes */
+  .fruitslasher-overlay {
+    padding: 12px 16px !important;
+    justify-content: center !important;
+    overflow-y: auto !important;
+  }
+
+  /* Hide subtitle to prevent horizontal overflow */
+  .fruitslasher-subtitle {
+    display: none !important;
+  }
+
+  /* Optimize padding to prevent card and grid overflow */
+  .fruitslasher-sidebar .glass-card {
+    padding: 12px !important;
+  }
+
+  .fruitslasher-preset-btn {
+    padding: 4px 2px !important;
+    font-size: 0.75rem !important;
+    min-width: 0 !important;
+  }
+
+  .fruitslasher-wallet-btn {
+    padding: 6px 8px !important;
+    min-width: 0 !important;
+  }
+
+  /* Hide the large decorative shield icon in Start Overlay */
+  .fruitslasher-overlay > svg:first-of-type {
+    display: none !important;
+  }
+
+  /* But keep win / lose icons, scaling them down */
+  .fruitslasher-overlay.win svg,
+  .fruitslasher-overlay.lost svg {
+    display: block !important;
+    width: 32px !important;
+    height: 32px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .fruitslasher-banner-title {
+    font-size: 1.4rem !important;
+    margin-bottom: 2px !important;
+    margin-top: 10px !important;
+  }
+
+  .fruitslasher-instruction-card {
+    padding: 0 !important;
+    margin-bottom: 8px !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .fruitslasher-instruction-card p {
+    font-size: 0.75rem !important;
+    margin-bottom: 4px !important;
+    line-height: 1.2 !important;
+    color: var(--text-secondary) !important;
+  }
+
+  /* Hide the long bullet list on mobile overlays to fit */
+  .fruitslasher-instruction-card ul {
+    display: none !important;
+  }
+
+  .fruitslasher-overlay .fruitslasher-action-btn.start {
+    width: 180px !important;
+    padding: 10px !important;
+    font-size: 0.9rem !important;
+  }
+
+  .fruitslasher-overlay.win .fruitslasher-banner-title,
+  .fruitslasher-overlay.lost .fruitslasher-banner-title {
+    font-size: 1.6rem !important;
+  }
+
+  .fruitslasher-overlay.win h4,
+  .fruitslasher-overlay.lost h4 {
+    font-size: 1.6rem !important;
+    margin: 4px 0 !important;
+  }
+
+  .fruitslasher-overlay.win p,
+  .fruitslasher-overlay.lost p {
+    font-size: 0.85rem !important;
+  }
+
+  .fruitslasher-overlay.win .btn-primary,
+  .fruitslasher-overlay.lost .btn-primary {
+    width: 150px !important;
+    min-height: 38px !important;
+    padding: 8px 16px !important;
+    font-size: 0.85rem !important;
+    margin-top: 8px !important;
+  }
+
+  .fruitslasher-action-btn {
+    padding: 12px;
+    font-size: 1rem;
+  }
+
+  .fruitslasher-wallet-amount {
+    font-size: 0.85rem;
+  }
+
+  .fruitslasher-wallet-btn {
+    padding: 8px;
+  }
+}
+
+/* Immersive Fullscreen Android app style layout overrides */
+.main-content-layout.fullscreen-game {
+  margin-left: 0 !important;
+  padding: 16px !important;
+  min-height: 100vh;
+  background: #07080b !important;
+}
+
+@media (max-width: 768px) {
+  .main-content-layout.fullscreen-game {
+    padding-bottom: 0px !important;
+    padding-top: 0px !important;
+    padding: 8px !important;
+  }
+}
+
+/* Premium Unified Bet Controls Card */
+.fs-controls {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--shadow-card);
+  transition: var(--transition);
+}
+
+.fs-controls-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+  margin: 0;
+  display: block;
+}
+
+/* Wallet Section */
+.fs-wallet-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fs-wallet-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.fs-wallet-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-card);
+  padding: 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  outline: none;
+}
+
+.fs-wallet-btn:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+}
+
+.fs-wallet-btn.active {
+  background: var(--accent-primary-glow);
+  border-color: var(--accent-primary);
+}
+
+.fs-wallet-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.fs-wallet-amount {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.fs-divider {
+  height: 1px;
+  background: var(--border-card);
+  margin: 4px 0;
+}
+
+/* Bet Header */
+.fs-bet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Auto Cashout styling exactly like Aviator */
+.fs-auto-cashout-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-tertiary);
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border-card);
+}
+
+.fs-auto-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+
+/* Compact Toggle Switch */
+.fs-switch {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 20px;
+}
+
+.fs-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.fs-switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border-input);
+  transition: .3s;
+  border-radius: 20px;
+}
+
+.fs-switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+}
+
+.fs-switch input:checked + .fs-switch-slider {
+  background-color: var(--accent-secondary);
+}
+
+.fs-switch input:checked + .fs-switch-slider:before {
+  transform: translateX(14px);
+}
+
+.fs-auto-input {
+  width: 55px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 800;
+  outline: none;
+  text-align: center;
+  border-bottom: 1px dashed var(--text-muted);
+  padding: 0;
+}
+
+.fs-auto-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+/* Bet Input Wrap (resembles Aviator's gray pill) */
+.fs-bet-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  padding: 4px;
+}
+
+.fs-bet-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-align: center;
+  outline: none;
+  min-width: 0;
+  font-family: 'SF Mono', 'Fira Code', Monaco, monospace;
+}
+
+.fs-bet-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+.fs-step-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--border-card);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fs-step-btn:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.fs-step-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Presets Scroll (like Aviator) */
+.fs-quick-bets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 2px;
+}
+
+.fs-quick-bets::-webkit-scrollbar {
+  display: none;
+}
+
+.fs-quick-btn {
+  padding: 8px 16px;
+  min-width: 65px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px dashed var(--border-card);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.03), 0 4px 6px rgba(0, 0, 0, 0.02);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.fs-quick-btn::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 9999px;
+  border: 1px solid var(--border-card);
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.fs-quick-btn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+  transform: translateY(-1px) scale(1.02);
+}
+
+.fs-quick-btn.active {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: #fff;
+  border-color: #4ade80;
+  border-style: solid;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.4), inset 0 0 8px rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px) scale(1.02);
+}
+
+.fs-quick-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+/* Action Buttons */
+.fs-action-btn {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 16px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  font-family: var(--font-headings);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.fs-action-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.fs-action-start {
+  background: linear-gradient(135deg, var(--accent-secondary) 0%, #047857 100%);
+  color: #fff;
+  box-shadow: 0 6px 20px var(--accent-secondary-glow);
+}
+
+.fs-action-start:hover:not(:disabled) {
+  box-shadow: 0 8px 25px rgba(5, 150, 105, 0.35);
+  transform: translateY(-1px);
+}
+
+.fs-action-start:disabled {
+  background: #374151;
+  color: #9ca3af;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.fs-action-cashout {
+  background: linear-gradient(135deg, #ea580c 0%, #ca8a04 100%);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(234, 88, 12, 0.3);
+  animation: pulse-green 1.5s infinite;
+}
+
+.fs-cashout-payout {
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.fs-error-msg {
+  color: #ef4444;
+  font-size: 0.85rem;
+  text-align: center;
+  background: rgba(239, 68, 68, 0.08);
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+@media (max-width: 576px) {
+  .fs-controls {
+    padding: 14px;
+    gap: 12px;
+    border-radius: 16px;
+  }
+
+  .fs-wallet-btn {
+    padding: 8px;
+  }
+
+  .fs-wallet-amount {
+    font-size: 0.82rem;
+  }
+
+  .fs-bet-input {
+    font-size: 1.25rem;
+  }
+
+  .fs-step-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+  }
+
+  .fs-quick-btn {
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    min-width: 56px;
+  }
+
+  .fs-action-btn {
+    padding: 12px;
+    font-size: 1rem;
+  }
+
+  .fs-cashout-payout {
+    font-size: 1.1rem;
+  }
+}
+
+

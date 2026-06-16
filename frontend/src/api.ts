@@ -151,7 +151,10 @@ export const gamesAPI = {
   getAviatorChats: () => request('GET', '/games/simulations/aviator-chats'),
   getAviatorBets: () => request('GET', '/games/simulations/aviator-bets'),
   getColourTradingBets: () => request('GET', '/games/simulations/colour-trading-bets'),
-  colourTradingPlay: (amount: number, color: string) => request('POST', '/games/colourtrading/play', { amount, color })
+  colourTradingPlay: (amount: number, color: string) => request('POST', '/games/colourtrading/play', { amount, color }),
+  fruitSlasherPlay: (amount: number, walletType: 'main' | 'gaming_bonus') => request('POST', '/games/fruitslasher/play', { amount, walletType }),
+  fruitSlasherCashout: (betId: number, multiplier: number) => request('POST', '/games/fruitslasher/cashout', { betId, multiplier }),
+  fruitSlasherCrash: (betId: number, multiplier: number) => request('POST', '/games/fruitslasher/crash', { betId, multiplier })
 };
 
 export const adminAPI = {

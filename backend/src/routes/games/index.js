@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../../db');
 
 const colourTradingRoutes = require('./colourtrading');
+const fruitSlasherRoutes = require('./fruitslasher');
 
 const router = express.Router();
 
@@ -59,5 +60,6 @@ router.get('/simulations/colour-trading-bets', async (req, res) => {
 
 // Mount game-specific routes
 router.use('/colourtrading', colourTradingRoutes);
+router.use('/fruitslasher', fruitSlasherRoutes);
 
 module.exports = router;

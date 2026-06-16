@@ -14,6 +14,7 @@ import { Referrals } from './views/Referrals';
 import { GamesCenter } from './views/GamesCenter';
 import { AviatorGame } from './views/games/aviator';
 import { ColourTradingGame } from './views/games/colourtrading';
+import { FruitSlasherGame } from './views/games/fruitslasher';
 import { authAPI, clearToken, getToken, adminAPI, getAdminToken, clearAdminToken, globalConfigAPI } from './api';
 import { setGlobalTimeZone } from './utils/dateFormatter';
 
@@ -46,6 +47,8 @@ export const App: React.FC = () => {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const isGameView = !isAdmin && currentView.startsWith('game-');
 
   const handleInitialize = async () => {
     try {
@@ -184,25 +187,29 @@ export const App: React.FC = () => {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
       {/* Sidebar - fixed left */}
-      <Sidebar 
-        currentView={currentView} 
-        onNavigate={(view) => {
-          setCurrentView(view);
-          setSidebarOpen(false);
-        }} 
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        isAdmin={isAdmin}
-        user={user}
-      />
+      {!isGameView && (
+        <Sidebar 
+          currentView={currentView} 
+          onNavigate={(view) => {
+            setCurrentView(view);
+            setSidebarOpen(false);
+          }} 
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          isAdmin={isAdmin}
+          user={user}
+        />
+      )}
 
       {/* Header Navbar - fixed top */}
-      <Navbar 
-        user={user} 
-        onLogout={handleLogout} 
-        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-        isAdmin={isAdmin}
-      />
+      {!isGameView && (
+        <Navbar 
+          user={user} 
+          onLogout={handleLogout} 
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          isAdmin={isAdmin}
+        />
+      )}
 
       {/* Backdrop overlay for mobile */}
       {sidebarOpen && (
@@ -210,7 +217,7 @@ export const App: React.FC = () => {
       )}
 
       {/* Main Viewport Container */}
-      <main className="main-content-layout">
+      <main className={`main-content-layout ${isGameView ? 'fullscreen-game' : ''}`}>
         {!isAdmin ? (
           <>
             {currentView === 'dashboard' && (
@@ -250,6 +257,9 @@ export const App: React.FC = () => {
             {currentView === 'game-colour-trading' && (
               <ColourTradingGame user={user} refreshUser={refreshUser} onNavigate={setCurrentView} />
             )}
+            {currentView === 'game-fruit-slasher' && (
+              <FruitSlasherGame user={user} refreshUser={refreshUser} onNavigate={setCurrentView} />
+            )}
           </>
         ) : (
           <>
@@ -288,7 +298,7 @@ export const App: React.FC = () => {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      {!isAdmin && (
+      {!isAdmin && !isGameView && (
         <nav className="mobile-bottom-nav">
           {[
             { id: 'dashboard', label: 'Home', icon: <LayoutDashboard size={20} /> },

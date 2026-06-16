@@ -1,0 +1,1 @@
+export { FruitSlasherGame } from './FruitSlasherGame';
