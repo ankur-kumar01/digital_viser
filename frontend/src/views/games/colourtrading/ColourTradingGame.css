@@ -244,8 +244,8 @@
 }
 
 .ct-result-orb {
-  width: 120px;
-  height: 120px;
+  width: var(--orb-size, 120px);
+  height: var(--orb-size, 120px);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -272,9 +272,17 @@
 }
 
 /* Cinematic Roulette */
+.ct-result-section {
+  --orb-size: 120px;
+  --orb-gap: 15px;
+  --orb-step: calc(var(--orb-size) + var(--orb-gap));
+  --roulette-offset: calc(-39 * var(--orb-step));
+  --roulette-padding: calc(50% - calc(var(--orb-size) / 2));
+}
+
 @keyframes ct-roulette-spin {
   0% { transform: translateX(0); }
-  100% { transform: translateX(calc(-39 * 135px)); }
+  100% { transform: translateX(var(--roulette-offset)); }
 }
 
 .ct-roulette-container {
@@ -313,8 +321,8 @@
 
 .ct-roulette-strip {
   display: flex;
-  gap: 15px;
-  padding: 0 calc(50% - 60px);
+  gap: var(--orb-gap);
+  padding: 0 var(--roulette-padding);
   align-items: center;
 }
 
@@ -323,7 +331,7 @@
 }
 
 .ct-roulette-strip.stopped {
-  transform: translateX(calc(-39 * 135px));
+  transform: translateX(var(--roulette-offset));
   transition: transform 0.5s ease;
 }
 
@@ -704,11 +712,18 @@
   .ct-result-section {
     padding: 24px 14px;
     border-radius: 16px;
+    --orb-size: 90px;
+    --orb-gap: 12px;
+  }
+
+  .ct-roulette-cursor {
+    width: 100px;
+    height: 100px;
   }
 
   .ct-result-orb {
-    width: 90px;
-    height: 90px;
+    width: var(--orb-size);
+    height: var(--orb-size);
     font-size: 2rem;
   }
 
