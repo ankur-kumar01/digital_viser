@@ -100,6 +100,7 @@ class AviatorGameLogic {
     this.io.emit('aviator_state', {
       state: 'FLYING',
       startTime: this.startTime,
+      serverTime: Date.now(),
       roundId: this.roundId
     });
 

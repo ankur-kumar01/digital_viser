@@ -4,6 +4,14 @@ import { io, Socket } from 'socket.io-client';
 import { getToken, gamesAPI } from '../../../api';
 import './AviatorGame.css';
 
+const PLANE_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="%23ef4444" d="M10,32 Q20,20 40,24 L60,28 Q62,29 62,32 Q62,35 60,36 L40,40 Q20,44 10,32 Z"/><path fill="%23b91c1c" d="M25,26 L15,10 L25,10 L35,25 Z M25,38 L15,54 L25,54 L35,39 Z"/><path fill="%23fca5a5" d="M55,30 L60,32 L55,34 Z"/><circle cx="50" cy="32" r="4" fill="%2360a5fa"/></svg>`;
+const CRASH_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="%23f97316" d="M32,5 L38,20 L55,15 L45,30 L60,40 L45,45 L50,60 L38,50 L32,60 L26,50 L14,60 L19,45 L4,40 L19,30 L9,15 L26,20 Z"/><path fill="%23fef08a" d="M32,20 L35,28 L45,25 L38,32 L48,40 L38,38 L40,48 L32,40 L24,48 L26,38 L16,40 L26,32 L19,25 L29,28 Z"/></svg>`;
+
+const planeImg = new Image();
+planeImg.src = PLANE_SVG;
+const crashImg = new Image();
+crashImg.src = CRASH_SVG;
+
 interface Props {
   user: any;
   refreshUser: () => void;
@@ -539,6 +547,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
   const cashoutSuccessRef = useRef(false);
   const autoCashoutRef = useRef(false);
   const autoCashoutMultRef = useRef(2.0);
+  const serverTimeOffsetRef = useRef<number>(0);
 
   useEffect(() => {
     return () => { if (animationRef.current) cancelAnimationFrame(animationRef.current); };
@@ -614,27 +623,39 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
       }
     }
 
-    // 3. Scrolling Grid Lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    // 3. Dynamic Grid Lines & Axis
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
     ctx.lineWidth = 1;
-    const gridSpeed = 25; // pixels per second
-    const offsetX = (elapsed * gridSpeed) % (w / 10);
-    const offsetY = (elapsed * gridSpeed * 0.5) % (h / 6);
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
     
-    for (let i = -1; i <= 6; i++) {
-      const y = (h * i / 6) + (elapsed > 0 ? offsetY : 0);
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-    }
-    for (let i = 0; i <= 11; i++) {
-      const x = (w * i / 10) - (elapsed > 0 ? offsetX : 0);
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-    }
-
     const pad = 30;
-    if (elapsed <= 0 && !didCrash) { ctx.setTransform(1, 0, 0, 1, 0, 0); return; }
-
     const maxTime = Math.max(elapsed, 3);
     const maxMult = Math.max(mult * 1.2, 2.5);
+
+    // Draw X-axis (Time)
+    const timeSteps = Math.ceil(maxTime / 5) * 5; 
+    const timeInterval = timeSteps / 5;
+    for (let i = 0; i <= 5; i++) {
+      const t = i * timeInterval;
+      if (t === 0) continue;
+      const x = pad + ((w - pad * 2) * (t / maxTime));
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h - pad); ctx.stroke();
+      ctx.fillText(`${t}s`, x - 8, h - pad + 15);
+    }
+
+    // Draw Y-axis (Multiplier)
+    const multSteps = Math.ceil(maxMult);
+    const multInterval = Math.max(1, Math.floor(multSteps / 4));
+    for (let i = 1; i <= Math.ceil(maxMult / multInterval); i++) {
+      const m = 1 + i * multInterval;
+      if (m > maxMult) continue;
+      const y = h - pad - ((h - pad * 2) * ((m - 1) / (maxMult - 1)));
+      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w, y); ctx.stroke();
+      ctx.fillText(`${m}x`, pad - 25, y + 4);
+    }
+
+    if (elapsed <= 0 && !didCrash) { ctx.setTransform(1, 0, 0, 1, 0, 0); return; }
 
     // 4. Exhaust Particles Trail (spawned along the past flight path)
     if (elapsed > 0 && !didCrash) {
@@ -713,17 +734,27 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
     ctx.fill();
 
     // 6. Plane or explosion at tip
-    ctx.font = `${didCrash ? 28 : 24}px serif`;
     if (didCrash) {
-      ctx.fillText('💥', tipX - 14, tipY - 6);
+      ctx.drawImage(crashImg, tipX - 20, tipY - 20, 40, 40);
     } else {
       // Glow dot at tip
       const dotGrad = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, 14);
-      dotGrad.addColorStop(0, 'rgba(34,197,94,0.8)');
+      dotGrad.addColorStop(0, 'rgba(34,197,94,0.4)');
       dotGrad.addColorStop(1, 'transparent');
       ctx.fillStyle = dotGrad;
       ctx.fillRect(tipX - 14, tipY - 14, 28, 28);
-      ctx.fillText('✈️', tipX - 12, tipY - 10);
+      
+      const dx = (w - pad * 2) / maxTime;
+      const dm_dt = 0.2 * Math.exp(0.2 * elapsed);
+      const dy = - ((h - pad * 2) / (maxMult - 1)) * dm_dt;
+      let angle = Math.atan2(dy, dx);
+      angle = Math.max(-Math.PI / 3, angle);
+      
+      ctx.save();
+      ctx.translate(tipX, tipY);
+      ctx.rotate(angle);
+      ctx.drawImage(planeImg, -16, -16, 32, 32);
+      ctx.restore();
     }
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -798,6 +829,9 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
     });
 
     socket.on('aviator_state', (data) => {
+      if (data.serverTime) {
+        serverTimeOffsetRef.current = data.serverTime - Date.now();
+      }
       setGameState(data.state);
       gameStateRef.current = data.state;
 
@@ -888,7 +922,8 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
     const animate = () => {
       if (gameStateRef.current !== 'FLYING') return;
       
-      const elapsed = (Date.now() - startTimeRef.current) / 1000;
+      const adjustedNow = Date.now() + serverTimeOffsetRef.current;
+      const elapsed = Math.max(0, (adjustedNow - startTimeRef.current) / 1000);
       const currentMult = Math.exp(0.2 * elapsed);
       
       setMultiplier(currentMult);

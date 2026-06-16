@@ -68,6 +68,7 @@ io.on('connection', (socket) => {
     state: aviatorEngine.state,
     roundId: aviatorEngine.roundId,
     startTime: aviatorEngine.startTime,
+    serverTime: Date.now(),
     hash: aviatorEngine.hash
   });
 

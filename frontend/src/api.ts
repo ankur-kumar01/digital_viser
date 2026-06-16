@@ -151,8 +151,6 @@ export const gamesAPI = {
   getAviatorChats: () => request('GET', '/games/simulations/aviator-chats'),
   getAviatorBets: () => request('GET', '/games/simulations/aviator-bets'),
   getColourTradingBets: () => request('GET', '/games/simulations/colour-trading-bets'),
-  aviatorBet: (amount: number) => request('POST', '/games/aviator/bet', { amount }),
-  aviatorCashout: (winAmount: number) => request('POST', '/games/aviator/cashout', { winAmount }),
   colourTradingPlay: (amount: number, color: string) => request('POST', '/games/colourtrading/play', { amount, color })
 };
 
