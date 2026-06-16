@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MessageSquare } from 'lucide-react';
-import { gamesAPI } from '../api';
+import { gamesAPI, globalConfigAPI } from '../api';
 
 const BOT_USERNAMES = [
   'AviatorKing', 'Sanjay_99', 'RocketGirl', 'MaxBet_Pro', 'LuckyPriya', 
@@ -24,6 +24,7 @@ const getUserColor = (username: string) => {
 export const AviatorChatWidget: React.FC = () => {
   const [dbChats, setDbChats] = useState<any[]>([]);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [config, setConfig] = useState<any>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const timeOutsRef = useRef<any[]>([]);
 
@@ -41,6 +42,7 @@ export const AviatorChatWidget: React.FC = () => {
     ]);
 
     gamesAPI.getAviatorChats().then(setDbChats).catch(console.error);
+    globalConfigAPI.getConfig().then(setConfig).catch(console.error);
 
     return () => {
       timeOutsRef.current.forEach(t => clearTimeout(t));
@@ -74,19 +76,22 @@ export const AviatorChatWidget: React.FC = () => {
 
   useEffect(() => {
     if (dbChats.length === 0) return;
+    if (!config || config.enable_aviator_chat_simulation === false) return;
     
     const interval = setInterval(() => {
       addMessage();
     }, 2500 + Math.random() * 2000); // 2.5s to 4.5s
     
     return () => clearInterval(interval);
-  }, [dbChats, addMessage]);
+  }, [dbChats, addMessage, config]);
 
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollTop = chatEndRef.current.scrollHeight;
     }
   }, [chatMessages]);
+
+  if (!config || config.enable_aviator_chat_simulation === false) return null;
 
   return (
     <div style={{ marginTop: '10px' }}>

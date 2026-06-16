@@ -151,7 +151,10 @@ app.get('/api/config', async (req, res) => {
     const settings = rows.reduce((acc, row) => ({ ...acc, [row.setting_key]: row.setting_value }), {});
     
     res.json({
-      global_timezone: settings.global_timezone || 'UTC'
+      global_timezone: settings.global_timezone || 'UTC',
+      enable_aviator_chat_simulation: settings.enable_aviator_chat_simulation !== 'false',
+      enable_aviator_bet_simulation: settings.enable_aviator_bet_simulation !== 'false',
+      enable_colour_trading_bet_simulation: settings.enable_colour_trading_bet_simulation !== 'false'
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch config' });

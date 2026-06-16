@@ -9,6 +9,9 @@ export const AdminSettings: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [timezone, setTimezone] = useState('Asia/Kolkata');
+  const [enableAviatorChat, setEnableAviatorChat] = useState(true);
+  const [enableAviatorBet, setEnableAviatorBet] = useState(true);
+  const [enableColourTradingBet, setEnableColourTradingBet] = useState(true);
 
   useEffect(() => {
     fetchSettings();
@@ -19,6 +22,9 @@ export const AdminSettings: React.FC = () => {
       const res = await adminAPI.getSettings();
       setUpiId(res.admin_upi_id || '');
       setTimezone(res.global_timezone || 'Asia/Kolkata');
+      setEnableAviatorChat(res.enable_aviator_chat_simulation !== 'false');
+      setEnableAviatorBet(res.enable_aviator_bet_simulation !== 'false');
+      setEnableColourTradingBet(res.enable_colour_trading_bet_simulation !== 'false');
     } catch (err) {
       setError('Failed to load settings');
     } finally {
@@ -51,6 +57,26 @@ export const AdminSettings: React.FC = () => {
       await adminAPI.updateSettings({ global_timezone: timezone });
       setSuccess('Timezone updated successfully! Reloading...');
       setTimeout(() => window.location.reload(), 1500);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSimulationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      await adminAPI.updateSettings({
+        enable_aviator_chat_simulation: String(enableAviatorChat),
+        enable_aviator_bet_simulation: String(enableAviatorBet),
+        enable_colour_trading_bet_simulation: String(enableColourTradingBet)
+      });
+      setSuccess('Simulation settings updated successfully!');
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       setError(err.message || 'Failed to update settings');
     } finally {
@@ -130,6 +156,60 @@ export const AdminSettings: React.FC = () => {
               <option value="Asia/Dubai">Asia/Dubai (GST)</option>
               <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
               <option value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</option>
+            </select>
+          </div>
+          
+          <button type="submit" className="btn btn-primary" disabled={saving}>
+            <Save size={18} />
+            {saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </form>
+      </div>
+      <div className="glass-card">
+        <h3 style={{ marginBottom: '20px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '12px' }}>Simulation Settings</h3>
+        <form onSubmit={handleSimulationSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <label className="input-label">Aviator Chat Simulation</label>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              Enable simulated live bot messages on user dashboard overview chat widget and in-game Aviator chat.
+            </p>
+            <select 
+              className="input-field" 
+              value={enableAviatorChat ? 'true' : 'false'} 
+              onChange={e => setEnableAviatorChat(e.target.value === 'true')}
+            >
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="input-label">Aviator Game Bet Simulation</label>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              Enable simulated live players placing bets and cashing out in the Aviator game.
+            </p>
+            <select 
+              className="input-field" 
+              value={enableAviatorBet ? 'true' : 'false'} 
+              onChange={e => setEnableAviatorBet(e.target.value === 'true')}
+            >
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="input-label">Colour Trading Bet Simulation</label>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              Enable simulated live players placing bets in the Colour Trading game.
+            </p>
+            <select 
+              className="input-field" 
+              value={enableColourTradingBet ? 'true' : 'false'} 
+              onChange={e => setEnableColourTradingBet(e.target.value === 'true')}
+            >
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
             </select>
           </div>
           

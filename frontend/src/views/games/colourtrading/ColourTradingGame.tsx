@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
-import { getToken, gamesAPI } from '../../../api';
+import { getToken, gamesAPI, globalConfigAPI } from '../../../api';
 import './ColourTradingGame.css';
 
 interface Props {
@@ -57,6 +57,9 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
   const [liveBets, setLiveBets] = useState<any[]>([]);
   const [dbBets, setDbBets] = useState<any[]>([]);
   const [poolTotal, setPoolTotal] = useState(18500);
+  const [config, setConfig] = useState<any>(null);
+
+  const showLiveBets = config ? config.enable_colour_trading_bet_simulation !== false : false;
 
   const rouletteItemsRef = useRef<string[]>([]);
 
@@ -72,6 +75,7 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
 
   useEffect(() => {
     gamesAPI.getColourTradingBets().then(setDbBets).catch(console.error);
+    globalConfigAPI.getConfig().then(setConfig).catch(console.error);
   }, []);
 
   // Sound persisted state toggle
@@ -292,6 +296,7 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
   // Simulated live multiplayer bets loop
   useEffect(() => {
     if (!isBettingPhase) return;
+    if (!config || config.enable_colour_trading_bet_simulation === false) return;
     
     const interval = setInterval(() => {
       let randomName = '';
@@ -613,35 +618,37 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
           </div>
           
           {/* Simulated Multiplayer Live Bets Ticker */}
-          <div className="ct-live-wagers-panel">
-            <div className="ct-live-wagers-header">
-              <span>👥 Live Wagers Pool</span>
-              <span className="ct-live-pool-total">Total Wagered: ₹{poolTotal.toLocaleString()}</span>
-            </div>
-            
-            <div className="ct-live-wagers-feed">
-              {liveBets.map((bet) => (
-                <div key={bet.id} className="ct-live-wager-row fade-in">
-                  <span className="ct-wager-user">👤 {bet.name}</span>
-                  <span className="ct-wager-choice">
-                    placed on{' '}
-                    <span 
-                      className="ct-wager-choice-badge"
-                      style={{ 
-                        background: isNaN(parseInt(bet.choice)) ? colorMap[bet.choice]?.bg : numberColors[bet.choice]
-                      }}
-                    >
-                      {isNaN(parseInt(bet.choice)) ? colorMap[bet.choice]?.label : `Number ${bet.choice}`}
+          {showLiveBets && (
+            <div className="ct-live-wagers-panel">
+              <div className="ct-live-wagers-header">
+                <span>👥 Live Wagers Pool</span>
+                <span className="ct-live-pool-total">Total Wagered: ₹{poolTotal.toLocaleString()}</span>
+              </div>
+              
+              <div className="ct-live-wagers-feed">
+                {liveBets.map((bet) => (
+                  <div key={bet.id} className="ct-live-wager-row fade-in">
+                    <span className="ct-wager-user">👤 {bet.name}</span>
+                    <span className="ct-wager-choice">
+                      placed on{' '}
+                      <span 
+                        className="ct-wager-choice-badge"
+                        style={{ 
+                          background: isNaN(parseInt(bet.choice)) ? colorMap[bet.choice]?.bg : numberColors[bet.choice]
+                        }}
+                      >
+                        {isNaN(parseInt(bet.choice)) ? colorMap[bet.choice]?.label : `Number ${bet.choice}`}
+                      </span>
                     </span>
-                  </span>
-                  <span className="ct-wager-amount">₹{bet.amount}</span>
-                </div>
-              ))}
-              {liveBets.length === 0 && (
-                <div className="ct-wagers-waiting">Waiting for new wagers...</div>
-              )}
+                    <span className="ct-wager-amount">₹{bet.amount}</span>
+                  </div>
+                ))}
+                {liveBets.length === 0 && (
+                  <div className="ct-wagers-waiting">Waiting for new wagers...</div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Bet Confirmation static card */}
           {selectedColor && (

@@ -624,7 +624,7 @@
   margin-left: 0 !important;
   padding: 16px !important;
   min-height: 100vh;
-  background: #07080b !important;
+  background: var(--bg-primary) !important;
 }
 
 @media (max-width: 768px) {
