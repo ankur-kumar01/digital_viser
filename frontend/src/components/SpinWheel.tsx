@@ -296,7 +296,7 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
 
   return (
     <>
-      {/* Styles for shiny effects */}
+      {/* Styles for responsive native mobile spin wheel */}
       <style>{`
         @keyframes rotate-rays {
           0% { transform: translate(-50%, -50%) rotate(0deg); }
@@ -310,32 +310,224 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
           0%, 100% { opacity: 0; transform: scale(0); }
           50% { opacity: 1; transform: scale(1); }
         }
+        
+        /* Responsive CSS Utility Classes */
+        .sw-title-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 24px;
+          justify-content: center;
+        }
+        .sw-title-text {
+          font-size: 1.8rem;
+          font-weight: 800;
+          margin: 0;
+          color: #f59e0b;
+          text-shadow: 0 2px 10px rgba(245,158,11,0.2);
+        }
+        .sw-ready-badge {
+          background: #10b981;
+          color: #fff;
+          border: 1px solid rgba(16,185,129,0.3);
+          border-radius: 20px;
+          padding: 4px 12px;
+          font-size: 0.85rem;
+          font-weight: 700;
+          animation: pulse 2s infinite;
+          box-shadow: 0 0 10px rgba(16,185,129,0.4);
+        }
+        
+        .sw-card-container {
+          padding: 32px 24px;
+          background: var(--bg-secondary);
+          border: 1px solid var(--border-color);
+          position: relative;
+          overflow: hidden;
+          border-radius: 24px;
+          box-shadow: var(--shadow-card);
+        }
+        
+        .sw-streak-bar {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 32px;
+          justify-content: center;
+          background: rgba(245, 158, 11, 0.08);
+          padding: 12px 20px;
+          border-radius: 50px;
+          border: 1px solid rgba(245,158,11,0.25);
+          flex-wrap: wrap;
+        }
+        .sw-streak-info {
+          font-size: 0.95rem;
+          color: var(--text-secondary);
+        }
+        .sw-streak-dots {
+          display: flex;
+          gap: 6px;
+        }
+        .sw-streak-dot {
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 10px;
+          transition: all 0.2s;
+        }
+        
+        .sw-wheel-wrapper {
+          position: relative;
+          width: 100%;
+          max-width: 300px;
+          aspect-ratio: 1 / 1;
+        }
+        .sw-canvas-el {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          position: relative;
+          z-index: 5;
+          box-shadow: inset 0 0 40px rgba(0,0,0,0.8);
+        }
+        
+        .sw-bonus-box {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: rgba(245, 158, 11, 0.08);
+          border: 1px solid rgba(245,158,11,0.25);
+          border-radius: 12px;
+          padding: 8px 16px;
+        }
+        
+        .sw-spin-btn {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+          color: #fff !important;
+          border: none !important;
+          border-radius: 50px !important;
+          padding: 14px 44px !important;
+          font-size: 1.15rem !important;
+          font-weight: 800 !important;
+          cursor: pointer;
+          letter-spacing: 0.03em;
+          box-shadow: 0 6px 20px rgba(16,185,129,0.35);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-top: 10px;
+        }
+        .sw-spin-btn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(16,185,129,0.5);
+        }
+        .sw-spin-btn:active:not(:disabled) {
+          transform: translateY(1px) scale(0.98);
+          box-shadow: 0 3px 10px rgba(16, 185, 129, 0.4);
+        }
+        .sw-spin-btn:disabled {
+          background: var(--bg-tertiary) !important;
+          color: var(--text-muted) !important;
+          cursor: not-allowed;
+          box-shadow: none;
+        }
+        
+        .sw-countdown-box {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          background: rgba(107,114,128,0.1);
+          border: 1px solid var(--border-card);
+          border-radius: 16px;
+          padding: 14px 28px;
+          width: 100%;
+          max-width: 280px;
+        }
+        
+        /* Mobile Adaptations */
+        @media (max-width: 576px) {
+          .sw-title-text {
+            font-size: 1.4rem;
+          }
+          .sw-ready-badge {
+            font-size: 0.75rem;
+            padding: 3px 8px;
+          }
+          .sw-card-container {
+            padding: 20px 16px;
+            border-radius: 20px;
+          }
+          .sw-streak-bar {
+            flex-direction: column;
+            border-radius: 16px;
+            padding: 12px;
+            gap: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+          }
+          .sw-streak-info {
+            font-size: 0.85rem;
+            text-align: center;
+          }
+          .sw-streak-dots {
+            gap: 4px;
+            justify-content: center;
+            width: 100%;
+          }
+          .sw-streak-dot {
+            width: 20px;
+            height: 20px;
+            font-size: 8px;
+          }
+          .sw-wheel-wrapper {
+            max-width: 260px;
+          }
+          .sw-bonus-box {
+            padding: 6px 12px;
+            border-radius: 10px;
+            width: 100%;
+            justify-content: center;
+          }
+          .sw-bonus-box span {
+            font-size: 0.82rem;
+          }
+          .sw-spin-btn {
+            padding: 12px 32px !important;
+            font-size: 1rem !important;
+            width: 100%;
+            max-width: 260px;
+            justify-content: center;
+          }
+          .sw-countdown-box {
+            padding: 10px 20px;
+            max-width: 260px;
+          }
+          .sw-countdown-box div:first-child {
+            font-size: 0.75rem !important;
+          }
+          .sw-countdown-box div:last-child {
+            font-size: 1.15rem !important;
+          }
+        }
       `}</style>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', justifyContent: 'center' }}>
+      <div className="sw-title-header">
         <Gift size={28} color="#f59e0b" style={{ filter: 'drop-shadow(0 0 8px rgba(245,158,11,0.5))' }} />
-        <h3 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, color: '#f59e0b', textShadow: '0 2px 10px rgba(245,158,11,0.2)' }}>
+        <h3 className="sw-title-text">
           Daily Spin Wheel
         </h3>
         {status?.can_spin && (
-          <span style={{
-            background: '#10b981', color: '#fff',
-            border: '1px solid rgba(16,185,129,0.3)', borderRadius: '20px',
-            padding: '4px 12px', fontSize: '0.85rem', fontWeight: 700, animation: 'pulse 2s infinite',
-            boxShadow: '0 0 10px rgba(16,185,129,0.4)'
-          }}>READY!</span>
+          <span className="sw-ready-badge">READY!</span>
         )}
       </div>
 
-      <div className="glass-card" style={{
-        padding: '32px 24px',
-        background: 'var(--bg-secondary)',
-        border: '1px solid var(--border-color)',
-        position: 'relative',
-        overflow: 'hidden',
-        borderRadius: '24px'
-      }}>
+      <div className="sw-card-container">
         {/* Decorative background sparkles */}
         <div style={{ position: 'absolute', top: '10%', left: '10%', width: '4px', height: '4px', background: '#fff', borderRadius: '50%', animation: 'sparkle 3s infinite', boxShadow: '0 0 8px #fff' }} />
         <div style={{ position: 'absolute', top: '20%', right: '15%', width: '6px', height: '6px', background: '#f59e0b', borderRadius: '50%', animation: 'sparkle 4s infinite 1s', boxShadow: '0 0 8px #f59e0b' }} />
@@ -343,25 +535,23 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
 
         {/* Streak bar */}
         {streakDay > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px', flexWrap: 'wrap', justifyContent: 'center', background: 'rgba(245, 158, 11, 0.1)', padding: '12px 20px', borderRadius: '50px', border: '1px solid rgba(245,158,11,0.3)' }}>
+          <div className="sw-streak-bar">
             <Zap size={20} color="#f59e0b" style={{ filter: 'drop-shadow(0 0 8px rgba(245,158,11,0.8))' }} />
-            <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+            <span className="sw-streak-info">
               <strong style={{ color: '#f59e0b', textShadow: '0 0 8px rgba(245,158,11,0.4)' }}>{streakDay}-Day Streak</strong>
               {nextStreakBonus <= 3 && (
                 <span style={{ color: '#3b82f6', fontWeight: 700 }}> — 🔥 {nextStreakBonus} more for 2x Bonus!</span>
               )}
             </span>
-            <div style={{ display: 'flex', gap: '6px', marginLeft: '12px' }}>
+            <div className="sw-streak-dots">
               {Array.from({ length: 7 }, (_, i) => {
                 const isEarned = i < (streakDay % 7 || (streakDay > 0 && streakDay % 7 === 0 ? 7 : 0));
                 return (
-                  <div key={i} style={{
-                    width: '24px', height: '24px', borderRadius: '50%',
+                  <div key={i} className="sw-streak-dot" style={{
                     background: isEarned ? '#f59e0b' : 'rgba(245, 158, 11, 0.05)',
                     border: isEarned ? 'none' : '1px solid rgba(245,158,11,0.4)',
                     boxShadow: isEarned ? '0 0 10px rgba(245,158,11,0.8), inset 0 2px 4px rgba(255,255,255,0.4)' : 'none',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '10px'
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}>
                     {i === 6 ? '⭐' : (isEarned ? '✓' : '')}
                   </div>
@@ -373,7 +563,7 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
 
         {/* Wheel + Pointer */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', position: 'relative', zIndex: 5, width: '100%' }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: `${WHEEL_SIZE}px`, aspectRatio: '1 / 1' }}>
+          <div className="sw-wheel-wrapper">
 
             {/* Glowing Border Frame */}
             <div style={{
@@ -409,26 +599,15 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
               ref={canvasRef}
               width={WHEEL_SIZE}
               height={WHEEL_SIZE}
-              style={{
-                width: '100%',
-                height: '100%',
-                borderRadius: '50%',
-                position: 'relative',
-                zIndex: 5,
-                boxShadow: 'inset 0 0 40px rgba(0,0,0,0.8)'
-              }}
+              className="sw-canvas-el"
             />
           </div>
 
           {/* Gaming Bonus Balance */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245,158,11,0.3)',
-            borderRadius: '12px', padding: '8px 16px'
-          }}>
+          <div className="sw-bonus-box">
             <Star size={16} color="#f59e0b" />
             <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Gaming Bonus Balance:</span>
-            <span style={{ fontWeight: 800, color: '#f59e0b', fontSize: '1rem' }}>
+            <span style={{ fontWeight: 800, color: '#f59e0b', fontSize: '1.1rem' }}>
               ₹{parseFloat(String(status?.gaming_bonus_balance || 0)).toFixed(2)}
             </span>
           </div>
@@ -438,26 +617,7 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
             <button
               onClick={handleSpin}
               disabled={isSpinning}
-              style={{
-                background: isSpinning
-                  ? 'var(--bg-tertiary)'
-                  : '#10b981',
-                color: '#fff',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '50px',
-                padding: '14px 40px',
-                fontSize: '1.2rem',
-                fontWeight: 700,
-                cursor: isSpinning ? 'not-allowed' : 'pointer',
-                letterSpacing: '0.02em',
-                boxShadow: isSpinning ? 'none' : '0 6px 20px rgba(16,185,129,0.4)',
-                transition: 'all 0.3s',
-                display: 'flex', alignItems: 'center', gap: '10px',
-                transform: isSpinning ? 'scale(0.98)' : 'scale(1)',
-                marginTop: '10px'
-              }}
-              onMouseEnter={e => { if (!isSpinning) e.currentTarget.style.transform = 'scale(1.03)' }}
-              onMouseLeave={e => { if (!isSpinning) e.currentTarget.style.transform = 'scale(1)' }}
+              className="sw-spin-btn"
             >
               {isSpinning ? (
                 <><RotateCcw size={20} style={{ animation: 'spin 1s linear infinite' }} /> Spinning...</>
@@ -466,11 +626,7 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
               )}
             </button>
           ) : (
-            <div style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-              background: 'rgba(107,114,128,0.15)', border: '1px solid rgba(107,114,128,0.3)',
-              borderRadius: '16px', padding: '14px 28px'
-            }}>
+            <div className="sw-countdown-box">
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                 <Clock size={14} /> Next Spin Available In:
               </div>
