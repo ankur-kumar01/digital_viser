@@ -161,8 +161,12 @@ export const AdminFdrPlans: React.FC = () => {
   const getOfferStatus = (offer: any) => {
     if (!offer.is_active) return { label: 'Disabled', class: 'badge-danger' };
     const now = new Date().getTime();
-    const start = new Date(offer.start_time).getTime();
-    const end = new Date(offer.end_time).getTime();
+    
+    const startStr = offer.start_time.includes('Z') ? offer.start_time : offer.start_time.replace(' ', 'T') + 'Z';
+    const endStr = offer.end_time.includes('Z') ? offer.end_time : offer.end_time.replace(' ', 'T') + 'Z';
+    
+    const start = new Date(startStr).getTime();
+    const end = new Date(endStr).getTime();
 
     if (now < start) return { label: 'Upcoming', style: { background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' } };
     if (now > end) return { label: 'Expired', style: { background: 'rgba(156, 163, 175, 0.15)', color: '#9ca3af' } };
@@ -343,8 +347,8 @@ export const AdminFdrPlans: React.FC = () => {
                           </div>
                         </td>
                         <td style={{ fontWeight: 700, color: 'var(--accent-secondary)' }}>{parseFloat(o.bonus_percent)}%</td>
-                        <td><Calendar size={12} style={{display:'inline', marginRight:'4px'}}/> {formatDateTime(o.start_time)}</td>
-                        <td><Clock size={12} style={{display:'inline', marginRight:'4px'}}/> {formatDateTime(o.end_time)}</td>
+                        <td><Calendar size={12} style={{display:'inline', marginRight:'4px'}}/> {formatDate(o.start_time)}</td>
+                        <td><Clock size={12} style={{display:'inline', marginRight:'4px'}}/> {formatDate(o.end_time)}</td>
                         <td>
                           {status.class ? (
                             <span className={`badge ${status.class}`}>

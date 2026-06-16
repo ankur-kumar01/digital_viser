@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminAPI } from '../../api';
 import { Plus, Edit2, Trash2, X, History, BarChart3, Settings2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { formatGlobalDate } from '../../utils/dateFormatter';
 
 const PRIZE_TYPE_OPTIONS = [
   { value: 'gaming_bonus', label: 'Gaming Bonus (₹ credited to Gaming Wallet)' },

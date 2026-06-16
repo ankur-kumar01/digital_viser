@@ -13,7 +13,8 @@ interface CreateFDRProps {
 
 const OfferTimer: React.FC<{ endTime: string; onExpire?: () => void }> = ({ endTime, onExpire }) => {
   const calculateTimeLeft = () => {
-    const difference = +new Date(endTime) - +new Date();
+    const safeEndTime = endTime.includes('Z') ? endTime : endTime.replace(' ', 'T') + 'Z';
+    const difference = +new Date(safeEndTime) - +new Date();
     let timeLeft = {
       days: '00',
       hours: '00',
