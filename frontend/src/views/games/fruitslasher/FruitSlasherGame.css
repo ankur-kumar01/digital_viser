@@ -503,8 +503,19 @@
   }
 
   .fruitslasher-canvas-wrapper {
-    aspect-ratio: auto !important;
-    height: 330px !important;
+    aspect-ratio: 16 / 9 !important;
+    height: auto !important;
+  }
+
+  .fs-controls {
+    padding: 12px !important;
+    border-radius: 14px !important;
+    gap: 12px !important;
+  }
+
+  .fs-balances-container {
+    padding: 8px 10px !important;
+    border-radius: 8px !important;
   }
 
   /* Overlay Responsive Changes */

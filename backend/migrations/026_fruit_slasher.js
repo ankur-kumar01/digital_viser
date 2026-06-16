@@ -9,7 +9,7 @@ module.exports = {
           'Fruit Slasher',
           'fruit-slasher',
           'Slice flying fruits, build your cashout multiplier, and avoid the bombs!',
-          '/games/fruit-slasher-thumb.jpg',
+          '/images/games/fruit-slasher-thumb.png',
           true
         )
       `);
