@@ -53,12 +53,30 @@ export const formatGlobalDate = (dateString: string | number | Date, options?: I
 export const parseAdminInputDateToGlobalUTC = (datetimeLocalString: string) => {
   if (!datetimeLocalString) return '';
   try {
-    const fakeUTC = new Date(datetimeLocalString + 'Z');
-    const formattedInTZ = new Date(fakeUTC.toLocaleString('en-US', { timeZone: globalTimeZone }));
-    const offsetMs = formattedInTZ.getTime() - fakeUTC.getTime();
-    const actualUTC = new Date(fakeUTC.getTime() - offsetMs);
-    return actualUTC.toISOString();
+    const dateAsUTC = new Date(datetimeLocalString + 'Z');
+    
+    const options: Intl.DateTimeFormatOptions = { 
+      timeZone: 'UTC', hour12: false, 
+      year: 'numeric', month: '2-digit', day: '2-digit', 
+      hour: '2-digit', minute: '2-digit', second: '2-digit' 
+    };
+    
+    const fmtUTC = new Intl.DateTimeFormat('en-US', options).format(dateAsUTC);
+    const fmtTZ = new Intl.DateTimeFormat('en-US', { ...options, timeZone: globalTimeZone }).format(dateAsUTC);
+    
+    // Format is "MM/DD/YYYY, HH:mm:ss" -> replace non-date characters with space
+    const cleanUTC = fmtUTC.replace(/[^0-9/:]/g, ' ').replace(/\s+/g, ' ').trim();
+    const cleanTZ = fmtTZ.replace(/[^0-9/:]/g, ' ').replace(/\s+/g, ' ').trim();
+
+    const msUTC = new Date(cleanUTC + ' UTC').getTime();
+    const msTZ = new Date(cleanTZ + ' UTC').getTime();
+    
+    const offsetMs = msTZ - msUTC;
+    const actualUTC = new Date(dateAsUTC.getTime() - offsetMs);
+    
+    return actualUTC.toISOString().slice(0, 19).replace('T', ' ');
   } catch (err) {
-    return new Date(datetimeLocalString).toISOString();
+    const fallback = new Date(datetimeLocalString);
+    return fallback.toISOString().slice(0, 19).replace('T', ' ');
   }
 };
