@@ -1209,4 +1209,116 @@ router.put('/settings', async (req, res) => {
   }
 });
 
+// ============================================================
+// SPIN WHEEL ADMIN ROUTES
+// ============================================================
+
+// GET /admin/spin-segments
+router.get('/spin-segments', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM spin_wheel_segments ORDER BY sort_order ASC, id ASC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch spin segments' });
+  }
+});
+
+// POST /admin/spin-segments
+router.post('/spin-segments', async (req, res) => {
+  try {
+    const { label, prize_type, prize_amount, probability, bg_color, text_color, emoji, is_active, sort_order } = req.body;
+    if (!label || !prize_type || probability === undefined) {
+      return res.status(400).json({ error: 'label, prize_type, and probability are required' });
+    }
+    const [result] = await pool.query(
+      'INSERT INTO spin_wheel_segments (label, prize_type, prize_amount, probability, bg_color, text_color, emoji, is_active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [label, prize_type, prize_amount || 0, probability, bg_color || '#22c55e', text_color || '#ffffff', emoji || '🎁', is_active !== false, sort_order || 0]
+    );
+    const [newRow] = await pool.query('SELECT * FROM spin_wheel_segments WHERE id = ?', [result.insertId]);
+    res.status(201).json(newRow[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create spin segment' });
+  }
+});
+
+// PUT /admin/spin-segments/:id
+router.put('/spin-segments/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { label, prize_type, prize_amount, probability, bg_color, text_color, emoji, is_active, sort_order } = req.body;
+    await pool.query(
+      'UPDATE spin_wheel_segments SET label=?, prize_type=?, prize_amount=?, probability=?, bg_color=?, text_color=?, emoji=?, is_active=?, sort_order=? WHERE id=?',
+      [label, prize_type, prize_amount || 0, probability, bg_color || '#22c55e', text_color || '#ffffff', emoji || '🎁', is_active !== false, sort_order || 0, id]
+    );
+    const [updated] = await pool.query('SELECT * FROM spin_wheel_segments WHERE id = ?', [id]);
+    res.json(updated[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update spin segment' });
+  }
+});
+
+// DELETE /admin/spin-segments/:id
+router.delete('/spin-segments/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM spin_wheel_segments WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete spin segment' });
+  }
+});
+
+// GET /admin/spin-history
+router.get('/spin-history', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT ush.id, ush.prize_amount, ush.prize_type, ush.streak_day, ush.spun_at,
+              u.name as user_name, u.email as user_email,
+              sws.label as segment_label, sws.emoji
+       FROM user_spin_history ush
+       JOIN users u ON u.id = ush.user_id
+       JOIN spin_wheel_segments sws ON sws.id = ush.segment_id
+       ORDER BY ush.spun_at DESC LIMIT 200`
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch spin history' });
+  }
+});
+
+// DELETE /admin/spin-history/:id
+router.delete('/spin-history/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM user_spin_history WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete spin history' });
+  }
+});
+
+// GET /admin/spin-stats
+router.get('/spin-stats', async (req, res) => {
+  try {
+    const [totalSpins] = await pool.query('SELECT COUNT(*) as count FROM user_spin_history');
+    const [totalBonus] = await pool.query(
+      "SELECT COALESCE(SUM(prize_amount),0) as total FROM user_spin_history WHERE prize_type = 'gaming_bonus'"
+    );
+    const [todaySpins] = await pool.query(
+      'SELECT COUNT(*) as count FROM user_spin_history WHERE DATE(spun_at) = CURDATE()'
+    );
+    const [todayBonus] = await pool.query(
+      "SELECT COALESCE(SUM(prize_amount),0) as total FROM user_spin_history WHERE prize_type = 'gaming_bonus' AND DATE(spun_at) = CURDATE()"
+    );
+    res.json({
+      total_spins: totalSpins[0].count,
+      total_gaming_bonus_distributed: parseFloat(totalBonus[0].total),
+      today_spins: todaySpins[0].count,
+      today_gaming_bonus_distributed: parseFloat(todayBonus[0].total)
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch spin stats' });
+  }
+});
+
 module.exports = router;

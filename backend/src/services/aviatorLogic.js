@@ -161,14 +161,45 @@ class AviatorGameLogic {
     try {
       await conn.beginTransaction();
 
-      const [userRows] = await conn.query('SELECT balance FROM users WHERE id = ? FOR UPDATE', [userId]);
+      const [userRows] = await conn.query(
+        'SELECT balance, gaming_bonus_balance FROM users WHERE id = ? FOR UPDATE',
+        [userId]
+      );
       if (userRows.length === 0) throw new Error('User not found');
-      const balance = parseFloat(userRows[0].balance);
 
-      if (balance < amount) throw new Error('Insufficient balance');
+      const mainBalance = parseFloat(userRows[0].balance);
+      const gamingBonus = parseFloat(userRows[0].gaming_bonus_balance || 0);
 
-      await conn.query('UPDATE users SET balance = balance - ? WHERE id = ?', [amount, userId]);
-      await conn.query('INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)', [userId, 'game_bet', -amount, 'Aviator Bet']);
+      // Priority: deduct from gaming_bonus_balance first
+      let deductFromBonus = 0;
+      let deductFromMain = 0;
+      let walletUsed = 'main';
+
+      if (gamingBonus >= amount) {
+        // Full amount from gaming bonus
+        deductFromBonus = amount;
+        walletUsed = 'gaming_bonus';
+      } else {
+        // No gaming bonus (or insufficient) → full from main
+        deductFromMain = amount;
+        walletUsed = 'main';
+        if (mainBalance < amount) throw new Error('Insufficient balance');
+      }
+
+      if (deductFromBonus > 0) {
+        await conn.query('UPDATE users SET gaming_bonus_balance = gaming_bonus_balance - ? WHERE id = ?', [deductFromBonus, userId]);
+        await conn.query(
+          'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+          [userId, 'game_bet', -deductFromBonus, 'Aviator Bet (Gaming Bonus)']
+        );
+      }
+      if (deductFromMain > 0) {
+        await conn.query('UPDATE users SET balance = balance - ? WHERE id = ?', [deductFromMain, userId]);
+        await conn.query(
+          'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+          [userId, 'game_bet', -deductFromMain, 'Aviator Bet']
+        );
+      }
 
       const [betRes] = await conn.query(
         'INSERT INTO aviator_bets (round_id, user_id, bet_amount, status) VALUES (?, ?, ?, ?)',
@@ -176,9 +207,10 @@ class AviatorGameLogic {
       );
 
       await conn.commit();
-      
-      this.activeBets.set(userId, { betAmount: amount, id: betRes.insertId });
-      return { success: true, newBalance: balance - amount };
+
+      const newMain = mainBalance - deductFromMain;
+      this.activeBets.set(userId, { betAmount: amount, id: betRes.insertId, walletUsed });
+      return { success: true, newBalance: newMain, walletUsed };
     } catch (err) {
       await conn.rollback();
       throw err;
@@ -211,21 +243,35 @@ class AviatorGameLogic {
     try {
       await conn.beginTransaction();
 
+      // Winnings ALWAYS go to main balance (even if bet was from gaming bonus)
       await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [winAmount, userId]);
-      await conn.query('INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)', [userId, 'game_win', winAmount, 'Aviator Win']);
+      const winDesc = bet.walletUsed === 'gaming_bonus'
+        ? `Aviator Win (Gaming Bonus Bet → Main Wallet)`
+        : 'Aviator Win';
+      await conn.query(
+        'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+        [userId, 'game_win', winAmount, winDesc]
+      );
 
-      await conn.query('UPDATE aviator_bets SET status = ?, cashout_multiplier = ?, win_amount = ? WHERE id = ?', 
+      await conn.query(
+        'UPDATE aviator_bets SET status = ?, cashout_multiplier = ?, win_amount = ? WHERE id = ?',
         ['cashed_out', currentMult, winAmount, bet.id]
       );
 
       await conn.commit();
 
-      this.activeBets.delete(userId); // Remove from active bets so they can't cashout twice
+      this.activeBets.delete(userId);
 
-      // Fetch new balance to return
-      const [rows] = await pool.query('SELECT balance FROM users WHERE id = ?', [userId]);
+      const [rows] = await pool.query('SELECT balance, gaming_bonus_balance FROM users WHERE id = ?', [userId]);
 
-      return { success: true, newBalance: parseFloat(rows[0].balance), multiplier: currentMult, winAmount };
+      return {
+        success: true,
+        newBalance: parseFloat(rows[0].balance),
+        gamingBonusBalance: parseFloat(rows[0].gaming_bonus_balance || 0),
+        multiplier: currentMult,
+        winAmount,
+        walletUsed: bet.walletUsed
+      };
     } catch (err) {
       await conn.rollback();
       throw err;

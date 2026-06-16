@@ -19,6 +19,7 @@ const fdrRoutes = require('./routes/fdr');
 const adminRoutes = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
 const gamesRoutes = require('./routes/games');
+const spinRoutes = require('./routes/spin');
 
 const app = express();
 const server = http.createServer(app);
@@ -140,6 +141,7 @@ app.use('/api/fdr', fdrRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/games', gamesRoutes);
+app.use('/api/spin', spinRoutes);
 
 // Initialize Cron Jobs
 require('./cron');

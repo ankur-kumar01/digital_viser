@@ -280,14 +280,43 @@ class ColourTradingLogic {
     try {
       await conn.beginTransaction();
 
-      const [userRows] = await conn.query('SELECT balance FROM users WHERE id = ? FOR UPDATE', [userId]);
+      const [userRows] = await conn.query(
+        'SELECT balance, gaming_bonus_balance FROM users WHERE id = ? FOR UPDATE',
+        [userId]
+      );
       if (userRows.length === 0) throw new Error('User not found');
-      const balance = parseFloat(userRows[0].balance);
 
-      if (balance < amount) throw new Error('Insufficient balance');
+      const mainBalance = parseFloat(userRows[0].balance);
+      const gamingBonus = parseFloat(userRows[0].gaming_bonus_balance || 0);
 
-      await conn.query('UPDATE users SET balance = balance - ? WHERE id = ?', [amount, userId]);
-      await conn.query('INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)', [userId, 'game_bet', -amount, `Colour Trading Bet (${color})`]);
+      // Priority: deduct from gaming_bonus_balance first
+      let deductFromBonus = 0;
+      let deductFromMain = 0;
+      let walletUsed = 'main';
+
+      if (gamingBonus >= amount) {
+        deductFromBonus = amount;
+        walletUsed = 'gaming_bonus';
+      } else {
+        deductFromMain = amount;
+        walletUsed = 'main';
+        if (mainBalance < amount) throw new Error('Insufficient balance');
+      }
+
+      if (deductFromBonus > 0) {
+        await conn.query('UPDATE users SET gaming_bonus_balance = gaming_bonus_balance - ? WHERE id = ?', [deductFromBonus, userId]);
+        await conn.query(
+          'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+          [userId, 'game_bet', -deductFromBonus, `Colour Trading Bet (${color}) - Gaming Bonus`]
+        );
+      }
+      if (deductFromMain > 0) {
+        await conn.query('UPDATE users SET balance = balance - ? WHERE id = ?', [deductFromMain, userId]);
+        await conn.query(
+          'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+          [userId, 'game_bet', -deductFromMain, `Colour Trading Bet (${color})`]
+        );
+      }
 
       const [betRes] = await conn.query(
         'INSERT INTO ct_bets (round_id, user_id, color, bet_amount, status) VALUES (?, ?, ?, ?, "active")',
@@ -295,8 +324,9 @@ class ColourTradingLogic {
       );
 
       await conn.commit();
-      
-      return { success: true, newBalance: balance - amount, betId: betRes.insertId };
+
+      const newMain = mainBalance - deductFromMain;
+      return { success: true, newBalance: newMain, walletUsed, betId: betRes.insertId };
     } catch (err) {
       await conn.rollback();
       throw err;

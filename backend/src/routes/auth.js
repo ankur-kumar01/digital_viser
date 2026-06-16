@@ -103,7 +103,7 @@ router.post('/login', async (req, res) => {
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query(
-      'SELECT id, name, email, balance, bonus_balance, referral_balance, locked_balance, locked_bonus_balance, locked_referral_balance, referral_code, phone_number, address, city, state, pin_code, profile_photo, created_at FROM users WHERE id = ?',
+      'SELECT id, name, email, balance, bonus_balance, gaming_bonus_balance, referral_balance, locked_balance, locked_bonus_balance, locked_referral_balance, referral_code, phone_number, address, city, state, pin_code, profile_photo, created_at FROM users WHERE id = ?',
       [req.user.userId]
     );
 
@@ -125,6 +125,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
       email: user.email,
       balance: parseFloat(user.balance),
       bonus_balance: parseFloat(user.bonus_balance || 0),
+      gaming_bonus_balance: parseFloat(user.gaming_bonus_balance || 0),
       referral_balance: parseFloat(user.referral_balance || 0),
       locked_balance: parseFloat(user.locked_balance || 0),
       locked_bonus_balance: parseFloat(user.locked_bonus_balance || 0),

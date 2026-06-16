@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { MetricCard } from '../components/MetricCard';
 import { walletAPI, fdrAPI, gamesAPI } from '../api';
-import { Wallet, Award, History, ArrowRight, ArrowUpRight, ArrowDownLeft, PiggyBank, TrendingUp, CalendarDays, Gift, Users, PlusCircle, Activity, Gamepad2, Trophy, RefreshCw, Eye, ExternalLink } from 'lucide-react';
+import { Wallet, Award, History, ArrowRight, ArrowUpRight, ArrowDownLeft, PiggyBank, TrendingUp, CalendarDays, Gift, Users, PlusCircle, Activity, Gamepad2, Trophy, RefreshCw, Eye, ExternalLink, Zap } from 'lucide-react';
 import { PortfolioHero } from '../components/PortfolioHero';
 import { AviatorChatWidget } from '../components/AviatorChatWidget';
+import { SpinWheel } from '../components/SpinWheel';
 
 interface DashboardOverviewProps {
   user: {
@@ -15,6 +16,7 @@ interface DashboardOverviewProps {
     locked_bonus_balance: number | string;
     referral_balance: number | string;
     locked_referral_balance: number | string;
+    gaming_bonus_balance?: number | string;
   } | null;
   onNavigate: (view: string) => void;
   refreshUser: () => Promise<void>;
@@ -359,6 +361,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       {/* Aviator Chat Simulation Widget */}
       <AviatorChatWidget />
 
+      {/* Daily Spin Wheel */}
+      <SpinWheel onBonusAwarded={() => refreshUser()} />
+
       {/* Offer Zone Section */}
       {activeOffers.length > 0 && (
         <div style={{ marginTop: '10px' }}>
@@ -403,6 +408,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           label={`Bonus Wallet (Locked: ${formatCurrency(parseFloat(user?.locked_bonus_balance?.toString() || '0'))})`} 
           value={formatCurrency(parseFloat(user?.bonus_balance?.toString() || '0'))} 
           variant="primary" 
+        />
+        <MetricCard 
+          icon={<Zap size={20} />} 
+          label="Gaming Bonus Wallet" 
+          value={formatCurrency(parseFloat(user?.gaming_bonus_balance?.toString() || '0'))} 
+          variant="warning" 
         />
         <MetricCard 
           icon={<Users size={20} />} 

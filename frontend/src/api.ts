@@ -213,4 +213,20 @@ export const adminAPI = {
   createSimulatedColourTradingBet: (data: any) => adminRequest('POST', '/admin/simulations/colour-trading-bets', data),
   updateSimulatedColourTradingBet: (id: number, data: any) => adminRequest('PUT', `/admin/simulations/colour-trading-bets/${id}`, data),
   deleteSimulatedColourTradingBet: (id: number) => adminRequest('DELETE', `/admin/simulations/colour-trading-bets/${id}`),
+  // Spin Wheel Admin
+  getSpinSegments: () => adminRequest('GET', '/admin/spin-segments'),
+  createSpinSegment: (data: any) => adminRequest('POST', '/admin/spin-segments', data),
+  updateSpinSegment: (id: number, data: any) => adminRequest('PUT', `/admin/spin-segments/${id}`, data),
+  deleteSpinSegment: (id: number) => adminRequest('DELETE', `/admin/spin-segments/${id}`),
+  getSpinHistory: () => adminRequest('GET', '/admin/spin-history'),
+  deleteSpinHistory: (id: number) => adminRequest('DELETE', `/admin/spin-history/${id}`),
+  getSpinStats: () => adminRequest('GET', '/admin/spin-stats'),
 };
+
+export const spinAPI = {
+  getStatus: () => request('GET', '/spin/status'),
+  claim: () => request('POST', '/spin/claim'),
+  getSegments: () => request('GET', '/spin/segments'),
+  getHistory: () => request('GET', '/spin/history'),
+};
+
