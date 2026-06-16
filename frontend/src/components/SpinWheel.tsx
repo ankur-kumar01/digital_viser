@@ -343,7 +343,7 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
 
         {/* Streak bar */}
         {streakDay > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px', flexWrap: 'wrap', justifyContent: 'center', background: 'rgba(0,0,0,0.3)', padding: '12px 20px', borderRadius: '50px', border: '1px solid rgba(245,158,11,0.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px', flexWrap: 'wrap', justifyContent: 'center', background: 'rgba(245, 158, 11, 0.1)', padding: '12px 20px', borderRadius: '50px', border: '1px solid rgba(245,158,11,0.3)' }}>
             <Zap size={20} color="#f59e0b" style={{ filter: 'drop-shadow(0 0 8px rgba(245,158,11,0.8))' }} />
             <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
               <strong style={{ color: '#f59e0b', textShadow: '0 0 8px rgba(245,158,11,0.4)' }}>{streakDay}-Day Streak</strong>
@@ -357,7 +357,7 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
                 return (
                   <div key={i} style={{
                     width: '24px', height: '24px', borderRadius: '50%',
-                    background: isEarned ? '#f59e0b' : 'var(--bg-tertiary)',
+                    background: isEarned ? '#f59e0b' : 'rgba(245, 158, 11, 0.05)',
                     border: isEarned ? 'none' : '1px solid rgba(245,158,11,0.4)',
                     boxShadow: isEarned ? '0 0 10px rgba(245,158,11,0.8), inset 0 2px 4px rgba(255,255,255,0.4)' : 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -367,32 +367,6 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
                   </div>
                 );
               })}
-            </div>
-          </div>
-        )}
-        {/* Streak bar */}
-        {streakDay > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            <Zap size={16} color="#f59e0b" />
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              <strong style={{ color: '#f59e0b' }}>{streakDay}-Day Streak</strong>
-              {nextStreakBonus <= 3 && (
-                <span style={{ color: '#ec4899', fontWeight: 700 }}> — 🔥 {nextStreakBonus} more for 2x Bonus!</span>
-              )}
-            </span>
-            <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
-              {Array.from({ length: 7 }, (_, i) => (
-                <div key={i} style={{
-                  width: '18px', height: '18px', borderRadius: '50%',
-                  background: i < (streakDay % 7 || (streakDay > 0 && streakDay % 7 === 0 ? 7 : 0))
-                    ? '#f59e0b' : 'var(--bg-tertiary)',
-                  border: '1px solid rgba(245,158,11,0.4)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '8px'
-                }}>
-                  {i === 6 ? '⭐' : ''}
-                </div>
-              ))}
             </div>
           </div>
         )}
