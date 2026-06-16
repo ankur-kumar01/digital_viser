@@ -1264,7 +1264,7 @@ export const FruitSlasherGame: React.FC<Props> = ({ user, refreshUser, onNavigat
                 className="fruitslasher-action-btn start" 
                 onClick={handleStartGame} 
                 disabled={loading}
-                style={{ width: '280px' }}
+                style={{ width: '100%', maxWidth: '280px' }}
               >
                 <Play size={20} />
                 <span>{loading ? 'Starting...' : 'Start Game'}</span>
@@ -1286,7 +1286,7 @@ export const FruitSlasherGame: React.FC<Props> = ({ user, refreshUser, onNavigat
               <button 
                 className="btn btn-primary" 
                 onClick={() => setGameState('idle')}
-                style={{ width: '180px', marginTop: '16px' }}
+                style={{ width: '100%', maxWidth: '180px', marginTop: '16px' }}
               >
                 Play Again
               </button>
@@ -1307,7 +1307,7 @@ export const FruitSlasherGame: React.FC<Props> = ({ user, refreshUser, onNavigat
               <button 
                 className="btn btn-primary" 
                 onClick={() => setGameState('idle')}
-                style={{ width: '180px', marginTop: '16px', backgroundColor: '#ef4444' }}
+                style={{ width: '100%', maxWidth: '180px', marginTop: '16px', backgroundColor: '#ef4444' }}
               >
                 Try Again
               </button>

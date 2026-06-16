@@ -1,5 +1,10 @@
 /* FruitSlasherGame.css */
 
+.fruitslasher-container,
+.fruitslasher-container * {
+  box-sizing: border-box;
+}
+
 .fruitslasher-container {
   display: flex;
   flex-direction: column;
@@ -134,13 +139,22 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   background: rgba(9, 9, 11, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   z-index: 20;
   text-align: center;
   padding: 24px;
+  overflow-y: auto;
+}
+
+.fruitslasher-overlay > :first-child {
+  margin-top: auto;
+}
+
+.fruitslasher-overlay > :last-child {
+  margin-bottom: auto;
 }
 
 .fruitslasher-overlay.win {
@@ -455,10 +469,19 @@
   outline: none;
 }
 
-@media (max-width: 576px) {
+@media (max-width: 768px) {
   .fruitslasher-container {
     gap: 12px;
     padding: 6px;
+  }
+
+  .fruitslasher-container h2 {
+    font-size: 1.15rem !important;
+  }
+
+  .fruitslasher-container .btn-glass {
+    padding: 6px 12px !important;
+    font-size: 0.75rem !important;
   }
   
   .fruitslasher-layout {
@@ -521,7 +544,7 @@
   /* Overlay Responsive Changes */
   .fruitslasher-overlay {
     padding: 12px 16px !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
     overflow-y: auto !important;
   }
 
@@ -989,11 +1012,20 @@
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
-@media (max-width: 576px) {
+@media (max-width: 768px) {
   .fs-controls {
     padding: 14px;
     gap: 12px;
     border-radius: 16px;
+  }
+
+  .fs-bet-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .fs-controls-label {
+    font-size: 0.7rem !important;
   }
 
   .fs-wallet-btn {
