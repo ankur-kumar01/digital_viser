@@ -10,10 +10,9 @@ router.use(authMiddleware);
 router.post('/play', async (req, res) => {
   const conn = await pool.getConnection();
   try {
-    const { amount, walletType } = req.body;
+    const { amount } = req.body;
     const userId = req.user.userId;
     const betAmount = parseFloat(amount);
-    const selectedWallet = walletType === 'gaming_bonus' ? 'gaming_bonus' : 'main';
 
     // 1. Validate bet amount
     if (isNaN(betAmount) || betAmount <= 0) {
@@ -56,13 +55,16 @@ router.post('/play', async (req, res) => {
     const mainBalance = parseFloat(userRows[0].balance);
     const gamingBonusBalance = parseFloat(userRows[0].gaming_bonus_balance || 0);
 
-    const availableBalance = selectedWallet === 'gaming_bonus' ? gamingBonusBalance : mainBalance;
-
-    if (availableBalance < betAmount) {
-      await conn.rollback();
-      return res.status(400).json({ 
-        error: `Insufficient funds in your ${selectedWallet === 'gaming_bonus' ? 'Gaming Bonus Wallet' : 'Main Wallet'}` 
-      });
+    // Priority: deduct from gaming_bonus_balance first
+    let selectedWallet = 'main';
+    if (gamingBonusBalance >= betAmount) {
+      selectedWallet = 'gaming_bonus';
+    } else {
+      selectedWallet = 'main';
+      if (mainBalance < betAmount) {
+        await conn.rollback();
+        return res.status(400).json({ error: 'Insufficient balance' });
+      }
     }
 
     // 4. Deduct balance
@@ -121,6 +123,7 @@ router.post('/play', async (req, res) => {
       success: true,
       betId,
       walletType: selectedWallet,
+      serverCrashMultiplier,
       newBalance: selectedWallet === 'gaming_bonus' 
         ? parseFloat(updatedUser[0].gaming_bonus_balance)
         : parseFloat(updatedUser[0].balance)

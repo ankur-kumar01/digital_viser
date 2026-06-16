@@ -312,7 +312,6 @@ const FRUIT_TYPES = ['watermelon', 'apple', 'orange', 'golden', 'bomb'] as const
 
 export const FruitSlasherGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => {
   // Betting parameters
-  const [walletType, setWalletType] = useState<'main' | 'gaming_bonus'>('main');
   const [betAmount, setBetAmount] = useState<string>('50');
   const [autoCashout, setAutoCashout] = useState<string>('');
   const [autoCashoutActive, setAutoCashoutActive] = useState<boolean>(false);
@@ -355,6 +354,7 @@ export const FruitSlasherGame: React.FC<Props> = ({ user, refreshUser, onNavigat
 
   // Auto cashout value reference
   const autoCashoutValRef = useRef<number | null>(null);
+  const serverCrashMultiplierRef = useRef<number | null>(null);
 
   // Audio context handler
   useEffect(() => {
@@ -382,8 +382,10 @@ export const FruitSlasherGame: React.FC<Props> = ({ user, refreshUser, onNavigat
     }
   }, [autoCashout, autoCashoutActive]);
 
-  // Wallet selection
-  const userBalance = walletType === 'gaming_bonus' ? (user?.gaming_bonus_balance || 0) : (user?.balance || 0);
+  // Unified balance calculation
+  const mainBalance = typeof user?.balance === 'string' ? parseFloat(user.balance) : (user?.balance || 0);
+  const gamingBonus = typeof user?.gaming_bonus_balance === 'string' ? parseFloat(user.gaming_bonus_balance) : (user?.gaming_bonus_balance || 0);
+  const userBalance = Math.max(mainBalance, gamingBonus);
 
   // Handle preset betting values
   const handlePreset = (amount: number) => {
@@ -416,7 +418,7 @@ export const FruitSlasherGame: React.FC<Props> = ({ user, refreshUser, onNavigat
       }
 
       // 1. Call Backend Play API
-      const res = await gamesAPI.fruitSlasherPlay(parsedAmount, walletType);
+      const res = await gamesAPI.fruitSlasherPlay(parsedAmount, 'main');
       
       if (!res.success) {
         throw new Error(res.error || 'Failed to start game.');
@@ -424,6 +426,7 @@ export const FruitSlasherGame: React.FC<Props> = ({ user, refreshUser, onNavigat
 
       // 2. Clear previous game states
       setBetId(res.betId);
+      serverCrashMultiplierRef.current = res.serverCrashMultiplier;
       setScore(0);
       setMultiplier(1.0);
       setLives(3);
@@ -941,6 +944,26 @@ export const FruitSlasherGame: React.FC<Props> = ({ user, refreshUser, onNavigat
                 setScore(newScore);
 
                 const newMult = parseFloat((multRef.current + multInc).toFixed(2));
+
+                // Check Server Crash Multiplier Limit
+                if (serverCrashMultiplierRef.current && newMult >= serverCrashMultiplierRef.current) {
+                  triggerCrash(serverCrashMultiplierRef.current);
+                  // Spawn explosion particles
+                  for (let k = 0; k < 35; k++) {
+                    particles.push({
+                      x: f.x,
+                      y: f.y,
+                      vx: (Math.random() - 0.5) * 16,
+                      vy: (Math.random() - 0.5) * 16,
+                      radius: Math.random() * 5 + 3,
+                      color: k % 2 === 0 ? '#ef4444' : '#fbbf24',
+                      alpha: 1.0,
+                      decay: 0.02 + Math.random() * 0.02
+                    });
+                  }
+                  return;
+                }
+
                 multRef.current = newMult;
                 setMultiplier(newMult);
 
@@ -1295,31 +1318,17 @@ export const FruitSlasherGame: React.FC<Props> = ({ user, refreshUser, onNavigat
         {/* RIGHT COLUMN: BET CONTROL PANEL */}
         <div className="fruitslasher-sidebar">
           <div className="fs-controls">
-            {/* Wallet Selector */}
-            <div className="fs-wallet-section">
-              <span className="fs-controls-label" style={{ marginBottom: '8px' }}>Select Balance Wallet</span>
-              <div className="fs-wallet-grid">
-                <button 
-                  className={`fs-wallet-btn ${walletType === 'main' ? 'active' : ''}`}
-                  onClick={() => !loading && gameState !== 'playing' && setWalletType('main')}
-                  disabled={loading || gameState === 'playing'}
-                >
-                  <div className="fs-wallet-label">Main Wallet</div>
-                  <div className="fs-wallet-amount">{(user?.balance || 0).toFixed(2)} INR</div>
-                </button>
-                <button 
-                  className={`fs-wallet-btn ${walletType === 'gaming_bonus' ? 'active' : ''}`}
-                  onClick={() => !loading && gameState !== 'playing' && setWalletType('gaming_bonus')}
-                  disabled={loading || gameState === 'playing'}
-                >
-                  <div className="fs-wallet-label">Gaming Bonus</div>
-                  <div className="fs-wallet-amount">{(user?.gaming_bonus_balance || 0).toFixed(2)} INR</div>
-                </button>
+            {/* Static Balance Layout */}
+            <div className="fs-balances-container" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--border-card)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Main Wallet:</span>
+                <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>₹{mainBalance.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Gaming Bonus:</span>
+                <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>₹{gamingBonus.toFixed(2)}</span>
               </div>
             </div>
-
-            {/* Divider line between wallet and bet controls */}
-            <div className="fs-divider" />
 
             {/* Bet Amount Header (Bet Amount + Auto Cashout Toggle) */}
             <div className="fs-bet-header">

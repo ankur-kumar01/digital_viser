@@ -28,6 +28,10 @@ const numberColors: Record<string, string> = {
 };
 
 export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => {
+  const mainBalance = typeof user?.balance === 'string' ? parseFloat(user.balance) : (user?.balance || 0);
+  const gamingBonus = typeof user?.gaming_bonus_balance === 'string' ? parseFloat(user.gaming_bonus_balance) : (user?.gaming_bonus_balance || 0);
+  const userBalance = Math.max(mainBalance, gamingBonus);
+
   const [betAmount, setBetAmount] = useState('100');
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(30);
@@ -353,7 +357,7 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
     if (!tempSelection) return;
     const bet = parseFloat(betAmount);
     if (isNaN(bet) || bet <= 0) return alert('Enter a valid bet amount');
-    if (bet > parseFloat(user.balance)) return alert('Insufficient balance');
+    if (bet > userBalance) return alert('Insufficient balance');
 
     socketRef.current?.emit('ct_bet', { amount: bet, color: tempSelection }, (res: any) => {
       if (res.error) return alert(res.error);
@@ -663,8 +667,15 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
       )}
 
       {/* Balance */}
-      <div className="ct-balance">
-        Balance: <span>₹{parseFloat(user.balance).toFixed(2)}</span>
+      <div className="ct-balances-container" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--border-card)', maxWidth: '340px', margin: '14px auto 0 auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+          <span style={{ color: 'var(--text-secondary)' }}>Main Wallet:</span>
+          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>₹{mainBalance.toFixed(2)}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+          <span style={{ color: 'var(--text-secondary)' }}>Gaming Bonus:</span>
+          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>₹{gamingBonus.toFixed(2)}</span>
+        </div>
       </div>
 
       {/* Slide-Up Bottom Bet Slip Drawer */}
@@ -736,7 +747,7 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
               <button 
                 className="ct-drawer-confirm-btn"
                 onClick={handleBetConfirm}
-                disabled={parseFloat(betAmount) <= 0 || parseFloat(betAmount) > parseFloat(user.balance)}
+                disabled={parseFloat(betAmount) <= 0 || parseFloat(betAmount) > userBalance}
                 style={{
                   background: isNaN(parseInt(tempSelection)) ? colorMap[tempSelection]?.bg : (tempSelection === '0' || tempSelection === '5' ? '#8b5cf6' : numberColors[tempSelection])
                 }}

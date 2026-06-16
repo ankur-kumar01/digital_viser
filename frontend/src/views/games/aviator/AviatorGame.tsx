@@ -152,6 +152,10 @@ const getUserColor = (username: string) => {
 };
 
 export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => {
+  const mainBalance = typeof user?.balance === 'string' ? parseFloat(user.balance) : (user?.balance || 0);
+  const gamingBonus = typeof user?.gaming_bonus_balance === 'string' ? parseFloat(user.gaming_bonus_balance) : (user?.gaming_bonus_balance || 0);
+  const userBalance = Math.max(mainBalance, gamingBonus);
+
   const [betAmount, setBetAmount] = useState('100');
   const [config, setConfig] = useState<any>(null);
 
@@ -990,7 +994,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
     if (gameState !== 'WAITING') return showToast('Wait for the next round to bet');
     const bet = parseFloat(betAmount);
     if (isNaN(bet) || bet <= 0) return showToast('Enter a valid bet amount');
-    if (bet > parseFloat(user.balance)) return showToast('Insufficient balance');
+    if (bet > userBalance) return showToast('Insufficient balance');
 
     setIsBetLoading(true);
     socketRef.current?.emit('aviator_bet', { amount: bet }, (res: any) => {
@@ -1264,8 +1268,15 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
       </div>
 
       {/* Balance */}
-      <div className="av-balance">
-        Balance: <span>₹{parseFloat(user.balance).toFixed(2)}</span>
+      <div className="av-balances-container" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--border-card)', maxWidth: '340px', margin: '14px auto 0 auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+          <span style={{ color: 'var(--text-secondary)' }}>Main Wallet:</span>
+          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>₹{mainBalance.toFixed(2)}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+          <span style={{ color: 'var(--text-secondary)' }}>Gaming Bonus:</span>
+          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>₹{gamingBonus.toFixed(2)}</span>
+        </div>
       </div>
 
       {/* Win Overlay */}

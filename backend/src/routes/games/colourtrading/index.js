@@ -25,20 +25,34 @@ router.post('/play', async (req, res) => {
     await conn.beginTransaction();
 
     // Check balance
-    const [userRows] = await conn.query('SELECT balance FROM users WHERE id = ? FOR UPDATE', [userId]);
+    const [userRows] = await conn.query('SELECT balance, gaming_bonus_balance FROM users WHERE id = ? FOR UPDATE', [userId]);
     if (userRows.length === 0) throw new Error('User not found');
-    const balance = parseFloat(userRows[0].balance);
+    const mainBalance = parseFloat(userRows[0].balance);
+    const gamingBonusBalance = parseFloat(userRows[0].gaming_bonus_balance || 0);
 
-    if (balance < betAmount) {
-      await conn.rollback();
-      return res.status(400).json({ error: 'Insufficient balance in normal wallet' });
+    // Priority: deduct from gaming_bonus_balance first
+    let selectedWallet = 'main';
+    if (gamingBonusBalance >= betAmount) {
+      selectedWallet = 'gaming_bonus';
+    } else {
+      selectedWallet = 'main';
+      if (mainBalance < betAmount) {
+        await conn.rollback();
+        return res.status(400).json({ error: 'Insufficient balance' });
+      }
     }
 
     // Deduct bet
-    await conn.query('UPDATE users SET balance = balance - ? WHERE id = ?', [betAmount, userId]);
+    const balanceField = selectedWallet === 'gaming_bonus' ? 'gaming_bonus_balance' : 'balance';
+    await conn.query(`UPDATE users SET ${balanceField} = ${balanceField} - ? WHERE id = ?`, [betAmount, userId]);
     await conn.query(
       'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
-      [userId, 'game_bet', -betAmount, `Colour Trading Bet (${color})`]
+      [
+        userId,
+        'game_bet',
+        -betAmount,
+        `Colour Trading Bet (${color}) (${selectedWallet === 'gaming_bonus' ? 'Gaming Bonus' : 'Main Wallet'})`
+      ]
     );
 
     // Roll Result on Server
@@ -53,14 +67,19 @@ router.post('/play', async (req, res) => {
       winAmount = betAmount * mult;
       
       // Add win to balance
-      await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [winAmount, userId]);
+      await conn.query(`UPDATE users SET ${balanceField} = ${balanceField} + ? WHERE id = ?`, [winAmount, userId]);
       await conn.query(
         'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
-        [userId, 'game_win', winAmount, `Colour Trading Win (${resultColor})`]
+        [
+          userId,
+          'game_win',
+          winAmount,
+          `Colour Trading Win (${resultColor}) (${selectedWallet === 'gaming_bonus' ? 'Gaming Bonus' : 'Main Wallet'})`
+        ]
       );
     }
 
-    const [updatedUser] = await conn.query('SELECT balance FROM users WHERE id = ?', [userId]);
+    const [updatedUser] = await conn.query('SELECT balance, gaming_bonus_balance FROM users WHERE id = ?', [userId]);
 
     await conn.commit();
     res.json({ 
@@ -68,7 +87,9 @@ router.post('/play', async (req, res) => {
       result: resultColor, 
       won: winAmount > 0,
       payout: winAmount,
-      newBalance: parseFloat(updatedUser[0].balance) 
+      newBalance: selectedWallet === 'gaming_bonus'
+        ? parseFloat(updatedUser[0].gaming_bonus_balance)
+        : parseFloat(updatedUser[0].balance) 
     });
   } catch (err) {
     await conn.rollback();
