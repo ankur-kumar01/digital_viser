@@ -1585,4 +1585,29 @@ router.get('/login-history', async (req, res) => {
   }
 });
 
+// GET /admin/activity-log
+router.get('/activity-log', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = (page - 1) * limit;
+
+    const [countResult] = await pool.query('SELECT COUNT(*) as total FROM user_activity_log');
+    const total = countResult[0].total;
+
+    const [rows] = await pool.query(`
+      SELECT al.*, u.name as user_name, u.email as user_email
+      FROM user_activity_log al
+      JOIN users u ON al.user_id = u.id
+      ORDER BY al.created_at DESC
+      LIMIT ? OFFSET ?
+    `, [limit, offset]);
+
+    res.json({ activity: rows, total, page, limit });
+  } catch (err) {
+    console.error('Failed to fetch activity log:', err);
+    res.status(500).json({ error: 'Failed to fetch activity log' });
+  }
+});
+
 module.exports = router;

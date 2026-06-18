@@ -41,6 +41,8 @@ import { AdminReferrals } from './views/admin/AdminReferrals';
 import { AdminTransactions } from './views/admin/AdminTransactions';
 import { AdminBets } from './views/admin/AdminBets';
 import { AdminLoginHistory } from './views/admin/AdminLoginHistory';
+import { AdminActivityLog } from './views/admin/AdminActivityLog';
+import { trackActivity } from './api';
 
 export const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -111,6 +113,13 @@ export const App: React.FC = () => {
       window.location.hash = currentView;
     }
   }, [currentView, isAuthenticated]);
+
+  // Track activity on view changes
+  useEffect(() => {
+    if (isAuthenticated && !isAdmin) {
+      trackActivity(currentView === 'dashboard' ? '/' : `/${currentView}`);
+    }
+  }, [currentView, isAuthenticated, isAdmin]);
 
   // Handle browser back/forward buttons
   useEffect(() => {
@@ -286,6 +295,7 @@ export const App: React.FC = () => {
             {currentView === 'admin-transactions' && <AdminTransactions />}
             {currentView === 'admin-bets' && <AdminBets />}
             {currentView === 'admin-login-history' && <AdminLoginHistory />}
+            {currentView === 'admin-activity-log' && <AdminActivityLog />}
             {currentView === 'admin-referrals' && <AdminReferrals />}
           </>
         )}

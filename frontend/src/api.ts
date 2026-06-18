@@ -233,6 +233,25 @@ export const adminAPI = {
   getTransactions: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/transactions?page=${page}&limit=${limit}`),
   getBets: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/bets?page=${page}&limit=${limit}`),
   getLoginHistory: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/login-history?page=${page}&limit=${limit}`),
+  getActivityLog: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/activity-log?page=${page}&limit=${limit}`),
+};
+
+// Activity tracking
+let lastTrackedUrl = '';
+let lastTrackedTime = 0;
+
+export const trackActivity = async (page_url: string = '/') => {
+  const token = getToken();
+  if (!token) return;
+  const now = Date.now();
+  if (page_url === lastTrackedUrl && now - lastTrackedTime < 30000) return;
+  lastTrackedUrl = page_url;
+  lastTrackedTime = now;
+  try {
+    await request('POST', '/activity/track', { page_url });
+  } catch {
+    // silently fail
+  }
 };
 
 export const spinAPI = {

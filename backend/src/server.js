@@ -20,6 +20,7 @@ const adminRoutes = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
 const gamesRoutes = require('./routes/games');
 const spinRoutes = require('./routes/spin');
+const activityRoutes = require('./routes/activity');
 
 const app = express();
 const server = http.createServer(app);
@@ -143,6 +144,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/games', gamesRoutes);
 app.use('/api/spin', spinRoutes);
+app.use('/api/activity', activityRoutes);
 
 // Public Config Endpoint
 app.get('/api/config', async (req, res) => {

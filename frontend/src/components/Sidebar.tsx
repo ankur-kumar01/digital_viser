@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Wallet, PlusCircle, BarChart3, Receipt, X, Users, User, ArrowUpRight, Gift, Gamepad2, Cpu, Disc, FileText, List, History } from 'lucide-react';
+import { LayoutDashboard, Wallet, PlusCircle, BarChart3, Receipt, X, Users, User, ArrowUpRight, Gift, Gamepad2, Cpu, Disc, FileText, List, History, Activity } from 'lucide-react';
 
 interface SidebarProps {
   currentView: string;
@@ -32,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'admin-transactions', name: 'Transactions', icon: <FileText size={20} /> },
     { id: 'admin-bets', name: 'Bets', icon: <List size={20} /> },
     { id: 'admin-login-history', name: 'Login History', icon: <History size={20} /> },
+    { id: 'admin-activity-log', name: 'Activity Log', icon: <Activity size={20} /> },
     { id: 'admin-referrals', name: 'Referral Program', icon: <Users size={20} /> },
     { id: 'admin-fdr-plans', name: 'FDR Plans', icon: <PlusCircle size={20} /> },
     { id: 'admin-fdrs', name: 'Manage FDRs', icon: <BarChart3 size={20} /> },
