@@ -40,6 +40,7 @@ import { AdminSpinWheel } from './views/admin/AdminSpinWheel';
 import { AdminReferrals } from './views/admin/AdminReferrals';
 import { AdminTransactions } from './views/admin/AdminTransactions';
 import { AdminBets } from './views/admin/AdminBets';
+import { AdminLoginHistory } from './views/admin/AdminLoginHistory';
 
 export const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -284,6 +285,7 @@ export const App: React.FC = () => {
             {currentView === 'admin-spin-wheel' && <AdminSpinWheel />}
             {currentView === 'admin-transactions' && <AdminTransactions />}
             {currentView === 'admin-bets' && <AdminBets />}
+            {currentView === 'admin-login-history' && <AdminLoginHistory />}
             {currentView === 'admin-referrals' && <AdminReferrals />}
           </>
         )}

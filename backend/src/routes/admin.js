@@ -1560,4 +1560,29 @@ router.get('/bets', async (req, res) => {
   }
 });
 
+// GET /admin/login-history
+router.get('/login-history', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = (page - 1) * limit;
+
+    const [countResult] = await pool.query('SELECT COUNT(*) as total FROM login_history');
+    const total = countResult[0].total;
+
+    const [rows] = await pool.query(`
+      SELECT lh.*, u.name as user_name, u.email as user_email
+      FROM login_history lh
+      JOIN users u ON lh.user_id = u.id
+      ORDER BY lh.login_at DESC
+      LIMIT ? OFFSET ?
+    `, [limit, offset]);
+
+    res.json({ history: rows, total, page, limit });
+  } catch (err) {
+    console.error('Failed to fetch login history:', err);
+    res.status(500).json({ error: 'Failed to fetch login history' });
+  }
+});
+
 module.exports = router;

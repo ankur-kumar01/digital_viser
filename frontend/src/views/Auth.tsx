@@ -59,7 +59,13 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     setIsLoading(true);
     try {
       if (isLoginTab) {
-        const response = await authAPI.login({ email, password });
+        const device_info = JSON.stringify({
+          platform: navigator.platform,
+          language: navigator.language,
+          screen: `${window.screen.width}x${window.screen.height}`,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        });
+        const response = await authAPI.login({ email, password, device_info });
         saveToken(response.token);
         onLogin(response.token, response.user, false);
       } else {

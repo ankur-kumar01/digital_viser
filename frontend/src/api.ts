@@ -232,6 +232,7 @@ export const adminAPI = {
   releaseLockedReferral: () => adminRequest('POST', '/admin/referrals/release-locked'),
   getTransactions: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/transactions?page=${page}&limit=${limit}`),
   getBets: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/bets?page=${page}&limit=${limit}`),
+  getLoginHistory: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/login-history?page=${page}&limit=${limit}`),
 };
 
 export const spinAPI = {

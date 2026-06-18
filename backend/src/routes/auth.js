@@ -61,7 +61,7 @@ router.post('/register', async (req, res) => {
 // POST /login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, device_info } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
@@ -83,6 +83,18 @@ router.post('/login', async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    // Record login history
+    try {
+      const ip_address = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || 'unknown';
+      const user_agent = req.headers['user-agent'] || '';
+      await pool.query(
+        'INSERT INTO login_history (user_id, ip_address, user_agent, device_info) VALUES (?, ?, ?, ?)',
+        [user.id, ip_address, user_agent, device_info || null]
+      );
+    } catch (logErr) {
+      console.error('Failed to record login history:', logErr);
+    }
 
     res.json({
       token,
