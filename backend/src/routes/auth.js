@@ -9,7 +9,7 @@ const router = express.Router();
 // POST /register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, referral_code } = req.body;
+    const { name, email, password, phone_number, referral_code } = req.body;
 
     // Validate all fields
     if (!name || !email || !password) {
@@ -39,8 +39,8 @@ router.post('/register', async (req, res) => {
 
     // Insert user
     const [result] = await pool.query(
-      'INSERT INTO users (name, email, password_hash, referral_code, invited_by) VALUES (?, ?, ?, ?, ?)',
-      [name, email, password_hash, newReferralCode, invitedBy]
+      'INSERT INTO users (name, email, password_hash, phone_number, referral_code, invited_by) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, email, password_hash, phone_number || null, newReferralCode, invitedBy]
     );
 
     const userId = result.insertId;

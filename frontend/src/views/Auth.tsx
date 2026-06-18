@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { authAPI, saveToken } from '../api';
-import { KeyRound, Mail, User, AlertCircle, Loader2 } from 'lucide-react';
+import { KeyRound, Mail, User, Phone, AlertCircle, Loader2 } from 'lucide-react';
 
 interface AuthProps {
   onLogin: (token: string, user: any, isRegistration?: boolean) => void;
@@ -12,6 +12,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [phone_number, setPhoneNumber] = useState('');
   
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -37,6 +38,9 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       if (!name) {
         errors.name = 'Name is required';
       }
+      if (!phone_number) {
+        errors.phone_number = 'Mobile number is required';
+      }
       if (password !== confirmPassword) {
         errors.confirmPassword = 'Passwords do not match';
       }
@@ -59,7 +63,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         saveToken(response.token);
         onLogin(response.token, response.user, false);
       } else {
-        const response = await authAPI.register({ name, email, password });
+        const response = await authAPI.register({ name, email, password, phone_number });
         saveToken(response.token);
         onLogin(response.token, response.user, true);
       }
@@ -214,6 +218,34 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               {fieldErrors.name && (
                 <span style={{ color: 'var(--accent-danger)', fontSize: '0.78rem', marginTop: '4px', display: 'block' }}>
                   {fieldErrors.name}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Phone Number Field (Signup only) */}
+          {!isLoginTab && (
+            <div>
+              <label className="input-label">Mobile Number</label>
+              <div style={{ position: 'relative' }}>
+                <Phone 
+                  size={18} 
+                  color="var(--text-muted)" 
+                  style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} 
+                />
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="+91 9876543210"
+                  value={phone_number}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  style={{ paddingLeft: '48px' }}
+                  disabled={isLoading}
+                />
+              </div>
+              {fieldErrors.phone_number && (
+                <span style={{ color: 'var(--accent-danger)', fontSize: '0.78rem', marginTop: '4px', display: 'block' }}>
+                  {fieldErrors.phone_number}
                 </span>
               )}
             </div>
