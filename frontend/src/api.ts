@@ -230,6 +230,8 @@ export const adminAPI = {
   getSpinStats: () => adminRequest('GET', '/admin/spin-stats'),
   getReferralStats: () => adminRequest('GET', '/admin/referrals/stats'),
   releaseLockedReferral: () => adminRequest('POST', '/admin/referrals/release-locked'),
+  getTransactions: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/transactions?page=${page}&limit=${limit}`),
+  getBets: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/bets?page=${page}&limit=${limit}`),
 };
 
 export const spinAPI = {

@@ -933,6 +933,11 @@ router.delete('/users/:id', async (req, res) => {
     }
 
     // Delete in order to respect foreign keys (even if not strictly enforced by ON DELETE CASCADE)
+    await conn.query('DELETE FROM aviator_bets WHERE user_id = ?', [userId]);
+    await conn.query('DELETE FROM ct_bets WHERE user_id = ?', [userId]);
+    await conn.query('DELETE FROM fruit_bets WHERE user_id = ?', [userId]);
+    await conn.query('DELETE FROM user_spin_history WHERE user_id = ?', [userId]);
+    await conn.query('DELETE FROM user_spin_streaks WHERE user_id = ?', [userId]);
     await conn.query('DELETE FROM locked_funds WHERE user_id = ?', [userId]);
     await conn.query('DELETE FROM transactions WHERE user_id = ?', [userId]);
     await conn.query('DELETE FROM deposits WHERE user_id = ?', [userId]);
@@ -1451,6 +1456,98 @@ router.post('/referrals/release-locked', async (req, res) => {
     res.status(500).json({ error: 'Failed to release funds' });
   } finally {
     conn.release();
+  }
+});
+
+// GET /admin/transactions - All transactions with user info, paginated
+router.get('/transactions', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = (page - 1) * limit;
+
+    const [countResult] = await pool.query('SELECT COUNT(*) as total FROM transactions');
+    const total = countResult[0].total;
+
+    const [rows] = await pool.query(`
+      SELECT t.*, u.name as user_name, u.email as user_email 
+      FROM transactions t 
+      JOIN users u ON t.user_id = u.id 
+      ORDER BY t.created_at DESC 
+      LIMIT ? OFFSET ?
+    `, [limit, offset]);
+
+    res.json({
+      transactions: rows.map(r => ({ ...r, amount: parseFloat(r.amount) })),
+      total,
+      page,
+      limit
+    });
+  } catch (err) {
+    console.error('Failed to fetch transactions:', err);
+    res.status(500).json({ error: 'Failed to fetch transactions' });
+  }
+});
+
+// GET /admin/bets - All bets from all games with user info, paginated
+router.get('/bets', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = (page - 1) * limit;
+
+    const [countResult] = await pool.query(`
+      SELECT COUNT(*) as total FROM (
+        SELECT id FROM aviator_bets
+        UNION ALL
+        SELECT id FROM ct_bets
+        UNION ALL
+        SELECT id FROM fruit_bets
+      ) combined
+    `);
+    const total = countResult[0].total;
+
+    const [rows] = await pool.query(`
+      SELECT * FROM (
+        SELECT 
+          b.id, b.user_id, u.name as user_name, u.email as user_email,
+          b.bet_amount, b.win_amount, b.status, b.created_at,
+          'aviator' as game_type,
+          b.round_id, b.cashout_multiplier, NULL as color
+        FROM aviator_bets b
+        JOIN users u ON b.user_id = u.id
+        UNION ALL
+        SELECT 
+          b.id, b.user_id, u.name as user_name, u.email as user_email,
+          b.bet_amount, b.win_amount, b.status, b.created_at,
+          'colour_trading' as game_type,
+          b.round_id, NULL as cashout_multiplier, b.color
+        FROM ct_bets b
+        JOIN users u ON b.user_id = u.id
+        UNION ALL
+        SELECT 
+          b.id, b.user_id, u.name as user_name, u.email as user_email,
+          b.bet_amount, b.win_amount, b.status, b.created_at,
+          'fruit_slasher' as game_type,
+          NULL as round_id, b.multiplier_reached as cashout_multiplier, NULL as color
+        FROM fruit_bets b
+        JOIN users u ON b.user_id = u.id
+      ) all_bets
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `, [limit, offset]);
+
+    const parsed = rows.map(r => ({
+      ...r,
+      bet_amount: parseFloat(r.bet_amount),
+      win_amount: r.win_amount ? parseFloat(r.win_amount) : null,
+      cashout_multiplier: r.cashout_multiplier ? parseFloat(r.cashout_multiplier) : null
+    }));
+
+    res.json({ bets: parsed, total, page, limit });
+  } catch (err) {
+    console.error('Failed to fetch bets:', err);
+    res.status(500).json({ error: 'Failed to fetch bets' });
   }
 });
 

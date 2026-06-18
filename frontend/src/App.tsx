@@ -38,6 +38,8 @@ import { AdminBigWins } from './views/admin/AdminBigWins';
 import { AdminGameSimulations } from './views/admin/AdminGameSimulations';
 import { AdminSpinWheel } from './views/admin/AdminSpinWheel';
 import { AdminReferrals } from './views/admin/AdminReferrals';
+import { AdminTransactions } from './views/admin/AdminTransactions';
+import { AdminBets } from './views/admin/AdminBets';
 
 export const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -280,6 +282,8 @@ export const App: React.FC = () => {
             {currentView === 'admin-big-wins' && <AdminBigWins />}
             {currentView === 'admin-game-simulations' && <AdminGameSimulations />}
             {currentView === 'admin-spin-wheel' && <AdminSpinWheel />}
+            {currentView === 'admin-transactions' && <AdminTransactions />}
+            {currentView === 'admin-bets' && <AdminBets />}
             {currentView === 'admin-referrals' && <AdminReferrals />}
           </>
         )}
