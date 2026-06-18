@@ -42,6 +42,7 @@ import { AdminTransactions } from './views/admin/AdminTransactions';
 import { AdminBets } from './views/admin/AdminBets';
 import { AdminLoginHistory } from './views/admin/AdminLoginHistory';
 import { AdminActivityLog } from './views/admin/AdminActivityLog';
+import { AdminActiveUsers } from './views/admin/AdminActiveUsers';
 import { trackActivity } from './api';
 
 export const App: React.FC = () => {
@@ -296,6 +297,7 @@ export const App: React.FC = () => {
             {currentView === 'admin-bets' && <AdminBets />}
             {currentView === 'admin-login-history' && <AdminLoginHistory />}
             {currentView === 'admin-activity-log' && <AdminActivityLog />}
+            {currentView === 'admin-active-users' && <AdminActiveUsers />}
             {currentView === 'admin-referrals' && <AdminReferrals />}
           </>
         )}

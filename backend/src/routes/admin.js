@@ -1610,4 +1610,85 @@ router.get('/activity-log', async (req, res) => {
   }
 });
 
+// GET /admin/active-users
+router.get('/active-users', async (req, res) => {
+  try {
+    const period = req.query.period || '24h';
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = (page - 1) * limit;
+
+    let hours;
+    let dateFilter;
+    const now = new Date();
+
+    switch (period) {
+      case '1h':
+        hours = 1;
+        dateFilter = new Date(now.getTime() - 60 * 60 * 1000);
+        break;
+      case '24h':
+        hours = 24;
+        dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+      case 'yesterday': {
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfYesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
+        const endOfYesterday = new Date(startOfToday.getTime() - 1);
+        dateFilter = startOfYesterday;
+        const [countResult] = await pool.query(`
+          SELECT COUNT(DISTINCT al.user_id) as total
+          FROM user_activity_log al
+          WHERE al.created_at >= ? AND al.created_at <= ?
+        `, [startOfYesterday, endOfYesterday]);
+        const total_yesterday = countResult[0].total;
+        const [rows] = await pool.query(`
+          SELECT al.user_id, u.name as user_name, u.email as user_email,
+                 MAX(al.created_at) as last_active,
+                 COUNT(al.id) as page_visits
+          FROM user_activity_log al
+          JOIN users u ON al.user_id = u.id
+          WHERE al.created_at >= ? AND al.created_at <= ?
+          GROUP BY al.user_id, u.name, u.email
+          ORDER BY last_active DESC
+          LIMIT ? OFFSET ?
+        `, [startOfYesterday, endOfYesterday, limit, offset]);
+        return res.json({ users: rows, total: total_yesterday, page, limit, period });
+      }
+      case 'last7days':
+        hours = 168;
+        dateFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        hours = 24;
+        dateFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    }
+
+    const [countResult] = await pool.query(`
+      SELECT COUNT(DISTINCT al.user_id) as total
+      FROM user_activity_log al
+      WHERE al.created_at >= ?
+    `, [dateFilter]);
+
+    const total = countResult[0].total;
+
+    const [rows] = await pool.query(`
+      SELECT al.user_id, u.name as user_name, u.email as user_email,
+             MAX(al.created_at) as last_active,
+             COUNT(al.id) as page_visits
+      FROM user_activity_log al
+      JOIN users u ON al.user_id = u.id
+      WHERE al.created_at >= ?
+      GROUP BY al.user_id, u.name, u.email
+      ORDER BY last_active DESC
+      LIMIT ? OFFSET ?
+    `, [dateFilter, limit, offset]);
+
+    res.json({ users: rows, total, page, limit, period });
+  } catch (err) {
+    console.error('Failed to fetch active users:', err);
+    res.status(500).json({ error: 'Failed to fetch active users' });
+  }
+});
+
 module.exports = router;

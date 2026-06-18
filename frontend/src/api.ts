@@ -234,6 +234,7 @@ export const adminAPI = {
   getBets: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/bets?page=${page}&limit=${limit}`),
   getLoginHistory: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/login-history?page=${page}&limit=${limit}`),
   getActivityLog: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/activity-log?page=${page}&limit=${limit}`),
+  getActiveUsers: (period: string = '24h', page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/active-users?period=${period}&page=${page}&limit=${limit}`),
 };
 
 // Activity tracking
