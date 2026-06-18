@@ -117,7 +117,7 @@ router.post('/withdraw', async (req, res) => {
       [userId, 'withdrawal_pending', withdrawAmount, withdrawDesc]
     );
 
-    // Record the charge as a separate transaction entry
+      // Record the charge as a separate transaction entry
     if (chargeAmount > 0) {
       await conn.query(
         'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
@@ -127,9 +127,9 @@ router.post('/withdraw', async (req, res) => {
 
     await conn.commit();
 
-    // Fetch updated balance
-    const [rows] = await conn.query('SELECT balance FROM users WHERE id = ?', [userId]);
-    const newBalance = parseFloat(rows[0].balance);
+    // Fetch updated balance from the affected wallet
+    const [rows] = await conn.query(`SELECT ${walletColumn} as updated_balance FROM users WHERE id = ?`, [userId]);
+    const newBalance = parseFloat(rows[0].updated_balance);
 
     res.status(201).json({
       balance: newBalance,

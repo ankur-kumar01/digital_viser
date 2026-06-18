@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { authAPI, saveToken } from '../api';
-import { KeyRound, Mail, User, Phone, AlertCircle, Loader2 } from 'lucide-react';
+import { KeyRound, Mail, User, Phone, AlertCircle, Loader2, Gift } from 'lucide-react';
 
 interface AuthProps {
   onLogin: (token: string, user: any, isRegistration?: boolean) => void;
@@ -13,10 +13,21 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phone_number, setPhoneNumber] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
+
+  // Parse referral code from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+      setIsLoginTab(false);
+    }
+  }, []);
 
   const validate = () => {
     const errors: Record<string, string> = {};
@@ -69,7 +80,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         saveToken(response.token);
         onLogin(response.token, response.user, false);
       } else {
-        const response = await authAPI.register({ name, email, password, phone_number });
+        const response = await authAPI.register({ name, email, password, phone_number, referral_code: referralCode || undefined });
         saveToken(response.token);
         onLogin(response.token, response.user, true);
       }
@@ -254,6 +265,31 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   {fieldErrors.phone_number}
                 </span>
               )}
+            </div>
+          )}
+
+          {/* Referral Code Field (Signup only) */}
+          {!isLoginTab && (
+            <div>
+              <label className="input-label" style={{ color: 'var(--text-muted)' }}>
+                Referral Code <span style={{ fontSize: '0.75rem' }}>(optional)</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Gift
+                  size={18}
+                  color="var(--text-muted)"
+                  style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }}
+                />
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Enter referral code"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value)}
+                  style={{ paddingLeft: '48px' }}
+                  disabled={isLoading}
+                />
+              </div>
             </div>
           )}
 

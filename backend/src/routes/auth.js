@@ -204,7 +204,7 @@ router.get('/referral-stats', authMiddleware, async (req, res) => {
     for (const u of referredUsers) {
       // Check if they deposited
       const [depRows] = await pool.query(
-        `SELECT COUNT(*) as count FROM transactions WHERE user_id = ? AND type = 'deposit' AND status = 'completed'`,
+        `SELECT COUNT(*) as count FROM deposits WHERE user_id = ? AND status = 'approved'`,
         [u.id]
       );
       const hasDeposited = depRows[0].count > 0;
