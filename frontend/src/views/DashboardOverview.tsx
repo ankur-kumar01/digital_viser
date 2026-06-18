@@ -26,7 +26,8 @@ interface DashboardOverviewProps {
 
 const OfferTimer: React.FC<{ endTime: string; onExpire?: () => void }> = ({ endTime, onExpire }) => {
   const calculateTimeLeft = () => {
-    const difference = +new Date(endTime) - +new Date();
+    const endStr = endTime.includes('Z') ? endTime : endTime.replace(' ', 'T') + 'Z';
+    const difference = +new Date(endStr) - +new Date();
     let timeLeft = {
       days: '00',
       hours: '00',
