@@ -368,35 +368,60 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       <SpinWheel onBonusAwarded={() => refreshUser()} />
 
       {/* Offer Zone Section */}
-      {activeOffers.length > 0 && (
-        <div style={{ marginTop: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <Gift size={20} color="var(--accent-secondary)" />
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0 }}>Offer Zone</h3>
-          </div>
-          
-          <div className="glass-card glow-card promo-offer-card">
+      <div style={{ marginTop: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+          <Gift size={20} color="var(--accent-secondary)" />
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0 }}>Offer Zone</h3>
+        </div>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* FDR Promotional Offers */}
+          {activeOffers.length > 0 && (
+            <div className="glass-card glow-card promo-offer-card">
+              <div className="promo-offer-card-left">
+                <div className="emoji" style={{ fontSize: '3rem', flexShrink: 0 }}>🎁</div>
+                <div>
+                  <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 6px 0' }}>
+                    {activeOffers[0].name}
+                  </h4>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0, lineHeight: 1.5, maxWidth: '600px' }}>
+                    Get an instant <strong style={{ color: 'var(--accent-secondary)' }}>{parseFloat(activeOffers[0].bonus_percent)}% bonus</strong> credited to your bonus wallet on creating any Fixed Deposit. Offer ends soon, lock your FDR now!
+                  </p>
+                  <OfferTimer endTime={activeOffers[0].end_time} onExpire={() => setActiveOffers([])} />
+                </div>
+              </div>
+              <button 
+                className="btn promo-offer-card-btn" 
+                onClick={() => onNavigate('create-fdr')}
+              >
+                Grab Offer
+              </button>
+            </div>
+          )}
+
+          {/* Referral Offer Banner */}
+          <div className="glass-card glow-card promo-offer-card" style={{ borderColor: 'var(--accent-primary)' }}>
             <div className="promo-offer-card-left">
-              <div className="emoji" style={{ fontSize: '3rem', flexShrink: 0 }}>🎁</div>
+              <div className="emoji" style={{ fontSize: '3rem', flexShrink: 0 }}>👥</div>
               <div>
                 <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 6px 0' }}>
-                  {activeOffers[0].name}
+                  Refer & Earn Rewards
                 </h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0, lineHeight: 1.5, maxWidth: '600px' }}>
-                  Get an instant <strong style={{ color: 'var(--accent-secondary)' }}>{parseFloat(activeOffers[0].bonus_percent)}% bonus</strong> credited to your bonus wallet on creating any Fixed Deposit. Offer ends soon, lock your FDR now!
+                  Invite your friends and earn <strong style={{ color: 'var(--accent-secondary)' }}>10% commission</strong> on their first deposit, plus <strong style={{ color: 'var(--accent-secondary)' }}>5% monthly recurring commission</strong> on their active FDRs. Unlimited earning potential!
                 </p>
-                <OfferTimer endTime={activeOffers[0].end_time} onExpire={() => setActiveOffers([])} />
               </div>
             </div>
             <button 
               className="btn promo-offer-card-btn" 
-              onClick={() => onNavigate('create-fdr')}
+              onClick={() => onNavigate('referrals')}
+              style={{ background: 'var(--accent-primary)', color: '#fff' }}
             >
-              Grab Offer
+              Refer Now
             </button>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Metrics Row */}
       <div className="dashboard-grid">
