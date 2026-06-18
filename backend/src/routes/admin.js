@@ -524,8 +524,17 @@ router.post('/schemes', async (req, res) => {
 // PUT /schemes/:id
 router.put('/schemes/:id', async (req, res) => {
   try {
-    const { is_active } = req.body;
-    await pool.query('UPDATE reward_schemes SET is_active = ? WHERE id = ?', [is_active, req.params.id]);
+    const { type, min_amount, reward_amount, is_active } = req.body;
+    const updates = [];
+    const values = [];
+    if (typeof type !== 'undefined') { updates.push('type = ?'); values.push(type); }
+    if (typeof min_amount !== 'undefined') { updates.push('min_amount = ?'); values.push(min_amount); }
+    if (typeof reward_amount !== 'undefined') { updates.push('reward_amount = ?'); values.push(reward_amount); }
+    if (typeof is_active !== 'undefined') { updates.push('is_active = ?'); values.push(is_active); }
+    if (updates.length > 0) {
+      values.push(req.params.id);
+      await pool.query(`UPDATE reward_schemes SET ${updates.join(', ')} WHERE id = ?`, values);
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update scheme' });

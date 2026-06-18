@@ -150,11 +150,17 @@ app.get('/api/config', async (req, res) => {
     const [rows] = await pool.query('SELECT setting_key, setting_value FROM system_settings');
     const settings = rows.reduce((acc, row) => ({ ...acc, [row.setting_key]: row.setting_value }), {});
     
+    const [schemeRows] = await pool.query("SELECT type, reward_amount FROM reward_schemes WHERE is_active = true");
+    const referralPercent = schemeRows.find((s) => s.type === 'referral_percent');
+    const fdrReferralPercent = schemeRows.find((s) => s.type === 'fdr_referral_percent');
+    
     res.json({
       global_timezone: settings.global_timezone || 'UTC',
       enable_aviator_chat_simulation: settings.enable_aviator_chat_simulation !== 'false',
       enable_aviator_bet_simulation: settings.enable_aviator_bet_simulation !== 'false',
-      enable_colour_trading_bet_simulation: settings.enable_colour_trading_bet_simulation !== 'false'
+      enable_colour_trading_bet_simulation: settings.enable_colour_trading_bet_simulation !== 'false',
+      referral_percent: referralPercent ? parseFloat(referralPercent.reward_amount) : 10,
+      fdr_referral_percent: fdrReferralPercent ? parseFloat(fdrReferralPercent.reward_amount) : 5
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch config' });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MetricCard } from '../components/MetricCard';
-import { walletAPI, fdrAPI, gamesAPI } from '../api';
+import { walletAPI, fdrAPI, gamesAPI, globalConfigAPI } from '../api';
 import { Wallet, Award, History, ArrowRight, ArrowUpRight, ArrowDownLeft, PiggyBank, TrendingUp, CalendarDays, Gift, Users, PlusCircle, Activity, Gamepad2, Trophy, RefreshCw, Eye, ExternalLink, Zap, Copy, MessageCircle } from 'lucide-react';
 import { PortfolioHero } from '../components/PortfolioHero';
 import { AviatorChatWidget } from '../components/AviatorChatWidget';
@@ -177,6 +177,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const [activeOffers, setActiveOffers] = useState<any[]>([]);
   const [bigWins, setBigWins] = useState<any[]>([]);
   const [copied, setCopied] = useState(false);
+  const [referralPercent, setReferralPercent] = useState(10);
+  const [fdrReferralPercent, setFdrReferralPercent] = useState(5);
 
   const loadData = async () => {
     try {
@@ -229,6 +231,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         setBigWins(bw);
       } catch (e) {
         console.error('Failed to load big wins', e);
+      }
+      // Load referral config
+      try {
+        const cfg = await globalConfigAPI.getConfig();
+        if (cfg.referral_percent) setReferralPercent(cfg.referral_percent);
+        if (cfg.fdr_referral_percent) setFdrReferralPercent(cfg.fdr_referral_percent);
+      } catch (e) {
+        console.error('Failed to load referral config', e);
       }
     } catch (err) {
       console.error('Failed to load dashboard statistics', err);
@@ -406,7 +416,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   Refer & Earn Rewards
                 </h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0, lineHeight: 1.5, maxWidth: '600px' }}>
-                  Invite your friends and earn <strong style={{ color: 'var(--accent-secondary)' }}>10% commission</strong> on their first deposit, plus <strong style={{ color: 'var(--accent-secondary)' }}>5% monthly recurring commission</strong> on their active FDRs. Unlimited earning potential!
+                  Invite your friends and earn <strong style={{ color: 'var(--accent-secondary)' }}>{referralPercent}% commission</strong> on their first deposit, plus <strong style={{ color: 'var(--accent-secondary)' }}>{fdrReferralPercent}% monthly recurring commission</strong> on their active FDRs. Unlimited earning potential!
                 </p>
               </div>
             </div>

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../../api';
-import { Plus, Check, X, Gift } from 'lucide-react';
+import { Plus, Check, X, Gift, Edit2 } from 'lucide-react';
 
 export const AdminSchemes: React.FC = () => {
   const [schemes, setSchemes] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [editingScheme, setEditingScheme] = useState<any | null>(null);
   const [formData, setFormData] = useState({ type: 'referral_percent', min_amount: '', reward_amount: '' });
 
   useEffect(() => {
@@ -23,17 +24,36 @@ export const AdminSchemes: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await adminAPI.createScheme({
-        type: formData.type,
-        min_amount: formData.min_amount ? parseFloat(formData.min_amount) : 0,
-        reward_amount: parseFloat(formData.reward_amount),
-      });
+      if (editingScheme) {
+        await adminAPI.updateScheme(editingScheme.id, {
+          type: formData.type,
+          min_amount: formData.min_amount ? parseFloat(formData.min_amount) : 0,
+          reward_amount: parseFloat(formData.reward_amount),
+        });
+      } else {
+        await adminAPI.createScheme({
+          type: formData.type,
+          min_amount: formData.min_amount ? parseFloat(formData.min_amount) : 0,
+          reward_amount: parseFloat(formData.reward_amount),
+        });
+      }
       setShowModal(false);
+      setEditingScheme(null);
       setFormData({ type: 'referral_percent', min_amount: '', reward_amount: '' });
       loadSchemes();
     } catch (err) {
-      alert('Failed to create scheme');
+      alert('Failed to save scheme');
     }
+  };
+
+  const handleEdit = (scheme: any) => {
+    setEditingScheme(scheme);
+    setFormData({
+      type: scheme.type,
+      min_amount: scheme.min_amount?.toString() || '',
+      reward_amount: scheme.reward_amount?.toString() || '',
+    });
+    setShowModal(true);
   };
 
   const toggleStatus = async (id: number, currentStatus: boolean) => {
@@ -53,6 +73,12 @@ export const AdminSchemes: React.FC = () => {
     } catch (err) {
       alert('Failed to delete scheme');
     }
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingScheme(null);
+    setFormData({ type: 'referral_percent', min_amount: '', reward_amount: '' });
   };
 
   return (
@@ -99,6 +125,13 @@ export const AdminSchemes: React.FC = () => {
                 </td>
                 <td style={{ padding: '16px 24px', textAlign: 'right', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                   <button 
+                    onClick={() => handleEdit(scheme)}
+                    className="btn" 
+                    style={{ padding: '6px 12px', fontSize: '0.85rem', background: 'var(--bg-tertiary)' }}
+                  >
+                    <Edit2 size={14} /> Edit
+                  </button>
+                  <button 
                     onClick={() => toggleStatus(scheme.id, scheme.is_active)}
                     className="btn" 
                     style={{ padding: '6px 12px', fontSize: '0.85rem', background: 'var(--bg-tertiary)' }}
@@ -130,8 +163,8 @@ export const AdminSchemes: React.FC = () => {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div className="glass-card" style={{ width: '100%', maxWidth: '500px', padding: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Create Reward Scheme</h3>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{editingScheme ? 'Edit Reward Scheme' : 'Create Reward Scheme'}</h3>
+              <button onClick={closeModal} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <X size={24} />
               </button>
             </div>
@@ -144,11 +177,27 @@ export const AdminSchemes: React.FC = () => {
                   value={formData.type} 
                   onChange={(e) => setFormData({...formData, type: e.target.value})}
                   required
+                  disabled={!!editingScheme}
                 >
                   <option value="referral_percent">Referral Commission (Percentage of 1st Deposit)</option>
                   <option value="fdr_referral_percent">FDR Recurring Commission (Monthly Percentage)</option>
+                  <option value="fdr_bonus">FDR Creation Bonus (Flat Amount)</option>
                 </select>
               </div>
+
+              {formData.type === 'fdr_bonus' && (
+                <div>
+                  <label className="input-label">Minimum FDR Amount (₹)</label>
+                  <input 
+                    type="number" 
+                    className="input-field" 
+                    value={formData.min_amount} 
+                    onChange={(e) => setFormData({...formData, min_amount: e.target.value})}
+                    required
+                    min="0"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="input-label">
@@ -166,8 +215,8 @@ export const AdminSchemes: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-                <button type="button" className="btn" style={{ flex: 1, background: 'var(--bg-tertiary)' }} onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Create Scheme</button>
+                <button type="button" className="btn" style={{ flex: 1, background: 'var(--bg-tertiary)' }} onClick={closeModal}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>{editingScheme ? 'Save Changes' : 'Create Scheme'}</button>
               </div>
             </form>
           </div>
