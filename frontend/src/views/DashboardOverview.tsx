@@ -449,6 +449,47 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
       </div>
 
+      {/* Anti-Fraud Warning */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(185,28,28,0.03))',
+        border: '1px solid rgba(239,68,68,0.2)',
+        borderRadius: '16px',
+        padding: '18px 22px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '14px',
+        animation: 'glowPulse 2s ease-in-out infinite',
+      }}>
+        <div style={{
+          fontSize: '1.6rem', flexShrink: 0, lineHeight: 1,
+          marginTop: '2px',
+        }}>⚠️</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontWeight: 700, fontSize: '0.95rem',
+            color: '#ef4444', marginBottom: '4px',
+          }}>
+            No Fake or Duplicate Accounts
+          </div>
+          <div style={{
+            fontSize: '0.85rem', color: 'var(--text-secondary)',
+            lineHeight: 1.6,
+          }}>
+            Creating multiple or fraudulent accounts is strictly prohibited. 
+            Family member accounts without prior permission are not allowed. 
+            Any such accounts will be <strong style={{ color: '#ef4444' }}>permanently suspended</strong> and 
+            <strong style={{ color: '#ef4444' }}> all funds will be forfeited with no refund</strong>.
+          </div>
+        </div>
+        <div style={{
+          fontSize: '1.2rem', flexShrink: 0, lineHeight: 1,
+          marginTop: '2px', opacity: 0.5, cursor: 'pointer',
+        }}
+          onClick={() => onNavigate('profile')}
+          title="View Terms"
+        >⚖️</div>
+      </div>
+
       {/* Daily Spin Wheel */}
       <SpinWheel onBonusAwarded={() => refreshUser()} />
 
