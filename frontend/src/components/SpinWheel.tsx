@@ -22,6 +22,7 @@ interface SpinStatus {
   current_streak: number;
   total_spins: number;
   gaming_bonus_balance: number;
+  total_deposits: number;
   spin_history: any[];
 }
 
@@ -601,8 +602,24 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
             </span>
           </div>
 
-          {/* Spin Button or Countdown */}
-          {status?.can_spin ? (
+          {/* Spin Button, Deposit Required, or Countdown */}
+          {status && status.total_deposits < 100 ? (
+            <div style={{
+              width: '100%', padding: '16px 20px', borderRadius: '16px',
+              background: 'linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05))',
+              border: '1px solid rgba(239,68,68,0.2)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '1.5rem' }}>🔒</div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#ef4444' }}>
+                Deposit ₹100 or more to spin
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Your deposits: ₹{parseFloat(String(status.total_deposits)).toFixed(2)}
+              </div>
+            </div>
+          ) : status?.can_spin ? (
             <button
               onClick={handleSpin}
               disabled={isSpinning}

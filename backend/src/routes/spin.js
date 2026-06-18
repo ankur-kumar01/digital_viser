@@ -51,6 +51,13 @@ router.get('/status', async (req, res) => {
       [userId]
     );
 
+    // Get total deposits
+    const [depositResult] = await pool.query(
+      "SELECT COALESCE(SUM(amount), 0) as total FROM deposits WHERE user_id = ? AND status = 'approved'",
+      [userId]
+    );
+    const total_deposits = parseFloat(depositResult[0].total);
+
     let can_spin = true;
     let next_spin_at = null;
     let seconds_remaining = 0;
@@ -85,6 +92,7 @@ router.get('/status', async (req, res) => {
       current_streak: streak.length > 0 ? streak[0].current_streak : 0,
       total_spins: streak.length > 0 ? streak[0].total_spins : 0,
       gaming_bonus_balance: user.length > 0 ? parseFloat(user[0].gaming_bonus_balance) : 0,
+      total_deposits,
       spin_history: history
     });
   } catch (err) {
@@ -121,6 +129,16 @@ router.post('/claim', async (req, res) => {
           seconds_remaining: secondsLeft
         });
       }
+    }
+
+    // 1.5 Check minimum deposit requirement
+    const [depositCheck] = await conn.query(
+      "SELECT COALESCE(SUM(amount), 0) as total FROM deposits WHERE user_id = ? AND status = 'approved'",
+      [userId]
+    );
+    if (parseFloat(depositCheck[0].total) < 100) {
+      await conn.rollback();
+      return res.status(403).json({ error: 'Minimum ₹100 deposit required to spin' });
     }
 
     // 2. Get active segments
