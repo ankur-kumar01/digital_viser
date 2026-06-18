@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MetricCard } from '../components/MetricCard';
 import { walletAPI, fdrAPI, gamesAPI } from '../api';
-import { Wallet, Award, History, ArrowRight, ArrowUpRight, ArrowDownLeft, PiggyBank, TrendingUp, CalendarDays, Gift, Users, PlusCircle, Activity, Gamepad2, Trophy, RefreshCw, Eye, ExternalLink, Zap } from 'lucide-react';
+import { Wallet, Award, History, ArrowRight, ArrowUpRight, ArrowDownLeft, PiggyBank, TrendingUp, CalendarDays, Gift, Users, PlusCircle, Activity, Gamepad2, Trophy, RefreshCw, Eye, ExternalLink, Zap, Copy, MessageCircle } from 'lucide-react';
 import { PortfolioHero } from '../components/PortfolioHero';
 import { AviatorChatWidget } from '../components/AviatorChatWidget';
 import { SpinWheel } from '../components/SpinWheel';
@@ -176,6 +176,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const [games, setGames] = useState<any[]>([]);
   const [activeOffers, setActiveOffers] = useState<any[]>([]);
   const [bigWins, setBigWins] = useState<any[]>([]);
+  const [copied, setCopied] = useState(false);
 
   const loadData = async () => {
     try {
@@ -412,13 +413,31 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 </p>
               </div>
             </div>
-            <button 
-              className="btn promo-offer-card-btn" 
-              onClick={() => onNavigate('referrals')}
-              style={{ background: 'var(--accent-primary)', color: '#fff' }}
-            >
-              Refer Now
-            </button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button 
+                className="btn promo-offer-card-btn" 
+                onClick={() => {
+                  const link = `${window.location.origin}/register?ref=${(user as any)?.referral_code || ''}`;
+                  navigator.clipboard.writeText(link);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                style={{ background: 'var(--accent-primary)', color: '#fff', whiteSpace: 'nowrap' }}
+              >
+                <Copy size={16} /> {copied ? 'Copied!' : 'Copy Link'}
+              </button>
+              <button 
+                className="btn promo-offer-card-btn" 
+                onClick={() => {
+                  const link = `${window.location.origin}/register?ref=${(user as any)?.referral_code || ''}`;
+                  const text = encodeURIComponent(`Join Digital_Viser and start earning! Use my referral link: ${link}`);
+                  window.open(`https://wa.me/?text=${text}`, '_blank');
+                }}
+                style={{ background: '#25D366', color: '#fff', whiteSpace: 'nowrap' }}
+              >
+                <MessageCircle size={16} /> WhatsApp
+              </button>
+            </div>
           </div>
         </div>
       </div>
