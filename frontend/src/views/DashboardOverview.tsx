@@ -365,9 +365,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       {/* Aviator Chat Simulation Widget */}
       <AviatorChatWidget />
 
-      {/* Daily Spin Wheel */}
-      <SpinWheel onBonusAwarded={() => refreshUser()} />
-
       {/* Offer Zone Section */}
       <div style={{ marginTop: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
@@ -441,6 +438,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Daily Spin Wheel */}
+      <SpinWheel onBonusAwarded={() => refreshUser()} />
 
       {/* Metrics Row */}
       <div className="dashboard-grid">
