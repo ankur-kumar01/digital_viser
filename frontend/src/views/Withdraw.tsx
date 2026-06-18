@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { walletAPI, uploadFile } from '../api';
-import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
 interface WithdrawProps {
@@ -42,6 +42,20 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
     };
     fetchMethods();
   }, []);
+
+  // Account age check for fee
+  const accountAgeDays = useMemo(() => {
+    if (!user) return 999;
+    const createdAt = (user as any).created_at;
+    if (!createdAt) return 999;
+    const diff = Date.now() - new Date(createdAt).getTime();
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
+  }, [user]);
+
+  const earlyFeeRate = accountAgeDays < 10 ? 0.10 : 0;
+  const numericAmount = parseFloat(amount) || 0;
+  const earlyFee = earlyFeeRate > 0 ? Math.round(numericAmount * earlyFeeRate * 100) / 100 : 0;
+  const netPayout = numericAmount - earlyFee;
 
   const selectedMethod = paymentChannels.find(m => m.name === paymentMethod);
   const adminInstructions = selectedMethod?.admin_instructions ? (typeof selectedMethod.admin_instructions === 'string' ? JSON.parse(selectedMethod.admin_instructions) : selectedMethod.admin_instructions) : [];
@@ -143,6 +157,27 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
                 ₹{user ? parseFloat(((user as any)[sourceWallet === 'normal' ? 'balance' : `${sourceWallet}_balance`] || '0')).toLocaleString() : '0.00'}
               </span>
             </div>
+
+            {/* Early Account Withdrawal Fee Warning */}
+            {earlyFeeRate > 0 && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(185,28,28,0.03))',
+                border: '1px solid rgba(239,68,68,0.2)',
+                borderRadius: '12px', padding: '14px 18px',
+                marginBottom: '20px',
+                display: 'flex', alignItems: 'flex-start', gap: '12px',
+              }}>
+                <Info size={20} color="#ef4444" style={{ flexShrink: 0, marginTop: '1px' }} />
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  <strong style={{ color: '#ef4444' }}>10% early withdrawal fee</strong> applies to accounts under 10 days old.
+                  {numericAmount > 0 && (
+                    <span style={{ display: 'block', marginTop: '6px', fontWeight: 500 }}>
+                      Fee: <strong style={{ color: '#ef4444' }}>₹{earlyFee.toFixed(2)}</strong> &nbsp;|&nbsp; You receive: <strong style={{ color: 'var(--accent-secondary)' }}>₹{netPayout.toFixed(2)}</strong>
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             {error && (
               <div style={{ background: 'rgba(239, 68, 68, 0.1)', borderLeft: '4px solid var(--accent-danger)', padding: '12px 16px', borderRadius: '4px', marginBottom: '24px', color: 'var(--accent-danger)' }}>
