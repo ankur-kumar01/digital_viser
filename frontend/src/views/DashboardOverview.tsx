@@ -402,19 +402,33 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           )}
 
           {/* Referral Offer Banner */}
-          <div className="glass-card glow-card promo-offer-card" style={{ borderColor: 'var(--accent-primary)' }}>
+          <div className="glass-card glow-card promo-offer-card">
             <div className="promo-offer-card-left">
-              <div className="emoji" style={{ fontSize: '3rem', flexShrink: 0 }}>👥</div>
-              <div>
-                <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 6px 0' }}>
-                  Refer & Earn Rewards
-                </h4>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0, lineHeight: 1.5, maxWidth: '600px' }}>
-                  Invite your friends and earn <strong style={{ color: 'var(--accent-secondary)' }}>{referralPercent}% commission</strong> on their first deposit, plus <strong style={{ color: 'var(--accent-secondary)' }}>{fdrReferralPercent}% monthly recurring commission</strong> on their active FDRs. Unlimited earning potential!
+              <div className="emoji" style={{ fontSize: '3rem', flexShrink: 0 }}>🎁</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                  <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                    Earn Up to ₹10,000+ Per Referral
+                  </h4>
+                  <span style={{
+                    background: 'linear-gradient(135deg, rgba(251,191,36,0.2), rgba(245,158,11,0.1))',
+                    border: '1px solid rgba(251,191,36,0.4)',
+                    borderRadius: '20px',
+                    padding: '3px 12px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    color: '#f59e0b',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {referralPercent}% + {fdrReferralPercent}%
+                  </span>
+                </div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
+                  <strong style={{ color: 'var(--accent-secondary)' }}>{referralPercent}%</strong> on their first deposit + <strong style={{ color: 'var(--accent-secondary)' }}>{fdrReferralPercent}%</strong> recurring monthly. Unlimited earning potential!
                 </p>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div className="promo-offer-card-buttons">
               <button 
                 className="btn promo-offer-card-btn" 
                 onClick={() => {
@@ -423,7 +437,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }}
-                style={{ background: 'var(--accent-primary)', color: '#fff', whiteSpace: 'nowrap' }}
+                style={{ background: 'var(--accent-primary)', color: '#fff' }}
               >
                 <Copy size={16} /> {copied ? 'Copied!' : 'Copy Link'}
               </button>
@@ -434,7 +448,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   const text = encodeURIComponent(`Join Digital_Viser and start earning! Use my referral link: ${link}`);
                   window.open(`https://wa.me/?text=${text}`, '_blank');
                 }}
-                style={{ background: '#25D366', color: '#fff', whiteSpace: 'nowrap' }}
+                style={{ background: '#25D366', color: '#fff' }}
               >
                 <MessageCircle size={16} /> WhatsApp
               </button>
