@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MetricCard } from '../components/MetricCard';
 import { walletAPI, fdrAPI, gamesAPI, globalConfigAPI } from '../api';
-import { Wallet, Award, History, ArrowRight, ArrowUpRight, ArrowDownLeft, PiggyBank, TrendingUp, CalendarDays, Gift, Users, PlusCircle, Activity, Gamepad2, Trophy, RefreshCw, Eye, ExternalLink, Zap, Copy, MessageCircle } from 'lucide-react';
+import { Wallet, Award, History, ArrowRight, ArrowUpRight, ArrowDownLeft, PiggyBank, TrendingUp, CalendarDays, Gift, Users, PlusCircle, Gamepad2, Zap, Copy, MessageCircle } from 'lucide-react';
 import { PortfolioHero } from '../components/PortfolioHero';
 import { AviatorChatWidget } from '../components/AviatorChatWidget';
 import { SpinWheel } from '../components/SpinWheel';
@@ -172,7 +172,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const [totalInterestEarned, setTotalInterestEarned] = useState(0);
   const [upcomingProfit7, setUpcomingProfit7] = useState(0);
   const [upcomingProfit30, setUpcomingProfit30] = useState(0);
-  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [games, setGames] = useState<any[]>([]);
   const [activeOffers, setActiveOffers] = useState<any[]>([]);
   const [bigWins, setBigWins] = useState<any[]>([]);
@@ -194,9 +193,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         .reduce((sum: number, tx: any) => sum + parseFloat(tx.amount), 0);
       setTotalDeposited(depositsTotal);
       
-      // Store top 5 recent transactions
-      setRecentTransactions(txs.slice(0, 5));
-
       // Load FDRs to get count, total funds, and total interest
       const fdrs = await fdrAPI.getMyFDRs();
       const activeCount = fdrs.filter((fdr: any) => fdr.status === 'active').length;
@@ -563,73 +559,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         />
       </div>
 
-      {/* Two Column Section */}
-      <div className="responsive-two-col">
-        
-        {/* QUICK ACTIONS PANEL */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 600 }}>Create New Investment</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>
-              Lock in your funds into dynamic Fixed Deposit Receipt plans and earn high-yield payouts on customized installment durations.
-            </p>
-            <button 
-              className="btn btn-primary" 
-              style={{ alignSelf: 'flex-start', marginTop: 'auto' }}
-              onClick={() => onNavigate('create-fdr')}
-            >
-              <span>FDR Builder</span>
-              <ArrowRight size={16} />
-            </button>
-          </div>
 
-        </div>
-
-        {/* RECENT ACTIVITY WIDGET */}
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Activity size={18} color="var(--accent-secondary)" />
-              Recent Activity
-            </h3>
-            <button 
-              onClick={() => onNavigate('transactions')}
-              style={{ background: 'none', border: 'none', color: 'var(--accent-secondary)', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
-            >
-              View All
-            </button>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-            {recentTransactions.length > 0 ? (
-              recentTransactions.map((tx: any) => (
-                <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid var(--border-card)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ 
-                      width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: tx.type.includes('deposit') ? 'var(--accent-secondary-light)' : (tx.type.includes('withdraw') ? 'var(--accent-danger-glow)' : 'var(--accent-info-glow)'),
-                      color: tx.type.includes('deposit') ? 'var(--accent-secondary)' : (tx.type.includes('withdraw') ? 'var(--accent-danger)' : 'var(--accent-info)')
-                    }}>
-                      {tx.type.includes('deposit') ? <ArrowDownLeft size={16} /> : (tx.type.includes('withdraw') ? <ArrowUpRight size={16} /> : <History size={16} />)}
-                    </div>
-                    <div>
-                      <p style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>{tx.description}</p>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{formatGlobalDate(tx.created_at, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                    </div>
-                  </div>
-                  <div style={{ fontWeight: 600, fontSize: '0.9rem', color: tx.type.includes('deposit') ? 'var(--accent-secondary)' : 'var(--text-primary)' }}>
-                    {tx.type.includes('deposit') ? '+' : ''}{formatCurrency(parseFloat(tx.amount))}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '20px 0' }}>No recent activity found.</p>
-            )}
-          </div>
-        </div>
-
-      </div>
 
     </div>
   );
