@@ -4,6 +4,7 @@ import { Navbar } from './components/Navbar';
 import { LayoutDashboard, Wallet, ArrowUpRight, BarChart3, User, Gamepad2 } from 'lucide-react';
 import { Auth } from './views/Auth';
 import { DashboardOverview } from './views/DashboardOverview';
+import { WalletView } from './views/WalletView';
 import { Deposit } from './views/Deposit';
 import { Withdraw } from './views/Withdraw';
 import { CreateFDR } from './views/CreateFDR';
@@ -236,6 +237,9 @@ export const App: React.FC = () => {
                 onNavigate={setCurrentView} 
                 refreshUser={refreshUser}
               />
+            )}
+            {currentView === 'wallet' && (
+              <WalletView user={user} />
             )}
             {currentView === 'deposit' && (
               <Deposit user={user} refreshUser={refreshUser} />

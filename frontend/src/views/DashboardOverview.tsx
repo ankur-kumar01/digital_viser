@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { MetricCard } from '../components/MetricCard';
 import { walletAPI, fdrAPI, gamesAPI, globalConfigAPI } from '../api';
-import { Wallet, Award, History, ArrowRight, ArrowUpRight, ArrowDownLeft, PiggyBank, TrendingUp, CalendarDays, Gift, Users, PlusCircle, Gamepad2, Zap, Copy, MessageCircle } from 'lucide-react';
+import { Award, ArrowRight, ArrowUpRight, ArrowDownLeft, Gift, Users, PlusCircle, Gamepad2, Copy, MessageCircle } from 'lucide-react';
 import { PortfolioHero } from '../components/PortfolioHero';
 import { AviatorChatWidget } from '../components/AviatorChatWidget';
 import { SpinWheel } from '../components/SpinWheel';
-import { formatGlobalDate } from '../utils/dateFormatter';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
 interface DashboardOverviewProps {
@@ -489,75 +487,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       {/* Daily Spin Wheel */}
       <SpinWheel onBonusAwarded={() => refreshUser()} />
 
-      {/* Metrics Row */}
-      <div className="dashboard-grid">
-        <MetricCard 
-          icon={<Wallet size={20} />} 
-          label={`Main Wallet (Locked: ${formatCurrency(parseFloat(user?.locked_balance?.toString() || '0'))})`} 
-          value={formatCurrency(balanceNum)} 
-          variant="secondary" 
-        />
-        <MetricCard 
-          icon={<Gift size={20} />} 
-          label={`Bonus Wallet (Locked: ${formatCurrency(parseFloat(user?.locked_bonus_balance?.toString() || '0'))})`} 
-          value={formatCurrency(parseFloat(user?.bonus_balance?.toString() || '0'))} 
-          variant="primary" 
-        />
-        <MetricCard 
-          icon={<Zap size={20} />} 
-          label="Gaming Bonus Wallet" 
-          value={formatCurrency(parseFloat(user?.gaming_bonus_balance?.toString() || '0'))} 
-          variant="warning" 
-        />
-        <MetricCard 
-          icon={<Users size={20} />} 
-          label={`Referral Wallet`} 
-          value={formatCurrency(parseFloat(user?.referral_balance?.toString() || '0'))} 
-          variant="info" 
-        />
-        <MetricCard 
-          icon={<PlusCircle size={20} />} 
-          label={`Running FDRs`} 
-          value={activeFDRCount.toString()} 
-          variant="primary" 
-        />
-        <MetricCard 
-          icon={<ArrowDownLeft size={20} />} 
-          label="Total Deposits" 
-          value={formatCurrency(totalDeposited)} 
-          variant="secondary" 
-        />
-        <MetricCard 
-          icon={<PiggyBank size={20} />} 
-          label="Total Funds in FDR" 
-          value={formatCurrency(totalFDRFunds)} 
-          variant="primary" 
-        />
-        <MetricCard 
-          icon={<History size={20} />} 
-          label="Total Withdrawals" 
-          value={formatCurrency(totalWithdrawn)} 
-          variant="secondary" 
-        />
-        <MetricCard 
-          icon={<Award size={20} />} 
-          label="Total Interest Earned" 
-          value={formatCurrency(totalInterestEarned)} 
-          variant="info" 
-        />
-        <MetricCard 
-          icon={<TrendingUp size={20} />} 
-          label="Upcoming Profit (7 Days)" 
-          value={formatCurrency(upcomingProfit7)} 
-          variant="warning" 
-        />
-        <MetricCard 
-          icon={<CalendarDays size={20} />} 
-          label="Upcoming Profit (30 Days)" 
-          value={formatCurrency(upcomingProfit30)} 
-          variant="primary" 
-        />
-      </div>
+
 
 
 

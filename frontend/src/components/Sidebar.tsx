@@ -13,6 +13,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpen, onClose, isAdmin = false, user }) => {
   const userMenuItems = [
     { id: 'dashboard', name: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+    { id: 'wallet', name: 'Wallet', icon: <Wallet size={20} /> },
     { id: 'deposit', name: 'Deposit Funds', icon: <Wallet size={20} /> },
     { id: 'withdraw', name: 'Withdraw Funds', icon: <ArrowUpRight size={20} /> },
     { id: 'referrals', name: 'Referrals', icon: <Users size={20} /> },
