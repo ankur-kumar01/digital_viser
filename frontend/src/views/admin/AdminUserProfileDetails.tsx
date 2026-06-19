@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminAPI } from '../../api';
-import { ArrowLeft, User, Wallet, Lock, Activity, Clock, Plus, X, Check, FileText, Calendar } from 'lucide-react';
+import { ArrowLeft, User, Wallet, Lock, Activity, Clock, Plus, X, Check, FileText, Calendar, EyeOff, Eye } from 'lucide-react';
+import { FdrRestrictionsSection } from './FdrRestrictionsSection';
 import { createPortal } from 'react-dom';
 import { formatGlobalDate } from '../../utils/dateFormatter';
 
@@ -12,7 +13,7 @@ interface Props {
 export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'fdrs' | 'locking'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'fdrs' | 'locking' | 'restrictions'>('overview');
   
   // Modals
   const [showFdrModal, setShowFdrModal] = useState(false);
@@ -30,6 +31,10 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
 
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [adjustWalletType, setAdjustWalletType] = useState<'main' | 'bonus' | 'referral' | 'gaming_bonus'>('main');
+
+  const [allFdrPlans, setAllFdrPlans] = useState<any[]>([]);
+  const [blockedPlanIds, setBlockedPlanIds] = useState<number[]>([]);
+  const [restrictionsLoading, setRestrictionsLoading] = useState(false);
   const [adjustAction, setAdjustAction] = useState<'add' | 'subtract'>('add');
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustDescription, setAdjustDescription] = useState('');
@@ -168,7 +173,7 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
       </div>
 
       <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', WebkitOverflowScrolling: 'touch' }} className="hide-scrollbar">
-        {['overview', 'transactions', 'fdrs', 'locking'].map(tab => (
+        {['overview', 'transactions', 'fdrs', 'locking', 'restrictions'].map(tab => (
           <button 
             key={tab}
             onClick={() => setActiveTab(tab as any)}
@@ -383,6 +388,18 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
             </table>
           </div>
         </div>
+      )}
+
+      {activeTab === 'restrictions' && (
+        <FdrRestrictionsSection
+          userId={userId}
+          allPlans={allFdrPlans}
+          setAllPlans={setAllFdrPlans}
+          blockedPlanIds={blockedPlanIds}
+          setBlockedPlanIds={setBlockedPlanIds}
+          restrictionsLoading={restrictionsLoading}
+          setRestrictionsLoading={setRestrictionsLoading}
+        />
       )}
 
       {activeTab === 'locking' && (

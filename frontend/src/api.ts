@@ -177,6 +177,8 @@ export const adminAPI = {
   rejectDeposit: (id: number) => adminRequest('POST', `/admin/deposits/${id}/reject`),
   approveWithdrawal: (id: number) => adminRequest('POST', `/admin/withdrawals/${id}/approve`),
   rejectWithdrawal: (id: number) => adminRequest('POST', `/admin/withdrawals/${id}/reject`),
+  adminUserWithdraw: (userId: number, data: { amount: number; payment_method?: string; source_wallet?: string; description?: string }) =>
+    adminRequest('POST', `/admin/users/${userId}/withdraw`, data),
   getUsers: () => adminRequest('GET', '/admin/users'),
   updateUser: (id: number, data: any) => adminRequest('PUT', `/admin/users/${id}`, data),
   updateUserReferrer: (id: number, invited_by: number | null) => adminRequest('PUT', `/admin/users/${id}/invited-by`, { invited_by }),
@@ -235,6 +237,9 @@ export const adminAPI = {
   getLoginHistory: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/login-history?page=${page}&limit=${limit}`),
   getActivityLog: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/activity-log?page=${page}&limit=${limit}`),
   getActiveUsers: (period: string = '24h', page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/active-users?period=${period}&page=${page}&limit=${limit}`),
+  getUserFdrPlanBlocks: (userId: number) => adminRequest('GET', `/admin/users/${userId}/fdr-plan-blocks`),
+  blockUserFdrPlan: (userId: number, planId: number) => adminRequest('POST', `/admin/users/${userId}/fdr-plan-blocks`, { plan_id: planId }),
+  unblockUserFdrPlan: (userId: number, planId: number) => adminRequest('DELETE', `/admin/users/${userId}/fdr-plan-blocks/${planId}`),
 };
 
 // Activity tracking

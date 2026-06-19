@@ -97,6 +97,7 @@ export const AdminWithdrawalRequests: React.FC = () => {
                   <th>User</th>
                   <th>Amount</th>
                   <th>Method</th>
+                  <th>Wallet</th>
                   <th>Details / Reference</th>
                   <th style={{ textAlign: 'right' }}>Actions / Status</th>
                 </tr>
@@ -113,6 +114,14 @@ export const AdminWithdrawalRequests: React.FC = () => {
                       ₹{parseFloat(item.amount).toFixed(2)}
                     </td>
                     <td style={{ textTransform: 'capitalize' }}>{item.payment_method ? item.payment_method.replace('_', ' ') : 'N/A'}</td>
+                    <td style={{ fontSize: '0.85rem' }}>
+                      {(() => {
+                        let cd = item.custom_data;
+                        if (typeof cd === 'string') { try { cd = JSON.parse(cd); } catch (e) { cd = null; } }
+                        const wallet = cd?.source_wallet || 'main';
+                        return <span style={{ fontWeight: 600, textTransform: 'capitalize', color: wallet === 'main' ? 'var(--accent-primary)' : wallet === 'bonus' ? 'var(--accent-secondary)' : wallet === 'referral' ? 'var(--accent-info)' : '#f59e0b' }}>{wallet.replace('_', ' ')}</span>;
+                      })()}
+                    </td>
                     <td style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                       <div style={{ marginBottom: '4px' }}><strong>TXN:</strong> {item.transaction_id ? item.transaction_id.substring(0, 12) + '...' : 'N/A'}</div>
                       {(() => {

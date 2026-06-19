@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../db');
+const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
 
@@ -340,6 +341,68 @@ router.post('/deposits/:id/reject', async (req, res) => {
   }
 });
 
+// POST /users/:id/withdraw (Admin creates withdrawal on behalf of a user)
+router.post('/users/:id/withdraw', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const userId = req.params.id;
+    const { amount, payment_method, source_wallet = 'main', description } = req.body;
+    const withdrawAmount = parseFloat(amount);
+    if (!withdrawAmount || withdrawAmount <= 0) {
+      return res.status(400).json({ error: 'Amount must be greater than 0.' });
+    }
+
+    const walletColumn = source_wallet === 'bonus' ? 'bonus_balance' : source_wallet === 'referral' ? 'referral_balance' : source_wallet === 'gaming_bonus' ? 'gaming_bonus_balance' : 'balance';
+    const walletLabel = source_wallet === 'main' ? 'Main' : source_wallet.charAt(0).toUpperCase() + source_wallet.slice(1).replace('_', ' ');
+
+    await conn.beginTransaction();
+
+    const [userRows] = await conn.query(`SELECT ${walletColumn} as current_balance FROM users WHERE id = ? FOR UPDATE`, [userId]);
+    if (userRows.length === 0) throw new Error('User not found');
+    const currentBalance = parseFloat(userRows[0].current_balance);
+    if (currentBalance < withdrawAmount) throw new Error(`Insufficient ${walletLabel} balance`);
+
+    // Check if account is less than 10 days old → apply 10% fee
+    const [user] = await conn.query('SELECT created_at FROM users WHERE id = ?', [userId]);
+    const accountAgeDays = Math.floor((Date.now() - new Date(user[0].created_at).getTime()) / (1000 * 60 * 60 * 24));
+    const chargeRate = accountAgeDays < 10 ? 0.10 : 0;
+    const chargeAmount = chargeRate > 0 ? Math.round(withdrawAmount * chargeRate * 100) / 100 : 0;
+    const netPayout = withdrawAmount - chargeAmount;
+
+    await conn.query(`UPDATE users SET ${walletColumn} = ${walletColumn} - ? WHERE id = ?`, [withdrawAmount, userId]);
+
+    const transactionId = uuidv4();
+    await conn.query(
+      'INSERT INTO withdrawals (user_id, amount, payment_method, transaction_id, status, custom_data) VALUES (?, ?, ?, ?, "pending", ?)',
+      [userId, withdrawAmount, payment_method || 'admin', transactionId, JSON.stringify({ source_wallet, charge_applied: chargeRate > 0, charge_amount: chargeAmount, net_payout: netPayout, created_by: 'admin', description: description || '' })]
+    );
+
+    let withdrawDesc = `Admin-initiated withdrawal from ${walletLabel} wallet via ${payment_method || 'admin'}`;
+    if (chargeRate > 0) {
+      withdrawDesc += ` (10% early withdrawal fee: ₹${chargeAmount.toFixed(2)}, net payout: ₹${netPayout.toFixed(2)})`;
+    }
+    await conn.query('INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)', [userId, 'withdrawal_pending', withdrawAmount, withdrawDesc]);
+
+    if (chargeAmount > 0) {
+      await conn.query('INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)', [userId, 'withdrawal_charge', chargeAmount, '10% early withdrawal fee (account < 10 days old)']);
+    }
+
+    await conn.commit();
+
+    const [updated] = await conn.query(`SELECT ${walletColumn} as updated_balance FROM users WHERE id = ?`, [userId]);
+    res.status(201).json({
+      success: true,
+      balance: parseFloat(updated[0].updated_balance),
+      withdrawal: { transaction_id: transactionId, amount: withdrawAmount, charge_applied: chargeRate > 0, charge_amount: chargeAmount, net_payout: netPayout, status: 'pending' }
+    });
+  } catch (err) {
+    await conn.rollback();
+    res.status(500).json({ error: err.message || 'Server error during withdrawal.' });
+  } finally {
+    conn.release();
+  }
+});
+
 // POST /withdrawals/:id/approve
 router.post('/withdrawals/:id/approve', async (req, res) => {
   try {
@@ -370,10 +433,21 @@ router.post('/withdrawals/:id/reject', async (req, res) => {
 
     await conn.query('UPDATE withdrawals SET status = "rejected" WHERE id = ?', [req.params.id]);
     
-    // Refund the user
-    await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [parseFloat(withdrawal.amount), withdrawal.user_id]);
+    // Parse custom_data to determine which wallet to refund
+    let refundWallet = 'balance';
+    if (withdrawal.custom_data) {
+      try {
+        const parsed = typeof withdrawal.custom_data === 'string' ? JSON.parse(withdrawal.custom_data) : withdrawal.custom_data;
+        if (parsed.source_wallet === 'bonus') refundWallet = 'bonus_balance';
+        else if (parsed.source_wallet === 'referral') refundWallet = 'referral_balance';
+        else if (parsed.source_wallet === 'gaming_bonus') refundWallet = 'gaming_bonus_balance';
+      } catch (e) {}
+    }
     
-    await conn.query('INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)', [withdrawal.user_id, 'withdrawal_rejected', withdrawal.amount, `Withdrawal Rejected (Refunded) via ${withdrawal.payment_method}`]);
+    // Refund the user to the original wallet
+    await conn.query(`UPDATE users SET ${refundWallet} = ${refundWallet} + ? WHERE id = ?`, [parseFloat(withdrawal.amount), withdrawal.user_id]);
+    
+    await conn.query('INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)', [withdrawal.user_id, 'withdrawal_rejected', withdrawal.amount, `Withdrawal Rejected (Refunded to ${refundWallet.replace('_', ' ')}) via ${withdrawal.payment_method}`]);
 
     await conn.commit();
     res.json({ success: true });
@@ -1688,6 +1762,50 @@ router.get('/active-users', async (req, res) => {
   } catch (err) {
     console.error('Failed to fetch active users:', err);
     res.status(500).json({ error: 'Failed to fetch active users' });
+  }
+});
+
+// GET /admin/users/:id/fdr-plan-blocks — Get blocked plan IDs for a user
+router.get('/users/:id/fdr-plan-blocks', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT plan_id FROM fdr_plan_blocks WHERE user_id = ?',
+      [req.params.id]
+    );
+    res.json(rows.map(r => r.plan_id));
+  } catch (err) {
+    console.error('Failed to fetch FDR plan blocks:', err);
+    res.status(500).json({ error: 'Failed to fetch FDR plan blocks' });
+  }
+});
+
+// POST /admin/users/:id/fdr-plan-blocks — Block a plan for a user
+router.post('/users/:id/fdr-plan-blocks', async (req, res) => {
+  try {
+    const { plan_id } = req.body;
+    if (!plan_id) return res.status(400).json({ error: 'plan_id is required' });
+    await pool.query(
+      'INSERT IGNORE INTO fdr_plan_blocks (user_id, plan_id) VALUES (?, ?)',
+      [req.params.id, plan_id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to block FDR plan:', err);
+    res.status(500).json({ error: 'Failed to block FDR plan' });
+  }
+});
+
+// DELETE /admin/users/:id/fdr-plan-blocks/:planId — Unblock a plan for a user
+router.delete('/users/:id/fdr-plan-blocks/:planId', async (req, res) => {
+  try {
+    await pool.query(
+      'DELETE FROM fdr_plan_blocks WHERE user_id = ? AND plan_id = ?',
+      [req.params.id, req.params.planId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to unblock FDR plan:', err);
+    res.status(500).json({ error: 'Failed to unblock FDR plan' });
   }
 });
 

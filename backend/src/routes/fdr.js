@@ -187,9 +187,16 @@ router.get('/my-fdrs', async (req, res) => {
 // GET /active-plans
 router.get('/active-plans', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM fdr_plans WHERE is_active = 1 ORDER BY created_at ASC');
+    const userId = req.user.userId;
+    const [rows] = await pool.query(`
+      SELECT p.* FROM fdr_plans p
+      LEFT JOIN fdr_plan_blocks b ON b.plan_id = p.id AND b.user_id = ?
+      WHERE p.is_active = 1 AND b.id IS NULL
+      ORDER BY p.created_at ASC
+    `, [userId]);
     res.json(rows);
   } catch (err) {
+    console.error('Failed to fetch active FDR plans:', err);
     res.status(500).json({ error: 'Server error fetching FDR plans.' });
   }
 });
