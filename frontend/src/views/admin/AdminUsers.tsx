@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { adminAPI } from '../../api';
-import { Users, Edit2, Check, X, Plus, Minus, DollarSign, Eye } from 'lucide-react';
+import { Users, Edit2, Check, X, Plus, Minus, DollarSign, Eye, Search } from 'lucide-react';
 import { formatGlobalDate } from '../../utils/dateFormatter';
 
 interface Props {
@@ -18,6 +18,14 @@ export const AdminUsers: React.FC<Props> = ({ onNavigate, onSelectUser }) => {
   const [editFormData, setEditFormData] = useState<any>({
     name: '', email: '', phone_number: '', address: '', city: '', state: '', pin_code: ''
   });
+
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredUsers = users.filter(u =>
+    !searchQuery || 
+    u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    u.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Balance Adjustment state
   const [adjustingUserId, setAdjustingUserId] = useState<number | null>(null);
@@ -45,7 +53,7 @@ export const AdminUsers: React.FC<Props> = ({ onNavigate, onSelectUser }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
 
-  const totalItems = users.length;
+  const totalItems = filteredUsers.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   useEffect(() => {
@@ -56,7 +64,7 @@ export const AdminUsers: React.FC<Props> = ({ onNavigate, onSelectUser }) => {
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentUsers = users.slice(indexOfFirstItem, indexOfLastItem);
+  const currentUsers = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
 
   const handleEditClick = (user: any) => {
     setEditingUser(user);
@@ -117,6 +125,32 @@ export const AdminUsers: React.FC<Props> = ({ onNavigate, onSelectUser }) => {
       <div>
         <h2 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '6px' }}>Manage Users</h2>
         <p style={{ color: 'var(--text-secondary)' }}>View and edit user accounts and adjust wallet balances.</p>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', padding: '12px 16px', background: 'var(--bg-glass)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-md)' }}>
+        <Search size={18} color="var(--text-muted)" />
+        <input
+          type="text"
+          placeholder="Search by name or email..."
+          value={searchQuery}
+          onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            color: 'var(--text-primary)',
+            fontSize: '0.95rem',
+          }}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
 
       <div className="table-container">
@@ -190,11 +224,11 @@ export const AdminUsers: React.FC<Props> = ({ onNavigate, onSelectUser }) => {
               );
             })}
             
-            {users.length === 0 && (
+            {filteredUsers.length === 0 && (
               <tr>
                 <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
                   <Users size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-                  No users found.
+                  {searchQuery ? 'No users match your search.' : 'No users found.'}
                 </td>
               </tr>
             )}
