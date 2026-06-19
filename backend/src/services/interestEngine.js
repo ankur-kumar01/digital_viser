@@ -115,6 +115,11 @@ async function processDailyFinancials() {
             );
             
             await conn.query(
+              "INSERT INTO locked_funds (user_id, wallet_type, amount, linked_entity_id, linked_entity_type, status) VALUES (?, 'referral', ?, ?, 'fdr_referral', 'locked')",
+              [invitedBy, dailyCommissionAmount, fdr.id]
+            );
+            
+            await conn.query(
               "INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)",
               [invitedBy, 'fdr_referral_commission', dailyCommissionAmount, `${dailyCommissionPercent.toFixed(4)}% daily recurring commission from referred user's active FDR #${fdr.id}`]
             );
