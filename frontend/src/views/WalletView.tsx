@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MetricCard } from '../components/MetricCard';
 import { walletAPI, fdrAPI, globalConfigAPI } from '../api';
-import { Wallet, Award, History, ArrowDownLeft, PiggyBank, TrendingUp, CalendarDays, Gift, Users, PlusCircle, Zap } from 'lucide-react';
+import { Wallet, Award, History, ArrowDownLeft, ArrowUpRight, PiggyBank, TrendingUp, CalendarDays, Gift, Users, PlusCircle, Zap } from 'lucide-react';
 
 interface WalletViewProps {
   user: {
@@ -15,9 +15,10 @@ interface WalletViewProps {
     locked_referral_balance: number | string;
     gaming_bonus_balance?: number | string;
   } | null;
+  onNavigate: (view: string) => void;
 }
 
-export const WalletView: React.FC<WalletViewProps> = ({ user }) => {
+export const WalletView: React.FC<WalletViewProps> = ({ user, onNavigate }) => {
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
   const [totalDeposited, setTotalDeposited] = useState(0);
   const [activeFDRCount, setActiveFDRCount] = useState(0);
@@ -76,6 +77,26 @@ export const WalletView: React.FC<WalletViewProps> = ({ user }) => {
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
           Overview of all your wallet balances, FDR investments, and earnings.
         </p>
+      </div>
+
+      {/* Quick Action Buttons */}
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <button
+          className="btn btn-primary"
+          style={{ flex: '1 1 auto', minWidth: '140px' }}
+          onClick={() => onNavigate('deposit')}
+        >
+          <ArrowDownLeft size={18} />
+          Deposit
+        </button>
+        <button
+          className="btn"
+          style={{ flex: '1 1 auto', minWidth: '140px', background: 'var(--accent-primary)', color: '#fff' }}
+          onClick={() => onNavigate('withdraw')}
+        >
+          <ArrowUpRight size={18} />
+          Withdraw
+        </button>
       </div>
 
       <div className="dashboard-grid">

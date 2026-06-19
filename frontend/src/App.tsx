@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
-import { LayoutDashboard, Wallet, ArrowUpRight, BarChart3, User, Gamepad2 } from 'lucide-react';
+import { LayoutDashboard, Wallet, ArrowUpRight, BarChart3, User, Gamepad2, Receipt } from 'lucide-react';
 import { Auth } from './views/Auth';
 import { DashboardOverview } from './views/DashboardOverview';
 import { WalletView } from './views/WalletView';
@@ -239,7 +239,7 @@ export const App: React.FC = () => {
               />
             )}
             {currentView === 'wallet' && (
-              <WalletView user={user} />
+              <WalletView user={user} onNavigate={setCurrentView} />
             )}
             {currentView === 'deposit' && (
               <Deposit user={user} refreshUser={refreshUser} />
@@ -321,9 +321,9 @@ export const App: React.FC = () => {
         <nav className="mobile-bottom-nav">
           {[
             { id: 'dashboard', label: 'Home', icon: <LayoutDashboard size={20} /> },
-            { id: 'deposit', label: 'Deposit', icon: <Wallet size={20} /> },
-            { id: 'withdraw', label: 'Withdraw', icon: <ArrowUpRight size={20} /> },
+            { id: 'wallet', label: 'Wallet', icon: <Wallet size={20} /> },
             { id: 'my-fdrs', label: 'FDRs', icon: <BarChart3 size={20} /> },
+            { id: 'transactions', label: 'Transactions', icon: <Receipt size={20} /> },
             { id: 'games', label: 'Gaming Zone', icon: <Gamepad2 size={20} /> },
           ].map((item) => (
             <button
