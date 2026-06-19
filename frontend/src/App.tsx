@@ -136,7 +136,16 @@ export const App: React.FC = () => {
   }, [currentView, isAuthenticated]);
 
   const handleLoginSuccess = async (_token: string, userData: any, isRegistration: boolean = false) => {
-    setUser(userData);
+    if (isRegistration) {
+      try {
+        const profile = await authAPI.getProfile();
+        setUser(profile);
+      } catch {
+        setUser(userData);
+      }
+    } else {
+      setUser(userData);
+    }
     setIsAuthenticated(true);
     setIsAdmin(false);
     setCurrentView(isRegistration ? 'profile' : 'dashboard');
