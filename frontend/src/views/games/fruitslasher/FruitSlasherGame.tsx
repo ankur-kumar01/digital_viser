@@ -219,6 +219,7 @@ export const FruitSlasherGame: React.FC<Props> = ({ onNavigate }) => {
 
   const audioSynthRef = useRef<GameAudioSynth | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasAreaRef = useRef<HTMLDivElement | null>(null);
   const requestRef = useRef<number | null>(null);
 
   const scoreRef = useRef<number>(0);
@@ -245,6 +246,42 @@ export const FruitSlasherGame: React.FC<Props> = ({ onNavigate }) => {
   useEffect(() => {
     if (audioSynthRef.current) audioSynthRef.current.enabled = soundEnabled;
   }, [soundEnabled]);
+
+  useEffect(() => {
+    const resizeCanvas = () => {
+      const container = canvasAreaRef.current;
+      const canvas = canvasRef.current;
+      if (!container || !canvas) return;
+
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+      const aspect = 16 / 9;
+
+      let displayWidth: number, displayHeight: number;
+      if (containerWidth / containerHeight > aspect) {
+        displayHeight = containerHeight;
+        displayWidth = displayHeight * aspect;
+      } else {
+        displayWidth = containerWidth;
+        displayHeight = displayWidth / aspect;
+      }
+
+      canvas.style.width = `${displayWidth}px`;
+      canvas.style.height = `${displayHeight}px`;
+    };
+
+    resizeCanvas();
+
+    const observer = new ResizeObserver(resizeCanvas);
+    if (canvasAreaRef.current) observer.observe(canvasAreaRef.current);
+
+    window.addEventListener('orientationchange', resizeCanvas);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('orientationchange', resizeCanvas);
+    };
+  }, []);
 
   const saveHighScore = (newScore: number) => {
     if (newScore > highScore) {
@@ -790,7 +827,7 @@ export const FruitSlasherGame: React.FC<Props> = ({ onNavigate }) => {
 
   return (
     <div className={`fruitslasher-container ${screenShake ? 'fruitslasher-shake' : ''}`}>
-      <div className="fruitslasher-canvas-area">
+      <div className="fruitslasher-canvas-area" ref={canvasAreaRef}>
         <canvas
           ref={canvasRef}
           className={`fruitslasher-canvas ${gameState === 'crashed' ? 'fruitslasher-slow-mo' : ''}`}
