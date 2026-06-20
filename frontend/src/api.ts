@@ -2,28 +2,58 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
+// Memory store fallback if localStorage is blocked (e.g. sandboxed WebView or private mode)
+const memoryStore: Record<string, string> = {};
+
+function safeGetItem(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch (err) {
+    console.warn(`localStorage.getItem failed for "${key}", using memory store fallback`, err);
+    return memoryStore[key] || null;
+  }
+}
+
+function safeSetItem(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch (err) {
+    console.warn(`localStorage.setItem failed for "${key}", using memory store fallback`, err);
+    memoryStore[key] = value;
+  }
+}
+
+function safeRemoveItem(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch (err) {
+    console.warn(`localStorage.removeItem failed for "${key}", using memory store fallback`, err);
+    delete memoryStore[key];
+  }
+}
+
 export function saveToken(token: string) {
-  localStorage.setItem('dv_token', token);
+  safeSetItem('dv_token', token);
 }
 
 export function getToken(): string | null {
-  return localStorage.getItem('dv_token');
+  return safeGetItem('dv_token');
 }
 
 export function clearToken() {
-  localStorage.removeItem('dv_token');
+  safeRemoveItem('dv_token');
 }
 
 export function saveAdminToken(token: string) {
-  localStorage.setItem('admin_dv_token', token);
+  safeSetItem('admin_dv_token', token);
 }
 
 export function getAdminToken(): string | null {
-  return localStorage.getItem('admin_dv_token');
+  return safeGetItem('admin_dv_token');
 }
 
 export function clearAdminToken() {
-  localStorage.removeItem('admin_dv_token');
+  safeRemoveItem('admin_dv_token');
 }
 
 export function isLoggedIn(): boolean {
@@ -154,6 +184,7 @@ export const gamesAPI = {
   getAviatorBets: () => request('GET', '/games/simulations/aviator-bets'),
   getRealMyAviatorBets: () => request('GET', '/games/aviator/my-bets'),
   getRealTopAviatorBets: () => request('GET', '/games/aviator/top-bets'),
+  getRealRecentAviatorBets: () => request('GET', '/games/aviator/recent-bets'),
   getColourTradingBets: () => request('GET', '/games/simulations/colour-trading-bets'),
   colourTradingPlay: (amount: number, color: string) => request('POST', '/games/colourtrading/play', { amount, color }),
   fruitSlasherPlay: (amount: number, walletType: 'main' | 'gaming_bonus') => request('POST', '/games/fruitslasher/play', { amount, walletType }),

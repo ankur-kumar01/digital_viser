@@ -60,7 +60,7 @@ router.get('/aviator/my-bets', authMiddleware, async (req, res) => {
        LEFT JOIN users u ON ab.user_id = u.id
        WHERE ab.user_id = ?
        ORDER BY ab.created_at DESC
-       LIMIT 50`,
+       LIMIT 20`,
       [req.user.userId]
     );
     // Format to make compatible with UI expecting numbers
@@ -105,6 +105,33 @@ router.get('/aviator/top-bets', async (req, res) => {
   } catch (err) {
     console.error('Failed to fetch top aviator bets:', err);
     res.status(500).json({ error: 'Failed to fetch top bets' });
+  }
+});
+
+// GET /api/games/aviator/recent-bets (Recent bets placed by all users)
+router.get('/aviator/recent-bets', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT ab.id, ab.bet_amount, ab.win_amount, ab.status, ab.cashout_multiplier, ab.created_at,
+              u.name as user_name
+       FROM aviator_bets ab
+       LEFT JOIN users u ON ab.user_id = u.id
+       ORDER BY ab.created_at DESC
+       LIMIT 20`
+    );
+    const formatted = rows.map(r => ({
+      id: r.id,
+      name: r.user_name || 'User',
+      bet: parseFloat(r.bet_amount) || 0,
+      cashedOut: r.status === 'cashed_out',
+      targetMult: parseFloat(r.cashout_multiplier) || 0,
+      winAmount: parseFloat(r.win_amount) || 0,
+      created_at: r.created_at
+    }));
+    res.json(formatted);
+  } catch (err) {
+    console.error('Failed to fetch recent aviator bets:', err);
+    res.status(500).json({ error: 'Failed to fetch recent bets' });
   }
 });
 

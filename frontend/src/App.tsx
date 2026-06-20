@@ -62,49 +62,53 @@ export const App: React.FC = () => {
 
   const handleInitialize = async () => {
     try {
-      const config = await globalConfigAPI.getConfig();
-      if (config && config.global_timezone) {
-        setGlobalTimeZone(config.global_timezone);
+      try {
+        const config = await globalConfigAPI.getConfig();
+        if (config && config.global_timezone) {
+          setGlobalTimeZone(config.global_timezone);
+        }
+      } catch (err) {
+        console.error('Failed to fetch global config', err);
       }
-    } catch (err) {
-      console.error('Failed to fetch global config', err);
-    }
 
-    const isAdminRoute = window.location.pathname === '/admin';
-    const hashView = window.location.hash ? window.location.hash.substring(1) : null;
-    
-    if (isAdminRoute) {
-      setShowAdminAuth(true);
-      const adminToken = getAdminToken();
-      if (adminToken) {
-        try {
-          // Validate admin token by fetching stats
-          await adminAPI.getStats();
-          setIsAdmin(true);
-          setIsAuthenticated(true);
-          setUser({ name: 'Super Admin', email: 'admin@digitalviser.com' });
-          setCurrentView(hashView || 'admin-dashboard');
-        } catch (adminErr) {
-          clearAdminToken();
+      const isAdminRoute = window.location.pathname === '/admin';
+      const hashView = window.location.hash ? window.location.hash.substring(1) : null;
+      
+      if (isAdminRoute) {
+        setShowAdminAuth(true);
+        const adminToken = getAdminToken();
+        if (adminToken) {
+          try {
+            // Validate admin token by fetching stats
+            await adminAPI.getStats();
+            setIsAdmin(true);
+            setIsAuthenticated(true);
+            setUser({ name: 'Super Admin', email: 'admin@digitalviser.com' });
+            setCurrentView(hashView || 'admin-dashboard');
+          } catch (adminErr) {
+            clearAdminToken();
+          }
+        }
+      } else {
+        setShowAdminAuth(false);
+        const token = getToken();
+        if (token) {
+          try {
+            const profile = await authAPI.getProfile();
+            setUser(profile);
+            setIsAuthenticated(true);
+            setIsAdmin(false);
+            setCurrentView(hashView || 'dashboard');
+          } catch (err) {
+            clearToken();
+          }
         }
       }
-    } else {
-      setShowAdminAuth(false);
-      const token = getToken();
-      if (token) {
-        try {
-          const profile = await authAPI.getProfile();
-          setUser(profile);
-          setIsAuthenticated(true);
-          setIsAdmin(false);
-          setCurrentView(hashView || 'dashboard');
-        } catch (err) {
-          clearToken();
-        }
-      }
+    } catch (globalErr) {
+      console.error('Critical initialization error:', globalErr);
+    } finally {
+      setIsInitializing(false);
     }
-
-    setIsInitializing(false);
   };
 
   useEffect(() => {

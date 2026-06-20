@@ -84,7 +84,11 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
 
   // Sound persisted state toggle
   const [isMuted, setIsMuted] = useState(() => {
-    return localStorage.getItem('av_muted') === 'true';
+    try {
+      return localStorage.getItem('av_muted') === 'true';
+    } catch (e) {
+      return false;
+    }
   });
 
   const socketRef = useRef<Socket | null>(null);
@@ -97,7 +101,11 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
   }, [selectedColor, betAmount]);
 
   useEffect(() => {
-    localStorage.setItem('av_muted', isMuted ? 'true' : 'false');
+    try {
+      localStorage.setItem('av_muted', isMuted ? 'true' : 'false');
+    } catch (e) {
+      console.warn('localStorage access blocked:', e);
+    }
   }, [isMuted]);
 
   // Synthesized Web Audio API triggers

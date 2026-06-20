@@ -157,21 +157,22 @@ const getUserColor = (username: string) => {
   return colors[index];
 };
 
-const maskName = (name: string) => {
+const maskName = (name: any) => {
   if (!name) return '***';
-  const cleanPhone = name.replace(/[\s\-\+\(\)]/g, '');
+  const nameStr = String(name);
+  const cleanPhone = nameStr.replace(/[\s\-\+\(\)]/g, '');
   const isPhone = /^\d+$/.test(cleanPhone);
   if (isPhone) {
     return '***' + cleanPhone.slice(-4);
   }
-  if (name.length <= 2) {
-    return name + '***';
+  if (nameStr.length <= 2) {
+    return nameStr + '***';
   }
-  if (name.length <= 4) {
-    return name[0] + '***' + name[name.length - 1];
+  if (nameStr.length <= 4) {
+    return nameStr[0] + '***' + nameStr[nameStr.length - 1];
   }
-  const first = name.substring(0, 2);
-  const last = name.substring(name.length - 2);
+  const first = nameStr.substring(0, 2);
+  const last = nameStr.substring(nameStr.length - 2);
   return `${first}***${last}`;
 };
 
@@ -230,9 +231,12 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
   const [liveBetsTab, setLiveBetsTab] = useState<'all' | 'my' | 'top'>('all');
   const [myBets, setMyBets] = useState<any[]>([]);
   const [topBets, setTopBets] = useState<any[]>([]);
+  const [recentBets, setRecentBets] = useState<any[]>([]);
 
   useEffect(() => {
-    if (liveBetsTab === 'my') {
+    if (liveBetsTab === 'all') {
+      gamesAPI.getRealRecentAviatorBets().then(setRecentBets).catch(console.error);
+    } else if (liveBetsTab === 'my') {
       gamesAPI.getRealMyAviatorBets().then(setMyBets).catch(console.error);
     } else if (liveBetsTab === 'top') {
       gamesAPI.getRealTopAviatorBets().then(setTopBets).catch(console.error);
@@ -401,7 +405,11 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
 
   // Audio state & synthesized Web Audio API sound effects
   const [isMuted, setIsMuted] = useState(() => {
-    return localStorage.getItem('av_muted') === 'true';
+    try {
+      return localStorage.getItem('av_muted') === 'true';
+    } catch (e) {
+      return false;
+    }
   });
   const isMutedRef = useRef(isMuted);
 
@@ -584,7 +592,11 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
 
   useEffect(() => {
     isMutedRef.current = isMuted;
-    localStorage.setItem('av_muted', isMuted ? 'true' : 'false');
+    try {
+      localStorage.setItem('av_muted', isMuted ? 'true' : 'false');
+    } catch (e) {
+      console.warn('localStorage access blocked:', e);
+    }
     if (isMuted) {
       stopEngineSound();
     } else if (gameState === 'FLYING') {
@@ -617,6 +629,15 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    if (typeof ResizeObserver === 'undefined') {
+      const handleResize = () => {
+        canvas.width = canvas.clientWidth * (window.devicePixelRatio || 1);
+        canvas.height = canvas.clientHeight * (window.devicePixelRatio || 1);
+      };
+      window.addEventListener('resize', handleResize);
+      handleResize();
+      return () => window.removeEventListener('resize', handleResize);
+    }
     const resizeObserver = new ResizeObserver(() => {
       canvas.width = canvas.clientWidth * (window.devicePixelRatio || 1);
       canvas.height = canvas.clientHeight * (window.devicePixelRatio || 1);
@@ -722,7 +743,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
       ctx.font = '700 10px Montserrat, sans-serif';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`${m.toFixed(1)}x`, padL - 8, y);
+      ctx.fillText(`${(m || 1.0).toFixed(1)}x`, padL - 8, y);
     }
     ctx.restore();
 
@@ -948,16 +969,17 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         scheduleFlyingComments();
       } 
       else if (data.state === 'CRASHED') {
-        crashPointRef.current = data.crashPoint;
-        setMultiplier(data.crashPoint);
-        multiplierRef.current = data.crashPoint;
+        const crashPt = typeof data.crashPoint === 'number' && !isNaN(data.crashPoint) ? data.crashPoint : 1.0;
+        crashPointRef.current = crashPt;
+        setMultiplier(crashPt);
+        multiplierRef.current = crashPt;
         if (animationRef.current) cancelAnimationFrame(animationRef.current);
         
         // Calculate the actual elapsed time for the exact crash point to draw accurately
-        const finalElapsed = Math.log(data.crashPoint) / 0.2;
-        drawFlightPath(finalElapsed, data.crashPoint, true);
+        const finalElapsed = Math.log(crashPt) / 0.2;
+        drawFlightPath(finalElapsed, crashPt, true);
         
-        setCrashHistory(prev => [parseFloat(data.crashPoint.toFixed(2)), ...prev].slice(0, 12));
+        setCrashHistory(prev => [parseFloat(crashPt.toFixed(2)), ...prev].slice(0, 12));
         
         if (hasActiveBetRef.current && !cashoutSuccessRef.current) {
           setShowLoseOverlay(true);
@@ -1108,7 +1130,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
           </div>
         </div>
         <div className="av-balance-box">
-          ₹{mainBalance.toFixed(2)}
+          ₹{(mainBalance || 0).toFixed(2)}
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '6px' }}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
         </div>
       </div>
@@ -1118,7 +1140,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         <div className="av-history-bar">
           {crashHistory.map((c, i) => (
             <div key={i} className={`av-history-chip ${getHistoryChipClass(c)}`}>
-              {c.toFixed(2)}x
+              {(c || 0).toFixed(2)}x
             </div>
           ))}
           {crashHistory.length === 0 && (
@@ -1145,7 +1167,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
           
           {gameState !== 'WAITING' && (
             <div className={`av-multiplier ${gameState === 'CRASHED' ? 'crashed' : ''}`}>
-              {multiplier.toFixed(2)}x
+              {(multiplier || 1.0).toFixed(2)}x
             </div>
           )}
 
@@ -1153,7 +1175,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
           
            {gameState === 'WAITING' && (
             <div className="av-waiting-text">
-              {timeLeft > 0 ? `Waiting... ${(timeLeft/1000).toFixed(1)}s` : 'Loading...'}
+              {timeLeft > 0 ? `Waiting... ${((timeLeft || 0) / 1000).toFixed(1)}s` : 'Loading...'}
             </div>
           )}
 
@@ -1162,8 +1184,8 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
             <div className="av-win-overlay">
               <div className="av-win-card">
                 <div className="av-win-title">CASHED OUT</div>
-                <div className="av-win-multiplier">{multiplier.toFixed(2)}x</div>
-                <div className="av-win-amount">₹{winAmount.toFixed(2)}</div>
+                <div className="av-win-multiplier">{(multiplier || 1.0).toFixed(2)}x</div>
+                <div className="av-win-amount">₹{(winAmount || 0).toFixed(2)}</div>
               </div>
             </div>
           )}
@@ -1173,8 +1195,8 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
             <div className="av-lose-overlay">
               <div className="av-lose-card">
                 <div className="av-lose-title">FLEW AWAY</div>
-                <div className="av-lose-multiplier">{multiplier.toFixed(2)}x</div>
-                <div className="av-lose-amount">₹{parseFloat(betAmount).toFixed(2)} lost</div>
+                <div className="av-lose-multiplier">{(multiplier || 1.0).toFixed(2)}x</div>
+                <div className="av-lose-amount">₹{(parseFloat(betAmount || '0') || 0).toFixed(2)} lost</div>
               </div>
             </div>
           )}
@@ -1240,7 +1262,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
                     disabled={isCashoutLoading}
                   >
                     CASHOUT
-                    <span>₹{(parseFloat(betAmount) * multiplier).toFixed(2)}</span>
+                    <span>₹{((parseFloat(betAmount || '0') || 0) * (multiplier || 1.0)).toFixed(2)}</span>
                   </button>
                 )
               ) : gameState === 'WAITING' ? (
@@ -1294,28 +1316,39 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
               </tr>
             </thead>
             <tbody>
-              {(liveBetsTab === 'all' ? simPlayers : (liveBetsTab === 'my' ? myBets : topBets)).slice(0, 15).map((p, i) => (
-                <tr key={i}>
-                  <td>
-                    <div className="av-user-cell">
-                      <div className="av-user-avatar">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      </div>
-                      <span className="av-user-name">{maskName(p.name)}</span>
-                    </div>
-                  </td>
-                  <td>₹{p.bet.toFixed(2)}</td>
-                  <td className="av-val-cashout">{p.cashedOut ? `₹${p.winAmount.toFixed(2)}` : '-'}</td>
-                  <td className="av-val-mult">
-                    {p.cashedOut ? (
-                      <span className={`av-mult-chip ${p.targetMult >= 10 ? 'ultra' : p.targetMult >= 2 ? 'high' : ''}`}>
-                        {p.targetMult.toFixed(2)}x
-                      </span>
-                    ) : '-'}
-                  </td>
-                </tr>
-              ))}
-              {(liveBetsTab === 'all' ? simPlayers : (liveBetsTab === 'my' ? myBets : topBets)).length === 0 && (
+              {(() => {
+                const list = liveBetsTab === 'all' ? recentBets : (liveBetsTab === 'my' ? myBets : topBets);
+                const safeList = Array.isArray(list) ? list : [];
+                const displayLimit = liveBetsTab === 'all' ? 10 : (liveBetsTab === 'my' ? 20 : 15);
+                return safeList.slice(0, displayLimit).map((p, i) => {
+                  if (!p) return null;
+                  const pBet = typeof p.bet === 'number' ? p.bet : (parseFloat(p.bet) || 0);
+                  const pWin = typeof p.winAmount === 'number' ? p.winAmount : (parseFloat(p.winAmount) || 0);
+                  const pMult = typeof p.targetMult === 'number' ? p.targetMult : (parseFloat(p.targetMult) || 0);
+                  return (
+                    <tr key={i}>
+                      <td>
+                        <div className="av-user-cell">
+                          <div className="av-user-avatar">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                          </div>
+                          <span className="av-user-name">{maskName(p.name)}</span>
+                        </div>
+                      </td>
+                      <td>₹{pBet.toFixed(2)}</td>
+                      <td className="av-val-cashout">{p.cashedOut ? `₹${pWin.toFixed(2)}` : '-'}</td>
+                      <td className="av-val-mult">
+                        {p.cashedOut ? (
+                          <span className={`av-mult-chip ${pMult >= 10 ? 'ultra' : pMult >= 2 ? 'high' : ''}`}>
+                            {pMult.toFixed(2)}x
+                          </span>
+                        ) : '-'}
+                      </td>
+                    </tr>
+                  );
+                });
+              })()}
+              {(liveBetsTab === 'all' ? recentBets : (liveBetsTab === 'my' ? myBets : topBets)).length === 0 && (
                 <tr>
                   <td colSpan={4} style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                     No bets recorded
