@@ -485,6 +485,9 @@ class LudoLogic {
       roomId
     });
 
+    // Reset turn timer to give player full 16 seconds to make their piece move
+    this.startTurnTimeout(roomId);
+
     // Check if player has any valid move
     const hasMoves = this.checkValidMoves(currentTurn, boardState, roll);
 
