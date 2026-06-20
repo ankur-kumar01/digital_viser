@@ -85,10 +85,22 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
   const [myBets, setMyBets] = useState<any[]>([]);
   const [topBets, setTopBets] = useState<any[]>([]);
   const [recentBets, setRecentBets] = useState<any[]>([]);
+  const [minBetLimit, setMinBetLimit] = useState(10);
+  const [maxBetLimit, setMaxBetLimit] = useState(100000);
 
   const showLiveBets = config ? config.enable_colour_trading_bet_simulation !== false : false;
 
   const rouletteItemsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    gamesAPI.getGames().then(games => {
+      const ct = games.find((g: any) => g.slug === 'colour-trading');
+      if (ct) {
+        setMinBetLimit(Number(ct.min_bet) || 10);
+        setMaxBetLimit(Number(ct.max_bet) || 100000);
+      }
+    }).catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (!isBettingPhase) {
@@ -398,6 +410,8 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
     if (!tempSelection) return;
     const bet = parseFloat(betAmount);
     if (isNaN(bet) || bet <= 0) return alert('Enter a valid bet amount');
+    if (bet < minBetLimit) return alert(`Minimum bet is ₹${minBetLimit}`);
+    if (bet > maxBetLimit) return alert(`Maximum bet is ₹${maxBetLimit}`);
     if (bet > userBalance) return alert('Insufficient balance');
 
     socketRef.current?.emit('ct_bet', { amount: bet, color: tempSelection }, (res: any) => {

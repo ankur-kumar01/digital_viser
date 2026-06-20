@@ -6,6 +6,9 @@ export const AdminGames: React.FC = () => {
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [settingsModalOpen, setSettingsModalOpen] = useState<string | null>(null);
+  const [limitsModalOpen, setLimitsModalOpen] = useState<any>(null); // holds the game object
+  const [editMinBet, setEditMinBet] = useState('');
+  const [editMaxBet, setEditMaxBet] = useState('');
   const [aviatorHouseEdge, setAviatorHouseEdge] = useState('3');
   const [ctHouseEdge, setCtHouseEdge] = useState('30');
   const [savingSettings, setSavingSettings] = useState(false);
@@ -62,6 +65,24 @@ export const AdminGames: React.FC = () => {
       setSettingsModalOpen(null);
     } catch (err: any) {
       alert(err.message || 'Failed to update settings');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleSaveLimits = async () => {
+    if (!limitsModalOpen) return;
+    setSavingSettings(true);
+    try {
+      await adminAPI.updateGameLimits(limitsModalOpen.id, {
+        min_bet: parseFloat(editMinBet),
+        max_bet: parseFloat(editMaxBet)
+      });
+      alert('Game limits updated successfully!');
+      setLimitsModalOpen(null);
+      fetchGames();
+    } catch (err: any) {
+      alert(err.message || 'Failed to update limits');
     } finally {
       setSavingSettings(false);
     }
@@ -233,6 +254,18 @@ export const AdminGames: React.FC = () => {
                   >
                     {g.is_active ? <Pause size={18} /> : <Play size={18} />}
                     {g.is_active ? 'Disable Game' : 'Enable Game'}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setLimitsModalOpen(g);
+                      setEditMinBet(g.min_bet?.toString() || '10');
+                      setEditMaxBet(g.max_bet?.toString() || '100000');
+                    }}
+                    className="btn btn-secondary"
+                    style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    title="Edit Bet Limits"
+                  >
+                    <DollarSign size={18} />
                   </button>
                   {g.slug === 'aviator' && (
                     <button 
@@ -528,6 +561,92 @@ export const AdminGames: React.FC = () => {
                 }}
               >
                 {savingSettings ? 'Saving Configuration...' : 'Save Configuration'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Limits Settings Modal */}
+      {limitsModalOpen && (
+        <div 
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(12px)',
+            zIndex: 1000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'fadeIn 0.3s ease-out'
+          }}
+        >
+          <div 
+            style={{ 
+              width: '100%', maxWidth: '480px', 
+              background: 'linear-gradient(145deg, var(--bg-secondary), var(--bg-primary))',
+              border: '1px solid var(--border-glass)',
+              borderRadius: '24px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(139, 92, 246, 0.15)',
+              overflow: 'hidden',
+              position: 'relative'
+            }}
+          >
+            <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ background: 'var(--accent-primary-glow)', padding: '10px', borderRadius: '12px', color: 'var(--accent-primary)' }}>
+                  <DollarSign size={20} />
+                </div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                  Bet Limits: {limitsModalOpen.name}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setLimitsModalOpen(null)}
+                style={{ background: 'var(--bg-tertiary)', border: 'none', color: 'var(--text-muted)', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div style={{ padding: '32px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div>
+                  <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '8px' }}>Minimum Bet Amount (₹)</label>
+                  <input 
+                    type="number" 
+                    value={editMinBet} 
+                    onChange={(e) => setEditMinBet(e.target.value)}
+                    className="input-field"
+                    style={{ width: '100%', padding: '12px', fontSize: '1.1rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '8px' }}>Maximum Bet Amount (₹)</label>
+                  <input 
+                    type="number" 
+                    value={editMaxBet} 
+                    onChange={(e) => setEditMaxBet(e.target.value)}
+                    className="input-field"
+                    style={{ width: '100%', padding: '12px', fontSize: '1.1rem' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '24px 32px', background: 'var(--bg-tertiary)', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button 
+                onClick={() => setLimitsModalOpen(null)} 
+                disabled={savingSettings}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveLimits} 
+                disabled={savingSettings}
+                className="btn btn-primary"
+              >
+                {savingSettings ? 'Saving...' : 'Save Limits'}
               </button>
             </div>
           </div>

@@ -163,6 +163,14 @@ class AviatorGameLogic {
     try {
       await conn.beginTransaction();
 
+      const [gameRows] = await conn.query('SELECT min_bet, max_bet FROM games WHERE slug = "aviator"');
+      if (gameRows.length > 0) {
+        const minBet = parseFloat(gameRows[0].min_bet);
+        const maxBet = parseFloat(gameRows[0].max_bet);
+        if (amount < minBet) throw new Error(`Minimum bet is ₹${minBet}`);
+        if (amount > maxBet) throw new Error(`Maximum bet is ₹${maxBet}`);
+      }
+
       const [userRows] = await conn.query(
         'SELECT balance, gaming_bonus_balance, name, phone_number FROM users WHERE id = ? FOR UPDATE',
         [userId]

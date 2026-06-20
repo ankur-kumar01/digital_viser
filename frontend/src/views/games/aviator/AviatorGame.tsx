@@ -209,11 +209,20 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
   const [simPlayers, setSimPlayers] = useState<any[]>([]);
   const [dbChats, setDbChats] = useState<any[]>([]);
   const [dbBets, setDbBets] = useState<any[]>([]);
+  const [minBetLimit, setMinBetLimit] = useState(10);
+  const [maxBetLimit, setMaxBetLimit] = useState(100000);
 
   useEffect(() => {
     gamesAPI.getAviatorChats().then(setDbChats).catch(console.error);
     gamesAPI.getAviatorBets().then(setDbBets).catch(console.error);
     globalConfigAPI.getConfig().then(setConfig).catch(console.error);
+    gamesAPI.getGames().then(games => {
+      const aviator = games.find((g: any) => g.slug === 'aviator');
+      if (aviator) {
+        setMinBetLimit(Number(aviator.min_bet) || 10);
+        setMaxBetLimit(Number(aviator.max_bet) || 100000);
+      }
+    }).catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -1055,6 +1064,8 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
     if (gameState !== 'WAITING') return showToast('Wait for the next round to bet');
     const bet = parseFloat(betAmount);
     if (isNaN(bet) || bet <= 0) return showToast('Enter a valid bet amount');
+    if (bet < minBetLimit) return showToast(`Minimum bet is ₹${minBetLimit}`);
+    if (bet > maxBetLimit) return showToast(`Maximum bet is ₹${maxBetLimit}`);
     if (bet > userBalance) return showToast('Insufficient balance');
 
     setIsBetLoading(true);

@@ -1319,6 +1319,18 @@ router.put('/games/:id', async (req, res) => {
   }
 });
 
+// PUT /games/:id/limits
+router.put('/games/:id/limits', async (req, res) => {
+  try {
+    const { min_bet, max_bet } = req.body;
+    await pool.query('UPDATE games SET min_bet = ?, max_bet = ? WHERE id = ?', [min_bet, max_bet, req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to update game limits:', err);
+    res.status(500).json({ error: 'Failed to update game limits' });
+  }
+});
+
 // GET /settings
 router.get('/settings', async (req, res) => {
   try {

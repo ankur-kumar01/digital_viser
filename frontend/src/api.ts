@@ -243,6 +243,7 @@ export const adminAPI = {
   getGameAnalytics: () => adminRequest('GET', '/admin/games/analytics'),
   getGamePlayersAnalytics: () => adminRequest('GET', '/admin/games/players'),
   updateGameStatus: (id: number, is_active: boolean) => adminRequest('PUT', `/admin/games/${id}`, { is_active }),
+  updateGameLimits: (id: number, limits: { min_bet: number; max_bet: number }) => adminRequest('PUT', `/admin/games/${id}/limits`, limits),
   getSettings: () => adminRequest('GET', '/admin/settings'),
   updateSettings: (settings: any) => adminRequest('PUT', '/admin/settings', { settings }),
   getAdminFdrs: () => adminRequest('GET', '/admin/fdrs'),
