@@ -85,17 +85,37 @@
 }
 
 @media (max-width: 480px) {
+  .ludo-header {
+    padding: 8px 8px;
+  }
+  .header-left, .header-right-actions {
+    gap: 6px;
+  }
   .ludo-logo {
     font-size: 1rem;
-    letter-spacing: 1px;
+    letter-spacing: 0px;
     gap: 4px;
   }
   .ludo-spark-icon {
     width: 14px;
     height: 14px;
   }
-  .ludo-header {
-    padding: 10px 12px;
+  .ludo-balance-box {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+  }
+  .ludo-balance-box svg {
+    width: 14px;
+    height: 14px;
+    margin-left: 4px !important;
+  }
+  .ludo-exit-btn, .ludo-audio-btn {
+    width: 32px;
+    height: 32px;
+  }
+  .ludo-exit-btn svg, .ludo-audio-btn svg {
+    width: 16px;
+    height: 16px;
   }
 }
 
