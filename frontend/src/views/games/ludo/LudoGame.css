@@ -29,77 +29,95 @@
   box-sizing: border-box;
 }
 
-/* Header styling matches colour trading and aviator */
+/* Header styling matching colour trading and aviator */
 .ludo-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
-  background: linear-gradient(180deg, #1d2026 0%, #15171c 100%);
-  border-bottom: 1px solid #282c35;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: #0b0c0d;
+  border-bottom: 1px solid #1a1e24;
 }
 
-.header-left, .header-right-actions {
+.ludo-header-left {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.ludo-audio-btn {
-  background: rgba(255, 255, 255, 0.05);
+.ludo-exit-btn, .ludo-audio-btn {
+  background: rgba(15, 23, 42, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-secondary);
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
+  outline: none;
+}
+.ludo-exit-btn svg, .ludo-audio-btn svg {
+  width: 15px;
+  height: 15px;
 }
 
-.ludo-audio-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+.ludo-exit-btn:hover, .ludo-audio-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
   transform: scale(1.05);
 }
 
 .ludo-logo {
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: 2px;
-  background: linear-gradient(90deg, #ff4757 0%, #2e86de 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fillColor: transparent;
   display: flex;
   align-items: center;
-  gap: 8px;
-  text-shadow: 0 0 20px rgba(255, 71, 87, 0.2);
-  white-space: nowrap;
-  flex-shrink: 0;
+  color: var(--accent-yellow);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.5px;
+  user-select: none;
+}
+
+.ludo-logo-wings {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-end;
+  margin: 0 6px;
+}
+.ludo-logo-wings div {
+  height: 2px;
+  background-color: var(--accent-yellow);
+  border-radius: 1px;
+}
+.ludo-logo-wings div:nth-child(1) { width: 16px; transform: skewX(-25deg); }
+.ludo-logo-wings div:nth-child(2) { width: 11px; transform: skewX(-25deg); }
+.ludo-logo-wings div:nth-child(3) { width: 6px; transform: skewX(-25deg); }
+
+.ludo-logo-wings-reverse {
+  align-items: flex-start;
+  transform: scaleX(-1);
+}
+
+.ludo-balance-box {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #2ecc71;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800;
+  font-size: 0.85rem;
+  background: rgba(60, 208, 30, 0.08);
+  border: 1px solid rgba(60, 208, 30, 0.15);
+  padding: 4px 8px;
+  border-radius: 6px;
 }
 
 @media (max-width: 480px) {
-  .ludo-header {
-    padding: 8px 8px;
-  }
-  .header-left, .header-right-actions {
-    gap: 6px;
-  }
-  .ludo-logo {
-    font-size: 1rem;
-    letter-spacing: 0px;
-    gap: 4px;
-  }
-  .ludo-spark-icon {
-    width: 14px;
-    height: 14px;
-  }
   .ludo-balance-box {
     padding: 4px 8px;
     font-size: 0.8rem;

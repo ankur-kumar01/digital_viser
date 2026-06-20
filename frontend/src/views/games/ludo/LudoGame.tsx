@@ -821,24 +821,26 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
   return (
     <div className="ludo-container fade-in">
       {/* Header Bar */}
-      <header className="ludo-header">
-        <div className="header-left">
+      <div className="ludo-header">
+        <div className="ludo-header-left">
           <button 
-            className="ludo-audio-btn"
-            onClick={() => setIsMuted(prev => !prev)}
+            className="ludo-audio-btn" 
+            onClick={() => setIsMuted(prev => !prev)} 
             title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
           >
             {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
         </div>
-        
         <div className="ludo-logo">
-          <Sparkles className="ludo-spark-icon animate-pulse" size={16} />
-          LUDO CLASH
-          <Sparkles className="ludo-spark-icon animate-pulse" size={16} />
+          <div className="ludo-logo-wings">
+            <div></div><div></div><div></div>
+          </div>
+          Ludo Clash
+          <div className="ludo-logo-wings ludo-logo-wings-reverse">
+            <div></div><div></div><div></div>
+          </div>
         </div>
-        
-        <div className="header-right-actions">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div className="ludo-balance-box">
             ₹{(userBalance || 0).toFixed(2)}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '6px' }}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
@@ -847,7 +849,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
             <LogOut size={18} />
           </button>
         </div>
-      </header>
+      </div>
 
       {/* Floating Notifications */}
       {toastMessage && (
