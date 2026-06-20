@@ -442,9 +442,6 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
       {/* Header */}
       <div className="ct-header">
         <div className="ct-header-left">
-          <button className="ct-exit-btn" onClick={() => onNavigate('games')} title="Exit Game">
-            <LogOut size={18} />
-          </button>
           <button 
             className="ct-audio-btn" 
             onClick={() => setIsMuted(prev => !prev)} 
@@ -462,9 +459,14 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
             <div></div><div></div><div></div>
           </div>
         </div>
-        <div className="ct-balance-box">
-          ₹{(userBalance || 0).toFixed(2)}
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '6px' }}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="ct-balance-box">
+            ₹{(userBalance || 0).toFixed(2)}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '6px' }}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </div>
+          <button className="ct-exit-btn" onClick={() => onNavigate('games')} title="Exit Game">
+            <LogOut size={18} />
+          </button>
         </div>
       </div>
 
@@ -718,17 +720,7 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
         </>
       )}
 
-      {/* Balances Card */}
-      <div className="ct-balances-container">
-        <div className="ct-balance-row">
-          <span className="ct-balance-label">Main Wallet:</span>
-          <span className="ct-balance-val">₹{mainBalance.toFixed(2)}</span>
-        </div>
-        <div className="ct-balance-row">
-          <span className="ct-balance-label">Gaming Bonus:</span>
-          <span className="ct-balance-val">₹{gamingBonus.toFixed(2)}</span>
-        </div>
-      </div>
+
 
       {/* Betting History Tables */}
       <div className="ct-bets-container">
