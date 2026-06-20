@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../../api';
-import { Save, CheckCircle2 } from 'lucide-react';
+import { Save, CheckCircle2, Mail } from 'lucide-react';
 
 export const AdminSettings: React.FC = () => {
   const [upiId, setUpiId] = useState('');
@@ -12,6 +12,14 @@ export const AdminSettings: React.FC = () => {
   const [enableAviatorChat, setEnableAviatorChat] = useState(true);
   const [enableAviatorBet, setEnableAviatorBet] = useState(true);
   const [enableColourTradingBet, setEnableColourTradingBet] = useState(true);
+
+  const [smtpHost, setSmtpHost] = useState('');
+  const [smtpPort, setSmtpPort] = useState('587');
+  const [smtpUser, setSmtpUser] = useState('');
+  const [smtpPass, setSmtpPass] = useState('');
+  const [smtpFromEmail, setSmtpFromEmail] = useState('');
+  const [smtpFromName, setSmtpFromName] = useState('Digital Viser');
+  const [smtpConfigured, setSmtpConfigured] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -25,6 +33,15 @@ export const AdminSettings: React.FC = () => {
       setEnableAviatorChat(res.enable_aviator_chat_simulation !== 'false');
       setEnableAviatorBet(res.enable_aviator_bet_simulation !== 'false');
       setEnableColourTradingBet(res.enable_colour_trading_bet_simulation !== 'false');
+      setSmtpHost(res.smtp_host || '');
+      setSmtpPort(res.smtp_port || '587');
+      setSmtpUser(res.smtp_user || '');
+      setSmtpFromEmail(res.smtp_from_email || '');
+      setSmtpFromName(res.smtp_from_name || 'Digital Viser');
+      if (res.smtp_pass) {
+        setSmtpConfigured(true);
+        setSmtpPass('••••••••');
+      }
     } catch (err) {
       setError('Failed to load settings');
     } finally {
@@ -79,6 +96,34 @@ export const AdminSettings: React.FC = () => {
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       setError(err.message || 'Failed to update settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSmtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      const payload: any = {
+        smtp_host: smtpHost,
+        smtp_port: smtpPort,
+        smtp_user: smtpUser,
+        smtp_from_email: smtpFromEmail,
+        smtp_from_name: smtpFromName,
+      };
+      if (smtpPass !== '••••••••') {
+        payload.smtp_pass = smtpPass;
+      }
+      await adminAPI.updateSettings(payload);
+      setSmtpConfigured(true);
+      setSmtpPass('••••••••');
+      setSuccess('SMTP settings saved successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update SMTP settings');
     } finally {
       setSaving(false);
     }
@@ -216,6 +261,50 @@ export const AdminSettings: React.FC = () => {
           <button type="submit" className="btn btn-primary" disabled={saving}>
             <Save size={18} />
             {saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </form>
+      </div>
+
+      <div className="glass-card">
+        <h3 style={{ marginBottom: '20px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Mail size={18} /> Email / SMTP Configuration
+        </h3>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+          Configure SMTP credentials for sending password reset OTP emails and other system notifications to users.
+        </p>
+        <form onSubmit={handleSmtpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '2 1 200px' }}>
+              <label className="input-label">SMTP Host</label>
+              <input type="text" className="input-field" placeholder="smtp.gmail.com" value={smtpHost} onChange={e => setSmtpHost(e.target.value)} />
+            </div>
+            <div style={{ flex: '1 1 100px' }}>
+              <label className="input-label">Port</label>
+              <input type="number" className="input-field" placeholder="587" value={smtpPort} onChange={e => setSmtpPort(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <label className="input-label">SMTP Username</label>
+            <input type="text" className="input-field" placeholder="your@email.com" value={smtpUser} onChange={e => setSmtpUser(e.target.value)} />
+          </div>
+          <div>
+            <label className="input-label">SMTP Password</label>
+            <input type="password" className="input-field" placeholder={smtpConfigured ? 'Leave blank to keep current' : 'Enter password'} value={smtpPass} onChange={e => setSmtpPass(e.target.value)} />
+            {smtpConfigured && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Leave as dots to keep existing password.</p>}
+          </div>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 200px' }}>
+              <label className="input-label">From Email</label>
+              <input type="email" className="input-field" placeholder="noreply@domain.com" value={smtpFromEmail} onChange={e => setSmtpFromEmail(e.target.value)} />
+            </div>
+            <div style={{ flex: '1 1 200px' }}>
+              <label className="input-label">From Name</label>
+              <input type="text" className="input-field" placeholder="Digital Viser" value={smtpFromName} onChange={e => setSmtpFromName(e.target.value)} />
+            </div>
+          </div>
+          <button type="submit" className="btn btn-primary" disabled={saving}>
+            <Save size={18} />
+            {saving ? 'Saving...' : 'Save SMTP Settings'}
           </button>
         </form>
       </div>

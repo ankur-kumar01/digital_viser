@@ -3,6 +3,7 @@ import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
 import { LayoutDashboard, Wallet, ArrowUpRight, BarChart3, User, Gamepad2, Receipt } from 'lucide-react';
 import { Auth } from './views/Auth';
+import { ForgotPassword } from './views/ForgotPassword';
 import { DashboardOverview } from './views/DashboardOverview';
 import { WalletView } from './views/WalletView';
 import { Deposit } from './views/Deposit';
@@ -50,6 +51,7 @@ export const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminAuth, setShowAdminAuth] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -192,7 +194,10 @@ export const App: React.FC = () => {
     if (showAdminAuth) {
       return <AdminAuth onLogin={handleAdminLoginSuccess} />;
     }
-    return <Auth onLogin={handleLoginSuccess} />;
+    if (showForgotPassword) {
+      return <ForgotPassword onBackToLogin={() => setShowForgotPassword(false)} />;
+    }
+    return <Auth onLogin={handleLoginSuccess} onNavigateForgot={() => setShowForgotPassword(true)} />;
   }
 
   return (

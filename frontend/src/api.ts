@@ -123,6 +123,8 @@ export const authAPI = {
   getProfile: () => request('GET', '/auth/profile'),
   updateProfile: (data: any) => request('PUT', '/auth/profile', data),
   getReferralStats: () => request('GET', '/auth/referral-stats'),
+  forgotPassword: (email: string) => request('POST', '/auth/forgot-password', { email }),
+  resetPassword: (email: string, otp: string, new_password: string) => request('POST', '/auth/reset-password', { email, otp, new_password }),
 };
 
 export const walletAPI = {
@@ -190,6 +192,7 @@ export const adminAPI = {
   getUserDetails: (id: number) => adminRequest('GET', `/admin/users/${id}/details`),
   createUserFDR: (id: number, data: any) => adminRequest('POST', `/admin/users/${id}/fdr/create`, data),
   closeUserFDR: (id: number, fdrId: number) => adminRequest('POST', `/admin/users/${id}/fdr/${fdrId}/close`),
+  changeUserPassword: (id: number, password: string) => adminRequest('PUT', `/admin/users/${id}/password`, { password }),
   lockUserFunds: (id: number, data: any) => adminRequest('POST', `/admin/users/${id}/lock-funds`, data),
   unlockUserFunds: (id: number, lockId: number) => adminRequest('POST', `/admin/users/${id}/unlock-funds/${lockId}`),
   updateUpiSettings: (upi_id: string) => adminRequest('POST', '/admin/settings/upi', { upi_id }),

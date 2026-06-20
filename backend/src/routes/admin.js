@@ -974,6 +974,21 @@ router.get('/profile', async (req, res) => {
   }
 });
 
+// PUT /users/:id/password
+router.put('/users/:id/password', async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+    const hash = await bcrypt.hash(password, 10);
+    await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [hash, req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to update password' });
+  }
+});
+
 // PUT /profile
 router.put('/profile', async (req, res) => {
   try {

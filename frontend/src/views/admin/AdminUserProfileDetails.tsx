@@ -32,6 +32,11 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [adjustWalletType, setAdjustWalletType] = useState<'main' | 'bonus' | 'referral' | 'gaming_bonus'>('main');
 
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
   const [allFdrPlans, setAllFdrPlans] = useState<any[]>([]);
   const [blockedPlanIds, setBlockedPlanIds] = useState<number[]>([]);
   const [restrictionsLoading, setRestrictionsLoading] = useState(false);
@@ -139,6 +144,24 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
       alert(err.message || 'Failed to adjust balance');
     } finally {
       setAdjustLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) { alert('Password must be at least 6 characters.'); return; }
+    if (newPassword !== confirmPassword) { alert('Passwords do not match.'); return; }
+    setPasswordLoading(true);
+    try {
+      await adminAPI.changeUserPassword(userId, newPassword);
+      setShowPasswordModal(false);
+      setNewPassword('');
+      setConfirmPassword('');
+      alert('Password changed successfully.');
+    } catch (err: any) {
+      alert(err.message || 'Failed to change password');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -310,6 +333,19 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
           </div>
         </div>
         
+        {/* CHANGE PASSWORD */}
+        <div style={{ marginTop: '30px' }} className="glass-card">
+          <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Lock size={18} /> Change Password
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
+            Set a new password for this user. They will be able to log in with the new password immediately.
+          </p>
+          <button onClick={() => setShowPasswordModal(true)} className="btn btn-primary">
+            Change Password
+          </button>
+        </div>
+
         {/* DANGER ZONE */}
         <div style={{ marginTop: '30px' }} className="glass-card">
           <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-danger)' }}>
@@ -524,6 +560,28 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
               </div>
               <button type="submit" className="btn btn-primary" disabled={adjustLoading} style={{ marginTop: '10px' }}>
                 {adjustLoading ? 'Processing...' : 'Confirm Adjustment'}
+              </button>
+            </form>
+          </div>
+        </div>, document.body
+      )}
+
+      {showPasswordModal && createPortal(
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '20px' }}>
+          <div className="glass-card" style={{ maxWidth: '400px', width: '100%', padding: '24px', position: 'relative' }}>
+            <button onClick={() => setShowPasswordModal(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={24} /></button>
+            <h3 style={{ marginBottom: '20px' }}>Change User Password</h3>
+            <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label className="input-label">New Password</label>
+                <input type="password" className="input-field" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={6} required placeholder="Min 6 characters" />
+              </div>
+              <div>
+                <label className="input-label">Confirm Password</label>
+                <input type="password" className="input-field" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} minLength={6} required placeholder="Re-enter new password" />
+              </div>
+              <button type="submit" className="btn btn-primary" disabled={passwordLoading} style={{ marginTop: '10px' }}>
+                {passwordLoading ? 'Changing...' : 'Change Password'}
               </button>
             </form>
           </div>

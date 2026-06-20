@@ -1,8 +1,10 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { pool } = require('../db');
 const authMiddleware = require('../middleware/auth');
+const { sendOtpEmail } = require('../services/emailService');
 
 const router = express.Router();
 
@@ -108,6 +110,64 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Server error during login.' });
+  }
+});
+
+// POST /forgot-password
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required.' });
+
+    // Always return success to prevent email enumeration
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    const [userRows] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+    if (userRows.length > 0) {
+      await pool.query(
+        'INSERT INTO password_resets (email, otp_code, expires_at) VALUES (?, ?, ?)',
+        [email, otp, expiresAt]
+      );
+      await sendOtpEmail(email, otp);
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
+// POST /reset-password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, otp, new_password } = req.body;
+    if (!email || !otp || !new_password) {
+      return res.status(400).json({ error: 'Email, OTP, and new password are required.' });
+    }
+    if (new_password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+
+    const [rows] = await pool.query(
+      'SELECT * FROM password_resets WHERE email = ? AND otp_code = ? AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1',
+      [email, otp]
+    );
+    if (rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired OTP.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(new_password, salt);
+
+    await pool.query('UPDATE users SET password_hash = ? WHERE email = ?', [password_hash, email]);
+    await pool.query('DELETE FROM password_resets WHERE email = ?', [email]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ error: 'Server error.' });
   }
 });
 

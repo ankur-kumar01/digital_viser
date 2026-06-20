@@ -4,9 +4,10 @@ import { KeyRound, Mail, User, Phone, AlertCircle, Loader2, Gift } from 'lucide-
 
 interface AuthProps {
   onLogin: (token: string, user: any, isRegistration?: boolean) => void;
+  onNavigateForgot?: () => void;
 }
 
-export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
+export const Auth: React.FC<AuthProps> = ({ onLogin, onNavigateForgot }) => {
   const [isLoginTab, setIsLoginTab] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -389,6 +390,18 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               <span>{isLoginTab ? 'Sign In' : 'Create Account'}</span>
             )}
           </button>
+
+          {isLoginTab && (
+            <div style={{ textAlign: 'center', marginTop: '12px' }}>
+              <button
+                type="button"
+                onClick={() => onNavigateForgot?.()}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', padding: 0 }}
+              >
+                Forgot Password?
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>
