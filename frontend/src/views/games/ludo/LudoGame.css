@@ -822,54 +822,78 @@
 /* PAWNS / PIECES INBOARD */
 .ludo-piece {
   position: absolute;
-  border-radius: 50%;
-  cursor: default;
-  outline: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.28s cubic-bezier(0.25, 1, 0.5, 1);
-  box-sizing: border-box;
-}
-
-.ludo-piece.host {
-  background: radial-gradient(circle at 30% 30%, #a5d6a7 0%, #4CAF50 60%, #2e7d32 100%);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4), inset -3px -5px 6px rgba(0,0,0,0.4);
-  border: 1px solid #1b5e20;
-}
-
-.ludo-piece.challenger {
-  background: radial-gradient(circle at 30% 30%, #fff59d 0%, #FFEB3B 60%, #fbc02d 100%);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4), inset -3px -5px 6px rgba(0,0,0,0.3);
-  border: 1px solid #f57f17;
-}
-
-.piece-inner {
-  width: 40%;
-  height: 40%;
-  border-radius: 50%;
-  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.8), transparent);
+  background: transparent;
   border: none;
-  transform: translateY(-20%);
+  box-shadow: none;
+  cursor: default;
+  outline: none;
+  transition: transform 0.28s cubic-bezier(0.25, 1, 0.5, 1);
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
-/* Clickable valid playable pawn */
+.piece-3d-wrapper {
+  position: relative;
+  width: 20px;
+  height: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: -12px;
+  pointer-events: none;
+}
+
+.ludo-piece.host { color: #4CAF50; }
+.ludo-piece.challenger { color: #FFEB3B; }
+.ludo-piece.blue-piece { color: #2196F3; }
+.ludo-piece.red-piece { color: #F44336; }
+
+.piece-head {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, currentColor 50%, rgba(0,0,0,0.6) 100%);
+  z-index: 3;
+  margin-bottom: -3px;
+  box-shadow: 0 2px 3px rgba(0,0,0,0.4);
+}
+
+.piece-body {
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.5) 0%, currentColor 30%, rgba(0,0,0,0.4) 100%);
+  clip-path: polygon(25% 0, 75% 0, 100% 100%, 0 100%);
+  z-index: 2;
+}
+
+.piece-base {
+  width: 18px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, currentColor 30%, rgba(0,0,0,0.6) 100%);
+  z-index: 1;
+  margin-top: -4px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+}
+
 .ludo-piece.playable {
   cursor: pointer;
-  border-color: #ffffff;
-  box-shadow: 0 0 15px #fff, 0 0 25px rgba(255,255,255,0.4);
-  animation: ludo-piece-pulse 1s infinite alternate;
+  z-index: 100 !important;
 }
 
-@keyframes ludo-piece-pulse {
-  0% {
-    transform: scale(0.9) translate(var(--tw-translate-x), var(--tw-translate-y));
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
-  }
-  100% {
-    transform: scale(1.1) translate(var(--tw-translate-x), var(--tw-translate-y));
-    box-shadow: 0 0 18px rgba(255, 255, 255, 1);
-  }
+.ludo-piece.playable .piece-3d-wrapper {
+  animation: pieceBounce 1s infinite alternate ease-in-out;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
+}
+
+@keyframes pieceBounce {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-8px) scale(1.05); }
 }
 
 /* DICE CONTROLS */
@@ -926,9 +950,35 @@
 
 /* 3D Dice Display Box */
 .dice-cube-container {
+  perspective: 1000px;
   width: 50px;
   height: 50px;
-  perspective: 200px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.ring-valid-move {
+  box-shadow: 0 0 15px 4px #4caf50;
+  animation: pulse-green-ring 1s infinite alternate;
+}
+
+.ring-invalid-move {
+  box-shadow: 0 0 15px 4px #f44336;
+  animation: pulse-red-ring 1s infinite alternate;
+}
+
+@keyframes pulse-green-ring {
+  0% { box-shadow: 0 0 10px 2px rgba(76, 175, 80, 0.6); }
+  100% { box-shadow: 0 0 20px 6px rgba(76, 175, 80, 1); }
+}
+
+@keyframes pulse-red-ring {
+  0% { box-shadow: 0 0 10px 2px rgba(244, 67, 54, 0.6); }
+  100% { box-shadow: 0 0 20px 6px rgba(244, 67, 54, 1); }
 }
 
 .dice-cube {
@@ -1270,6 +1320,27 @@
   font-family: monospace;
   font-size: 1.25rem;
   text-shadow: 0 0 10px rgba(241, 196, 15, 0.3);
+}
+
+/* Lobby */
+.ludo-lobby {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.lobby-hero-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-card);
+  border-radius: 16px;
+  position: relative;
+}
+
+.ludo-banner-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-bottom: 2px solid var(--border-card);
 }
 
 .matching-details-card {

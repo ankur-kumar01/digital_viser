@@ -333,7 +333,6 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
     });
 
     socket.on('ludo:turn_passed', (data: { boardState: any; reason: string }) => {
-      showToast(data.reason || 'No moves possible, turn passed!');
       setCurrentRoom(prev => prev ? { ...prev, boardState: data.boardState } : null);
     });
 
@@ -511,6 +510,22 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
       return dice === 6;
     }
     return position + dice <= 58;
+  };
+
+  const hasAnyValidMove = () => {
+    if (!currentRoom) return false;
+    const pieces = isHostUser ? currentRoom.boardState.hostPieces : currentRoom.boardState.challengerPieces;
+    for (let i = 0; i < 4; i++) {
+      if (isValidPieceMove(isHostUser, pieces[i], currentRoom.boardState.dice)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const renderDiceRingClass = () => {
+    if (!currentRoom || !isPlayerTurn || currentRoom.boardState.phase !== 'move' || diceRolling) return '';
+    return hasAnyValidMove() ? 'ring-valid-move' : 'ring-invalid-move';
   };
 
   // Helper coordinates mapping for board pawn renders
@@ -757,10 +772,10 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
             key={piece.id}
             className={`ludo-piece ${piece.isHost ? 'host' : 'challenger'} ${canMoveThisPiece ? 'playable pulse' : ''}`}
             style={{
-              top: `calc(${(piece.r / 15) * 100}% + 2.2%)`,
-              left: `calc(${(piece.c / 15) * 100}% + 2.2%)`,
-              width: 'calc(6.66% - 4.4px)',
-              height: 'calc(6.66% - 4.4px)',
+              top: `${(piece.r / 15) * 100}%`,
+              left: `${(piece.c / 15) * 100}%`,
+              width: '6.66%',
+              height: '6.66%',
               transform: `translate(${dx}%, ${dy}%) scale(${scale})`,
               zIndex: canMoveThisPiece ? 20 : 10
             }}
@@ -771,7 +786,11 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
             }}
             disabled={!canMoveThisPiece}
           >
-            <div className="piece-inner" />
+            <div className="piece-3d-wrapper">
+              <div className="piece-head" />
+              <div className="piece-body" />
+              <div className="piece-base" />
+            </div>
           </button>
         );
       });
@@ -819,10 +838,12 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
       {/* Lobby panel / Matchmaking */}
       {!currentRoom ? (
         <div className="ludo-lobby">
-          <div className="lobby-hero-card">
-            <div className="hero-gradient-ring" />
-            <h2 className="lobby-title">Multiplayer Betting Ludo</h2>
-            <p className="lobby-desc">Wager entry coins, defeat opponents in standard turn clashes, and win the payout pool minus a 5% commission!</p>
+          <div className="lobby-hero-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <img src="/images/games/ludo-banner.png" alt="Ludo Clash" className="ludo-banner-img" />
+            <div style={{ padding: '20px' }}>
+              <h2 className="lobby-title">Multiplayer Betting Ludo</h2>
+              <p className="lobby-desc">Wager entry coins, defeat opponents in standard turn clashes, and win the payout pool minus a 5% commission!</p>
+            </div>
           </div>
 
           {isMatching ? (
@@ -981,7 +1002,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
                 )}
 
                 {/* 3D Dice Display Box */}
-                <div className={`dice-cube-container ${diceRolling ? 'rolling' : ''}`}>
+                <div className={`dice-cube-container ${diceRolling ? 'rolling' : ''} ${renderDiceRingClass()}`}>
                   <div className={`dice-cube face-${currentRoom.boardState.dice}`}>
                     {currentRoom.boardState.dice > 0 ? (
                       <div className="dice-face">
@@ -1039,7 +1060,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
               {(() => {
                 const list = historyTab === 'all' ? recentBets : (historyTab === 'my' ? myBets : topBets);
                 const safeList = Array.isArray(list) ? list : [];
-                const displayLimit = historyTab === 'all' ? 10 : (historyTab === 'my' ? 20 : 15);
+                const displayLimit = 10;
                 
                 return safeList.slice(0, displayLimit).map((b, i) => {
                   if (!b) return null;

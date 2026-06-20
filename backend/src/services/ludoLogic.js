@@ -710,14 +710,6 @@ class LudoLogic {
         boardState.missedTurns = boardState.missedTurns || { host: 0, challenger: 0 };
         boardState.missedTurns[missedPlayer] = (boardState.missedTurns[missedPlayer] || 0) + 1;
 
-        if (boardState.missedTurns[missedPlayer] >= 3) {
-          // Forfeit game
-          console.log(`Ludo Room #${roomId}: Player "${missedPlayer}" forfeited by missing 3 turns`);
-          const winnerId = missedPlayer === 'host' ? room.challenger_id : room.host_id;
-          await this.resolveWin(roomId, winnerId, room.entry_fee);
-          return;
-        }
-
         // Pass turn
         boardState.phase = 'roll';
         boardState.turn = missedPlayer === 'host' ? 'challenger' : 'host';
