@@ -835,7 +835,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
           <div className="ludo-logo-wings">
             <div></div><div></div><div></div>
           </div>
-          Ludo Clash
+          <span>Ludo Clash</span>
           <div className="ludo-logo-wings ludo-logo-wings-reverse">
             <div></div><div></div><div></div>
           </div>

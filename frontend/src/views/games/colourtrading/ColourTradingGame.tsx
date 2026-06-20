@@ -468,7 +468,7 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
           <div className="ct-logo-wings">
             <div></div><div></div><div></div>
           </div>
-          Colour Trade
+          <span>Colour Trade</span>
           <div className="ct-logo-wings ct-logo-wings-reverse">
             <div></div><div></div><div></div>
           </div>
@@ -490,8 +490,8 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
           className="ct-roadmap-toggle"
           onClick={() => setRoadmapExpanded(prev => !prev)}
         >
-          <span>📊 Real-Time Charts & Trend Roadmap</span>
-          <span style={{ fontSize: '0.75rem' }}>{roadmapExpanded ? '▲ Hide' : '▼ View'}</span>
+          <span style={{ whiteSpace: 'nowrap', fontSize: 'clamp(0.65rem, 3vw, 0.95rem)', overflow: 'hidden', textOverflow: 'ellipsis' }}>📊 Real-Time Charts & Trend Roadmap</span>
+          <span style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>{roadmapExpanded ? '▲ Hide' : '▼ View'}</span>
         </button>
         
         {roadmapExpanded && (
