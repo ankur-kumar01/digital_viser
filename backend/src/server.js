@@ -16,12 +16,14 @@ const LudoLogic = require('./services/ludoLogic');
 // Import route files
 const authRoutes = require('./routes/auth');
 const walletRoutes = require('./routes/wallet');
+const adminFantasyRoutes = require('./routes/adminFantasy');
 const fdrRoutes = require('./routes/fdr');
 const adminRoutes = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
 const gamesRoutes = require('./routes/games');
 const spinRoutes = require('./routes/spin');
 const activityRoutes = require('./routes/activity');
+const fantasyRoutes = require('./routes/fantasy');
 
 const app = express();
 const server = http.createServer(app);
@@ -159,8 +161,10 @@ app.use('/api/fdr', fdrRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/games', gamesRoutes);
+app.use('/api/admin/fantasy', adminFantasyRoutes);
 app.use('/api/spin', spinRoutes);
 app.use('/api/activity', activityRoutes);
+app.use('/api/fantasy', require('./middleware/auth'), fantasyRoutes);
 
 // Public Config Endpoint
 app.get('/api/config', async (req, res) => {
@@ -187,6 +191,8 @@ app.get('/api/config', async (req, res) => {
 
 // Initialize Cron Jobs
 require('./cron');
+const fantasyCricketCron = require('./cron/fantasyCricketCron');
+fantasyCricketCron.start();
 
 // Static file serving for uploads
 app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));

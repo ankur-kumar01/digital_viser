@@ -40,6 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'admin-fdrs', name: 'Manage FDRs', icon: <BarChart3 size={20} /> },
     { id: 'admin-schemes', name: 'Reward Schemes', icon: <Gift size={20} /> },
     { id: 'admin-games', name: 'Manage Games', icon: <Gamepad2 size={20} /> },
+    { id: 'admin-fantasy-cricket', name: 'Fantasy Cricket', icon: <Gamepad2 size={20} /> },
     { id: 'admin-big-wins', name: 'Big Wins Ticker', icon: <Gift size={20} /> },
     { id: 'admin-spin-wheel', name: 'Spin Wheel', icon: <Disc size={20} /> },
     { id: 'admin-game-simulations', name: 'Game Simulations', icon: <Cpu size={20} /> },

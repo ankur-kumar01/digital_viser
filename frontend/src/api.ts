@@ -89,7 +89,7 @@ async function request(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, 
   return data;
 }
 
-async function adminRequest(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: any) {
+export async function adminRequest(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: any) {
   const token = getAdminToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -196,6 +196,16 @@ export const gamesAPI = {
   fruitSlasherPlay: (amount: number, walletType: 'main' | 'gaming_bonus') => request('POST', '/games/fruitslasher/play', { amount, walletType }),
   fruitSlasherCashout: (betId: number, multiplier: number) => request('POST', '/games/fruitslasher/cashout', { betId, multiplier }),
   fruitSlasherCrash: (betId: number, multiplier: number) => request('POST', '/games/fruitslasher/crash', { betId, multiplier })
+};
+
+export const fantasyAPI = {
+  getMatches: (status: 'upcoming' | 'live' | 'completed' = 'upcoming') => request('GET', `/fantasy/matches?status=${status}`),
+  getMatchSquad: (id: number) => request('GET', `/fantasy/match/${id}/squad`),
+  getMatchContests: (id: number) => request('GET', `/fantasy/match/${id}/contests`),
+  createTeam: (data: { matchId: number; playerIds: number[]; captainId: number; viceCaptainId: number }) => request('POST', '/fantasy/team', data),
+  getMyTeams: (matchId: number) => request('GET', `/fantasy/match/${matchId}/my-teams`),
+  joinContest: (data: { contestId: number; teamId: number }) => request('POST', '/fantasy/contest/join', data),
+  getLeaderboard: (contestId: number) => request('GET', `/fantasy/contest/${contestId}/leaderboard`)
 };
 
 export const adminAPI = {

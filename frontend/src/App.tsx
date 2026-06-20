@@ -18,6 +18,7 @@ import { AviatorGame } from './views/games/aviator';
 import { ColourTradingGame } from './views/games/colourtrading';
 import { FruitSlasherGame } from './views/games/fruitslasher';
 import { LudoGame } from './views/games/ludo';
+import { CricketGame } from './views/games/cricket';
 import { authAPI, clearToken, getToken, adminAPI, getAdminToken, clearAdminToken, globalConfigAPI } from './api';
 import { setGlobalTimeZone } from './utils/dateFormatter';
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -40,6 +41,7 @@ import { AdminFdrs } from './views/admin/AdminFdrs';
 import { AdminBigWins } from './views/admin/AdminBigWins';
 import { AdminGameSimulations } from './views/admin/AdminGameSimulations';
 import { AdminSpinWheel } from './views/admin/AdminSpinWheel';
+import { AdminFantasy } from './views/admin/AdminFantasy';
 import { AdminReferrals } from './views/admin/AdminReferrals';
 import { AdminTransactions } from './views/admin/AdminTransactions';
 import { AdminBets } from './views/admin/AdminBets';
@@ -287,6 +289,9 @@ export const App: React.FC = () => {
             {currentView === 'game-ludo' && (
               <LudoGame user={user} refreshUser={refreshUser} onNavigate={setCurrentView} />
             )}
+            {currentView === 'game-cricket-fantasy' && (
+              <CricketGame user={user} refreshUser={refreshUser} onNavigate={setCurrentView} />
+            )}
           </>
         ) : (
           <>
@@ -319,6 +324,7 @@ export const App: React.FC = () => {
             {currentView === 'admin-big-wins' && <AdminBigWins />}
             {currentView === 'admin-game-simulations' && <AdminGameSimulations />}
             {currentView === 'admin-spin-wheel' && <AdminSpinWheel />}
+            {currentView === 'admin-fantasy-cricket' && <AdminFantasy />}
             {currentView === 'admin-transactions' && <AdminTransactions />}
             {currentView === 'admin-bets' && <AdminBets />}
             {currentView === 'admin-login-history' && <AdminLoginHistory />}

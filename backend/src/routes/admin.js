@@ -1645,8 +1645,56 @@ router.get('/bets', async (req, res) => {
 
     res.json({ bets: parsed, total, page, limit });
   } catch (err) {
-    console.error('Failed to fetch bets:', err);
     res.status(500).json({ error: 'Failed to fetch bets' });
+  }
+});
+
+// Update game limits (min_bet, max_bet)
+router.put('/games/:id/limits', adminAuth, async (req, res) => {
+  try {
+    const { min_bet, max_bet } = req.body;
+    await pool.query(
+      'UPDATE games SET min_bet = ?, max_bet = ? WHERE id = ?',
+      [min_bet, max_bet, req.params.id]
+    );
+    res.json({ success: true, message: 'Game limits updated' });
+  } catch (err) {
+    console.error('Failed to update game limits:', err);
+    res.status(500).json({ error: 'Failed to update game limits' });
+  }
+});
+
+// GET /settings
+router.get('/settings', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT setting_key, setting_value FROM system_settings');
+    const settings = {};
+    rows.forEach(r => settings[r.setting_key] = r.setting_value);
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+// PUT /settings
+router.put('/settings', adminAuth, async (req, res) => {
+  try {
+    const { settings } = req.body;
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({ error: 'Invalid settings object' });
+    }
+    
+    // Update each setting provided
+    for (const [key, value] of Object.entries(settings)) {
+      await pool.query(
+        'INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
+        [key, value, value]
+      );
+    }
+    res.json({ success: true, message: 'Settings updated' });
+  } catch (err) {
+    console.error('Failed to update settings:', err);
+    res.status(500).json({ error: 'Failed to update settings' });
   }
 });
 
