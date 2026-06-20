@@ -118,9 +118,10 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
   
   // Direct Automated Matchmaking states
   const [isMatching, setIsMatching] = useState(false);
-  const [matchingTimeLeft, setMatchingTimeLeft] = useState(30);
-  const [matchingRoomId, setMatchingRoomId] = useState<number | null>(null);
+  const [matchingTimeLeft, setMatchingTimeLeft] = useState<number>(30);
   const [matchingWager, setMatchingWager] = useState(100);
+  const [matchingRoomId, setMatchingRoomId] = useState<number | null>(null);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   // Game animations & alerts
   const [diceRolling, setDiceRolling] = useState(false);
@@ -496,12 +497,28 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
     if (isMatching) {
       handleCancelMatchmaking();
     }
+    if (currentRoom && currentRoom.boardState.status === 'waiting') {
+      handleCancelRoom();
+      onNavigate('games');
+      return;
+    }
     if (currentRoom && currentRoom.boardState.phase !== 'game_over') {
-      const confirmForfeit = window.confirm('Are you sure you want to exit? Leaving an active Ludo match will forfeit your wager!');
-      if (!confirmForfeit) return;
-      socketRef.current?.emit('ludo:forfeit', { roomId: currentRoom.id });
+      setShowExitConfirm(true);
+      return;
     }
     onNavigate('games');
+  };
+
+  const confirmExitGame = () => {
+    if (currentRoom && currentRoom.boardState.phase !== 'game_over') {
+      socketRef.current?.emit('ludo:forfeit', { roomId: currentRoom.id });
+    }
+    setShowExitConfirm(false);
+    onNavigate('games');
+  };
+
+  const cancelExitGame = () => {
+    setShowExitConfirm(false);
   };
 
   // Check if a piece can move
@@ -835,6 +852,20 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
         </div>
       )}
 
+      {/* Exit Confirmation Modal */}
+      {showExitConfirm && (
+        <div className="ludo-exit-overlay">
+          <div className="ludo-exit-modal fade-in">
+            <h3>Are you sure?</h3>
+            <p>Leaving an active Ludo match will forfeit your wager and you will instantly lose!</p>
+            <div className="exit-modal-actions">
+              <button className="lobby-secondary-btn" onClick={cancelExitGame}>Resume Game</button>
+              <button className="cancel-matchmaker-btn" onClick={confirmExitGame}>Forfeit & Exit</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Lobby panel / Matchmaking */}
       {!currentRoom ? (
         <div className="ludo-lobby">
@@ -862,7 +893,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
                 <span className="matching-wager-value">₹{matchingWager.toFixed(0)}</span>
               </div>
               <p className="matching-hint text-muted">
-                Looking for players matching your entry fee. If no opponent connects within 30s, you will automatically start against LudoBot 🤖.
+                Looking for players matching your entry fee...
               </p>
               <button className="cancel-matchmaker-btn" onClick={handleCancelMatchmaking}>
                 Cancel Matchmaking
@@ -900,22 +931,15 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
                 ))}
               </div>
 
-              <div className="lobby-actions-row">
+              <div className="lobby-actions-row" style={{ display: 'flex', justifyContent: 'center' }}>
                 <button 
                   className="lobby-primary-btn create-btn"
                   onClick={handleFindMatch}
                   disabled={isCreatingRoom || parseFloat(wagerInput) > userBalance}
+                  style={{ width: '100%', maxWidth: '300px' }}
                 >
                   <Dices size={18} style={{ marginRight: '6px' }} />
                   FIND MATCH
-                </button>
-                <button 
-                  className="lobby-secondary-btn play-bot-btn"
-                  onClick={handlePlayBot}
-                  disabled={isCreatingRoom || parseFloat(wagerInput) > userBalance}
-                >
-                  <Play size={16} style={{ marginRight: '6px' }} />
-                  BOT PRACTICE
                 </button>
               </div>
             </div>
