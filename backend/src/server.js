@@ -73,6 +73,17 @@ io.on('connection', (socket) => {
     hash: aviatorEngine.hash
   });
 
+  socket.emit('aviator_bets_update', Array.from(aviatorEngine.activeBets.values()).map(b => ({
+    id: b.id,
+    userId: b.userId,
+    name: b.name,
+    phone_number: b.phone_number,
+    bet: b.betAmount,
+    cashedOut: b.cashedOut,
+    targetMult: b.multiplier,
+    winAmount: b.winAmount
+  })));
+
   socket.on('aviator_bet', async (data, callback) => {
     try {
       const res = await aviatorEngine.handleBet(socket.user.userId, data.amount);

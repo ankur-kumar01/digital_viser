@@ -3,6 +3,7 @@ const { pool } = require('../../db');
 
 const colourTradingRoutes = require('./colourtrading');
 const fruitSlasherRoutes = require('./fruitslasher');
+const authMiddleware = require('../../middleware/auth');
 
 const router = express.Router();
 
@@ -45,6 +46,65 @@ router.get('/simulations/aviator-bets', async (req, res) => {
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch aviator bets' });
+  }
+});
+
+// GET /api/games/aviator/my-bets (User's own bet history)
+router.get('/aviator/my-bets', authMiddleware, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT ab.id, ab.bet_amount, ab.win_amount, ab.status, ab.cashout_multiplier, ab.created_at, 
+              ar.crash_point, u.name as user_name
+       FROM aviator_bets ab
+       LEFT JOIN aviator_rounds ar ON ab.round_id = ar.id
+       LEFT JOIN users u ON ab.user_id = u.id
+       WHERE ab.user_id = ?
+       ORDER BY ab.created_at DESC
+       LIMIT 50`,
+      [req.user.userId]
+    );
+    // Format to make compatible with UI expecting numbers
+    const formatted = rows.map(r => ({
+      id: r.id,
+      name: r.user_name || 'You',
+      bet: parseFloat(r.bet_amount) || 0,
+      cashedOut: r.status === 'cashed_out',
+      targetMult: parseFloat(r.cashout_multiplier) || 0,
+      winAmount: parseFloat(r.win_amount) || 0,
+      created_at: r.created_at
+    }));
+    res.json(formatted);
+  } catch (err) {
+    console.error('Failed to fetch my aviator bets:', err);
+    res.status(500).json({ error: 'Failed to fetch my bets' });
+  }
+});
+
+// GET /api/games/aviator/top-bets (Top wins of all time)
+router.get('/aviator/top-bets', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT ab.id, ab.bet_amount, ab.win_amount, ab.status, ab.cashout_multiplier, ab.created_at,
+              u.name as user_name
+       FROM aviator_bets ab
+       LEFT JOIN users u ON ab.user_id = u.id
+       WHERE ab.status = 'cashed_out'
+       ORDER BY ab.win_amount DESC
+       LIMIT 50`
+    );
+    const formatted = rows.map(r => ({
+      id: r.id,
+      name: r.user_name || 'User',
+      bet: parseFloat(r.bet_amount) || 0,
+      cashedOut: true,
+      targetMult: parseFloat(r.cashout_multiplier) || 0,
+      winAmount: parseFloat(r.win_amount) || 0,
+      created_at: r.created_at
+    }));
+    res.json(formatted);
+  } catch (err) {
+    console.error('Failed to fetch top aviator bets:', err);
+    res.status(500).json({ error: 'Failed to fetch top bets' });
   }
 });
 

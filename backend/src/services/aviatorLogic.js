@@ -76,6 +76,7 @@ class AviatorGameLogic {
       roundId: this.roundId,
       hash: this.hash // Prove fairness before round starts
     });
+    this.io.emit('aviator_bets_update', []);
 
     let timeLeft = this.WAIT_TIME;
     this.timer = setInterval(() => {
@@ -163,13 +164,15 @@ class AviatorGameLogic {
       await conn.beginTransaction();
 
       const [userRows] = await conn.query(
-        'SELECT balance, gaming_bonus_balance FROM users WHERE id = ? FOR UPDATE',
+        'SELECT balance, gaming_bonus_balance, name, phone_number FROM users WHERE id = ? FOR UPDATE',
         [userId]
       );
       if (userRows.length === 0) throw new Error('User not found');
 
       const mainBalance = parseFloat(userRows[0].balance);
       const gamingBonus = parseFloat(userRows[0].gaming_bonus_balance || 0);
+      const userName = userRows[0].name || 'User';
+      const userPhone = userRows[0].phone_number || '';
 
       // Priority: deduct from gaming_bonus_balance first
       let deductFromBonus = 0;
@@ -210,7 +213,29 @@ class AviatorGameLogic {
       await conn.commit();
 
       const newMain = mainBalance - deductFromMain;
-      this.activeBets.set(userId, { betAmount: amount, id: betRes.insertId, walletUsed });
+      this.activeBets.set(userId, { 
+        id: betRes.insertId, 
+        userId,
+        name: userName,
+        phone_number: userPhone,
+        betAmount: amount, 
+        cashedOut: false,
+        multiplier: null,
+        winAmount: 0,
+        walletUsed 
+      });
+
+      this.io.emit('aviator_bets_update', Array.from(this.activeBets.values()).map(b => ({
+        id: b.id,
+        userId: b.userId,
+        name: b.name,
+        phone_number: b.phone_number,
+        bet: b.betAmount,
+        cashedOut: b.cashedOut,
+        targetMult: b.multiplier,
+        winAmount: b.winAmount
+      })));
+
       return { success: true, newBalance: newMain, walletUsed };
     } catch (err) {
       await conn.rollback();
@@ -228,6 +253,9 @@ class AviatorGameLogic {
     const bet = this.activeBets.get(userId);
     if (!bet) {
       throw new Error('No active bet found for this round');
+    }
+    if (bet.cashedOut) {
+      throw new Error('Already cashed out!');
     }
 
     // Verify current multiplier
@@ -261,9 +289,22 @@ class AviatorGameLogic {
 
       await conn.commit();
 
-      this.activeBets.delete(userId);
+      bet.cashedOut = true;
+      bet.multiplier = currentMult;
+      bet.winAmount = winAmount;
 
       const [rows] = await pool.query('SELECT balance, gaming_bonus_balance FROM users WHERE id = ?', [userId]);
+
+      this.io.emit('aviator_bets_update', Array.from(this.activeBets.values()).map(b => ({
+        id: b.id,
+        userId: b.userId,
+        name: b.name,
+        phone_number: b.phone_number,
+        bet: b.betAmount,
+        cashedOut: b.cashedOut,
+        targetMult: b.multiplier,
+        winAmount: b.winAmount
+      })));
 
       return {
         success: true,

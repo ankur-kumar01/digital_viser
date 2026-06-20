@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, Volume2, VolumeX, LogOut } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { getToken, gamesAPI, globalConfigAPI } from '../../../api';
 import './AviatorGame.css';
 
-const PLANE_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="%23ef4444" d="M10,32 Q20,20 40,24 L60,28 Q62,29 62,32 Q62,35 60,36 L40,40 Q20,44 10,32 Z"/><path fill="%23b91c1c" d="M25,26 L15,10 L25,10 L35,25 Z M25,38 L15,54 L25,54 L35,39 Z"/><path fill="%23fca5a5" d="M55,30 L60,32 L55,34 Z"/><circle cx="50" cy="32" r="4" fill="%2360a5fa"/></svg>`;
+const PLANE_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 64"><ellipse cx="88" cy="32" rx="3" ry="24" fill="none" stroke="%23ffffff" stroke-width="1.5" opacity="0.5" stroke-dasharray="4 2"/><circle cx="88" cy="32" r="3" fill="%23fcd34d"/><path fill="%23c0171d" d="M22,28 L8,10 L18,10 L28,26 Z"/><path fill="%23e50914" d="M18,32 C22,26 40,24 75,28 C85,29 88,31 88,32 C88,33 85,35 75,36 C40,40 22,38 18,32 Z"/><path fill="%23ffffff" d="M62,27 C66,27 70,29 72,32 L58,32 Z" opacity="0.9"/><path fill="%23e50914" d="M48,26 L25,4 L35,4 L55,26 Z"/><path fill="%239b0c10" d="M48,38 L25,60 L35,60 L55,38 Z"/></svg>`;
 const CRASH_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="%23f97316" d="M32,5 L38,20 L55,15 L45,30 L60,40 L45,45 L50,60 L38,50 L32,60 L26,50 L14,60 L19,45 L4,40 L19,30 L9,15 L26,20 Z"/><path fill="%23fef08a" d="M32,20 L35,28 L45,25 L38,32 L48,40 L38,38 L40,48 L32,40 L24,48 L26,38 L16,40 L26,32 L19,25 L29,28 Z"/></svg>`;
 
 const planeImg = new Image();
@@ -137,6 +137,12 @@ const CRASH_HIGH_PHRASES = [
   "sach me maza aa gaya, super hit run!"
 ];
 
+const getHistoryChipClass = (val: number) => {
+  if (val >= 10) return 'ultra';
+  if (val >= 2) return 'high';
+  return '';
+};
+
 const getUserColor = (username: string) => {
   if (username === 'You' || username === 'System') return 'var(--accent-primary)';
   const colors = [
@@ -149,6 +155,24 @@ const getUserColor = (username: string) => {
   }
   const index = Math.abs(hash) % colors.length;
   return colors[index];
+};
+
+const maskName = (name: string) => {
+  if (!name) return '***';
+  const cleanPhone = name.replace(/[\s\-\+\(\)]/g, '');
+  const isPhone = /^\d+$/.test(cleanPhone);
+  if (isPhone) {
+    return '***' + cleanPhone.slice(-4);
+  }
+  if (name.length <= 2) {
+    return name + '***';
+  }
+  if (name.length <= 4) {
+    return name[0] + '***' + name[name.length - 1];
+  }
+  const first = name.substring(0, 2);
+  const last = name.substring(name.length - 2);
+  return `${first}***${last}`;
 };
 
 export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => {
@@ -174,6 +198,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
   const [cashoutSuccess, setCashoutSuccess] = useState(false);
   const [winAmount, setWinAmount] = useState(0);
   const [showWinOverlay, setShowWinOverlay] = useState(false);
+  const [showLoseOverlay, setShowLoseOverlay] = useState(false);
   
   // Auto Cashout State
   const [autoCashout, setAutoCashout] = useState(false);
@@ -202,11 +227,17 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
     }
   }, [config]);
 
+  const [liveBetsTab, setLiveBetsTab] = useState<'all' | 'my' | 'top'>('all');
+  const [myBets, setMyBets] = useState<any[]>([]);
+  const [topBets, setTopBets] = useState<any[]>([]);
+
   useEffect(() => {
-    if (config && dbBets.length > 0 && gameStateRef.current !== 'CRASHED') {
-      generateSimulatedPlayers();
+    if (liveBetsTab === 'my') {
+      gamesAPI.getRealMyAviatorBets().then(setMyBets).catch(console.error);
+    } else if (liveBetsTab === 'top') {
+      gamesAPI.getRealTopAviatorBets().then(setTopBets).catch(console.error);
     }
-  }, [config, dbBets]);
+  }, [liveBetsTab, gameState]);
 
   // Mobile drawer, toast, and cashout lock states
   const [toast, setToast] = useState<string | null>(null);
@@ -215,6 +246,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
 
   // Tabs & Live Chat states
   const [activeTab, setActiveTab] = useState<'players' | 'chat'>('players');
+  const [betTab, setBetTab] = useState<'bet' | 'auto'>('bet');
   const [userMessage, setUserMessage] = useState('');
   const [chatMessages, setChatMessages] = useState<any[]>(() => {
     const initial = [];
@@ -607,85 +639,96 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
     const w = W / dpr;
     const h = H / dpr;
 
-    // 1. Nebulae / Glowing Dust Clouds for depth
-    if (elapsed > 0) {
-      const nebulae = [
-        { x: w * 0.3, y: h * 0.4, r: 120, color: 'rgba(99, 102, 241, 0.04)' }, // Indigo glow
-        { x: w * 0.7, y: h * 0.3, r: 150, color: 'rgba(236, 72, 153, 0.03)' }  // Pink glow
-      ];
-      nebulae.forEach(n => {
-        const scrollX = (n.x - elapsed * 8) % (w + n.r * 2);
-        const drawX = scrollX < -n.r ? scrollX + w + n.r * 2 : scrollX;
-        const grad = ctx.createRadialGradient(drawX, n.y, 0, drawX, n.y, n.r);
-        grad.addColorStop(0, n.color);
-        grad.addColorStop(1, 'transparent');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(drawX, n.y, n.r, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    }
+    const padL = 45;
+    const padB = 25;
+    const padR = 15;
+    const padT = 15;
 
-    // 2. Parallax Twinkling Starfield
-    if (elapsed > 0) {
-      const numStars = 40;
-      for (let i = 0; i < numStars; i++) {
-        const depth = 0.4 + 1.2 * ((i * 17) % 10) / 10; // 0.4 to 1.6
-        const baseX = ((i * 113) % 100) / 100 * w;
-        const baseY = ((i * 197) % 100) / 100 * h;
-        const size = 0.5 + 1.5 * ((i * 7) % 5) / 5; // 0.5 to 2.0 px
-        
-        const speedX = 30 * depth;
-        const speedY = 15 * depth;
-        
-        let x = (baseX - elapsed * speedX) % w;
-        if (x < 0) x += w;
-        let y = (baseY + elapsed * speedY) % h;
-        if (y < 0) y += h;
-        
-        const alpha = (0.2 + 0.6 * (depth - 0.4) / 1.2) * (0.7 + 0.3 * Math.sin(elapsed * 5 + i));
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    // 3. Dynamic Grid Lines & Axis
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-    ctx.lineWidth = 1;
-    ctx.font = '10px Inter, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    
-    const pad = 30;
-    const maxTime = Math.max(elapsed, 3);
+    const maxTime = Math.max(elapsed, 3.0);
     const maxMult = Math.max(mult * 1.2, 2.5);
 
-    // Draw X-axis (Time)
-    const timeSteps = Math.ceil(maxTime / 5) * 5; 
-    const timeInterval = timeSteps / 5;
-    for (let i = 0; i <= 5; i++) {
-      const t = i * timeInterval;
-      if (t === 0) continue;
-      const x = pad + ((w - pad * 2) * (t / maxTime));
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h - pad); ctx.stroke();
-      ctx.fillText(`${t}s`, x - 8, h - pad + 15);
+    // 1. Radial Sunburst Rays background
+    ctx.save();
+    const originX = padL;
+    const originY = h - padB;
+    const rayCount = 18;
+    const maxRadius = Math.sqrt(w * w + h * h);
+    const angleStep = (Math.PI / 2) / rayCount; // 90 degrees of rays
+    
+    for (let i = 0; i < rayCount; i++) {
+      const startAngle = -i * angleStep;
+      const endAngle = -(i + 0.65) * angleStep;
+      
+      ctx.beginPath();
+      ctx.moveTo(originX, originY);
+      ctx.arc(originX, originY, maxRadius, startAngle, endAngle, true);
+      ctx.closePath();
+      
+      if (i % 2 === 0) {
+        ctx.fillStyle = 'rgba(229, 9, 20, 0.035)'; // Soft red glow
+      } else {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'; // Dark shadow ray
+      }
+      ctx.fill();
     }
+    ctx.restore();
 
-    // Draw Y-axis (Multiplier)
-    const multSteps = Math.ceil(maxMult);
-    const multInterval = Math.max(1, Math.floor(multSteps / 4));
-    for (let i = 1; i <= Math.ceil(maxMult / multInterval); i++) {
-      const m = 1 + i * multInterval;
-      if (m > maxMult) continue;
-      const y = h - pad - ((h - pad * 2) * ((m - 1) / (maxMult - 1)));
-      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w, y); ctx.stroke();
-      ctx.fillText(`${m}x`, pad - 25, y + 4);
+    // 2. Parallax Twinkling Starfield
+    ctx.save();
+    const timeVal = elapsed > 0 ? elapsed : (Date.now() % 100000) / 1000;
+    const numStars = 30;
+    for (let i = 0; i < numStars; i++) {
+      const depth = 0.4 + 1.2 * ((i * 17) % 10) / 10;
+      const baseX = ((i * 113) % 100) / 100 * w;
+      const baseY = ((i * 197) % 100) / 100 * h;
+      const size = 0.5 + 1.5 * ((i * 7) % 5) / 5;
+      
+      const speedX = elapsed > 0 ? 25 * depth : 4 * depth;
+      const speedY = elapsed > 0 ? 10 * depth : 1 * depth;
+      
+      let x = (baseX - timeVal * speedX) % w;
+      if (x < 0) x += w;
+      let y = (baseY + timeVal * speedY) % h;
+      if (y < 0) y += h;
+      
+      const alpha = (0.2 + 0.6 * (depth - 0.4) / 1.2) * (0.6 + 0.4 * Math.sin(timeVal * 3 + i));
+      ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
     }
+    ctx.restore();
+
+    // 3. Y-Axis Dashed Grid Lines & Labels
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]);
+    
+    const minM = 1.0;
+    const gridCount = 5;
+    const step = (maxMult - minM) / gridCount;
+    
+    for (let i = 0; i <= gridCount; i++) {
+      const m = minM + i * step;
+      const y = h - padB - ((h - padB - padT) * ((m - 1) / (maxMult - 1)));
+      
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(w - padR, y);
+      ctx.stroke();
+      
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.font = '700 10px Montserrat, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${m.toFixed(1)}x`, padL - 8, y);
+    }
+    ctx.restore();
 
     if (elapsed <= 0 && !didCrash) { ctx.setTransform(1, 0, 0, 1, 0, 0); return; }
 
-    // 4. Exhaust Particles Trail (spawned along the past flight path)
+    // 4. Exhaust Particles Trail
     if (elapsed > 0 && !didCrash) {
       const maxAge = 0.8;
       const particleInterval = 0.04;
@@ -694,9 +737,9 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
       for (let t = elapsed; t >= startT; t -= particleInterval) {
         const age = elapsed - t;
         const m = Math.exp(0.2 * t);
-        const px = pad + ((w - pad * 2) * (t / maxTime));
-        const py = h - pad - ((h - pad * 2) * ((m - 1) / (maxMult - 1)));
-        const clampedPy = Math.max(8, Math.min(h - pad, py));
+        const px = padL + ((w - padL - padR) * (t / maxTime));
+        const py = h - padB - ((h - padB - padT) * ((m - 1) / (maxMult - 1)));
+        const clampedPy = Math.max(padT, Math.min(h - padB, py));
         
         const jitterX = Math.sin(t * 80) * 3 * (age / maxAge);
         const jitterY = Math.cos(t * 100) * 3 * (age / maxAge);
@@ -711,13 +754,13 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         
         let color;
         if (age < 0.15) {
-          color = `rgba(253, 224, 71, ${opacity})`; // yellow flame
+          color = `rgba(253, 224, 71, ${opacity})`;
         } else if (age < 0.35) {
-          color = `rgba(249, 115, 22, ${opacity})`; // orange flame
+          color = `rgba(249, 115, 22, ${opacity})`;
         } else if (age < 0.55) {
-          color = `rgba(239, 68, 68, ${opacity})`; // red glow
+          color = `rgba(239, 68, 68, ${opacity})`;
         } else {
-          color = `rgba(156, 163, 175, ${opacity * 0.4})`; // grey smoke
+          color = `rgba(156, 163, 175, ${opacity * 0.4})`;
         }
         
         ctx.fillStyle = color;
@@ -729,59 +772,66 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
 
     // 5. Curve Path
     ctx.beginPath();
-    ctx.moveTo(pad, h - pad);
+    ctx.moveTo(padL, h - padB);
     const steps = 150;
-    let tipX = pad, tipY = h - pad;
+    let tipX = padL, tipY = h - padB;
     for (let i = 1; i <= steps; i++) {
       const t = (elapsed * i) / steps;
       const m = Math.exp(0.2 * t);
-      const x = pad + ((w - pad * 2) * (t / maxTime));
-      const y = h - pad - ((h - pad * 2) * ((m - 1) / (maxMult - 1)));
-      const clampedY = Math.max(8, Math.min(h - pad, y));
+      const x = padL + ((w - padL - padR) * (t / maxTime));
+      const y = h - padB - ((h - padB - padT) * ((m - 1) / (maxMult - 1)));
+      const clampedY = Math.max(padT, Math.min(h - padB, y));
       ctx.lineTo(x, clampedY);
       tipX = x; tipY = clampedY;
     }
 
     // Stroke with glow
-    const lineColor = didCrash ? '#ef4444' : '#22c55e';
+    const lineColor = didCrash ? '#ef4444' : '#e50914';
+    ctx.save();
     ctx.strokeStyle = lineColor;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.shadowColor = lineColor;
-    ctx.shadowBlur = 20;
+    ctx.shadowBlur = 12;
     ctx.stroke();
-    ctx.shadowBlur = 0;
+    ctx.restore();
 
     // Gradient fill under curve
-    ctx.lineTo(tipX, h - pad);
-    ctx.lineTo(pad, h - pad);
+    ctx.lineTo(tipX, h - padB);
+    ctx.lineTo(padL, h - padB);
     ctx.closePath();
-    const fillGrad = ctx.createLinearGradient(0, 0, 0, h);
-    fillGrad.addColorStop(0, didCrash ? 'rgba(239,68,68,0.20)' : 'rgba(34,197,94,0.20)');
+    ctx.save();
+    const fillGrad = ctx.createLinearGradient(0, padT, 0, h - padB);
+    fillGrad.addColorStop(0, didCrash ? 'rgba(239, 68, 68, 0.22)' : 'rgba(229, 9, 20, 0.22)');
     fillGrad.addColorStop(1, 'transparent');
     ctx.fillStyle = fillGrad;
     ctx.fill();
+    ctx.restore();
 
     // 6. Plane or explosion at tip
     if (didCrash) {
       ctx.drawImage(crashImg, tipX - 20, tipY - 20, 40, 40);
     } else {
       // Glow dot at tip
-      const dotGrad = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, 14);
-      dotGrad.addColorStop(0, 'rgba(34,197,94,0.4)');
+      ctx.save();
+      const dotGrad = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, 12);
+      dotGrad.addColorStop(0, 'rgba(229, 9, 20, 0.4)');
       dotGrad.addColorStop(1, 'transparent');
       ctx.fillStyle = dotGrad;
-      ctx.fillRect(tipX - 14, tipY - 14, 28, 28);
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
       
-      const dx = (w - pad * 2) / maxTime;
+      const dx = (w - padL - padR) / maxTime;
       const dm_dt = 0.2 * Math.exp(0.2 * elapsed);
-      const dy = - ((h - pad * 2) / (maxMult - 1)) * dm_dt;
+      const dy = - ((h - padB - padT) / (maxMult - 1)) * dm_dt;
       let angle = Math.atan2(dy, dx);
       angle = Math.max(-Math.PI / 3, angle);
       
       ctx.save();
       ctx.translate(tipX, tipY);
       ctx.rotate(angle);
-      ctx.drawImage(planeImg, -16, -16, 32, 32);
+      ctx.drawImage(planeImg, -18, -11, 36, 23);
       ctx.restore();
     }
 
@@ -806,33 +856,30 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
 
   // Generate simulated players
   const generateSimulatedPlayers = () => {
-    if (!config || config.enable_aviator_bet_simulation === false) {
+    if (config && config.enable_aviator_bet_simulation === false) {
       setSimPlayers([]);
       return;
     }
-    const count = Math.floor(Math.random() * 5) + 4; // 4 to 8 players
+    const count = Math.floor(Math.random() * 9) + 12; // 12 to 20 players
     const players = [];
     
-    // Use DB bets if available
-    if (dbBets.length > 0) {
-      const shuffledBets = [...dbBets].sort(() => 0.5 - Math.random());
-      const selectedBets = shuffledBets.slice(0, count);
-      for (let i = 0; i < selectedBets.length; i++) {
+    const shuffledBets = dbBets.length > 0 ? [...dbBets].sort(() => 0.5 - Math.random()) : [];
+    
+    for (let i = 0; i < count; i++) {
+      if (i < shuffledBets.length) {
         players.push({
           id: i,
-          name: selectedBets[i].user_name,
-          bet: selectedBets[i].bet_amount,
-          targetMult: selectedBets[i].target_multiplier,
+          name: shuffledBets[i].user_name,
+          bet: shuffledBets[i].bet_amount,
+          targetMult: shuffledBets[i].target_multiplier || (1.2 + Math.random() * 8.0),
           cashedOut: false,
           winAmount: 0
         });
-      }
-    } else {
-      const names = ['Rahul88', 'Priya_M', 'AmanK', 'Raj_007', 'NehaS', 'Vikas12', 'Simran_X', 'AmitB'];
-      for (let i = 0; i < count; i++) {
+      } else {
+        const botName = BOT_USERNAMES[Math.floor(Math.random() * BOT_USERNAMES.length)];
         players.push({
           id: i,
-          name: names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 100),
+          name: botName + Math.floor(Math.random() * 100),
           bet: QUICK_BETS[Math.floor(Math.random() * QUICK_BETS.length)],
           targetMult: 1.2 + Math.random() * 8.0, // random cashout target
           cashedOut: false,
@@ -874,7 +921,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         setHasActiveBet(false);
         setCashoutSuccess(false);
         setShowWinOverlay(false);
-        generateSimulatedPlayers();
+        setShowLoseOverlay(false);
         if (animationRef.current) cancelAnimationFrame(animationRef.current);
         drawFlightPath(0, 1.0, false);
         stopEngineSound();
@@ -913,6 +960,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         setCrashHistory(prev => [parseFloat(data.crashPoint.toFixed(2)), ...prev].slice(0, 12));
         
         if (hasActiveBetRef.current && !cashoutSuccessRef.current) {
+          setShowLoseOverlay(true);
           setHasActiveBet(false); // Lost
         }
         
@@ -920,7 +968,7 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
         playCrashSound();
         
         refreshUser();
-
+ 
         // Crash Chat comments triggers based on multiplier (schedule 3 comments to look active)
         clearChatTimeouts();
         const crashType = data.crashPoint < 1.5 ? 'CRASH_LOW' : data.crashPoint < 5.0 ? 'CRASH_MED' : 'CRASH_HIGH';
@@ -940,6 +988,10 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
       if (gameStateRef.current === 'WAITING' && data.timeLeft > 0) {
         playTickSound();
       }
+    });
+
+    socket.on('aviator_bets_update', (data: any[]) => {
+      setSimPlayers(data);
     });
 
     return () => {
@@ -971,19 +1023,6 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
           handleCashout();
         }
       }
-
-      // Simulate player cashouts
-      setSimPlayers(prev => {
-        let changed = false;
-        const next = prev.map(p => {
-          if (!p.cashedOut && currentMult >= p.targetMult) {
-            changed = true;
-            return { ...p, cashedOut: true, winAmount: p.bet * currentMult };
-          }
-          return p;
-        });
-        return changed ? next : prev;
-      });
       
       animationRef.current = requestAnimationFrame(animate);
     };
@@ -1044,274 +1083,249 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
   const multClass = getTensionClass();
 
   return (
-    <div className="av-container fade-in">
+    <div className="av-container">
       {/* Header */}
-      <div className="av-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={() => onNavigate('games')} className="av-back-btn">
-            <ArrowLeft size={20} />
+      <div className="av-header">
+        <div className="av-header-left">
+          <button className="av-exit-btn" onClick={() => onNavigate('games')} title="Exit Game">
+            <LogOut size={18} />
           </button>
-          <div>
-            <h2 className="av-title">Aviator</h2>
-            <p className="av-subtitle">Fly high, cash out before crash!</p>
-          </div>
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Mute/Unmute audio button */}
-          <button className="av-audio-btn" onClick={() => setIsMuted(prev => !prev)}>
+          <button 
+            className="av-audio-btn" 
+            onClick={() => setIsMuted(!isMuted)} 
+            title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
+          >
             {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
-
-          {/* Live Players Badge Button for Mobile Drawer */}
-          {showBets && (
-            <button className="av-live-badge-btn" onClick={() => {
-              setActiveTab('players');
-              sidebarRef.current?.scrollIntoView({ behavior: 'smooth' });
-            }}>
-              <span className="av-live-dot" />
-              <span>Live: {simPlayers.length}</span>
-            </button>
-          )}
+        </div>
+        <div className="av-logo">
+          <div className="av-logo-wings">
+            <div></div><div></div><div></div>
+          </div>
+          Aviator
+          <div className="av-logo-wings av-logo-wings-reverse">
+            <div></div><div></div><div></div>
+          </div>
+        </div>
+        <div className="av-balance-box">
+          ₹{mainBalance.toFixed(2)}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '6px' }}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
         </div>
       </div>
 
-      {/* Crash History */}
-      <div className="av-history-bar">
-        {crashHistory.map((c, i) => (
-          <div key={i} className={`av-history-chip ${c >= 2 ? 'win' : 'lose'}`}>
-            {c.toFixed(2)}x
-          </div>
-        ))}
+      {/* History Bar */}
+      <div className="av-history-wrapper">
+        <div className="av-history-bar">
+          {crashHistory.map((c, i) => (
+            <div key={i} className={`av-history-chip ${getHistoryChipClass(c)}`}>
+              {c.toFixed(2)}x
+            </div>
+          ))}
+          {crashHistory.length === 0 && (
+            <>
+              <div className="av-history-chip">1.45x</div>
+              <div className="av-history-chip high">2.36x</div>
+              <div className="av-history-chip">1.12x</div>
+              <div className="av-history-chip ultra">12.59x</div>
+              <div className="av-history-chip">1.08x</div>
+              <div className="av-history-chip high">2.01x</div>
+              <div className="av-history-chip">1.00x</div>
+            </>
+          )}
+        </div>
+        <button className="av-history-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </button>
       </div>
+
       <div className="av-main-grid">
         {/* Main Game Area */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, width: '100%' }}>
-          {/* Game Canvas */}
-          <div className={`av-canvas-wrap ${gameState === 'FLYING' ? 'playing' : ''} ${gameState === 'CRASHED' ? 'crashed' : ''}`}>
-            <canvas ref={canvasRef} />
-            
-            <div className={`av-multiplier ${multClass}`}>
+        <div className={`av-canvas-wrap ${gameState === 'FLYING' ? 'playing' : ''} ${gameState === 'CRASHED' ? 'crashed' : ''}`}>
+          <canvas ref={canvasRef} />
+          
+          {gameState !== 'WAITING' && (
+            <div className={`av-multiplier ${gameState === 'CRASHED' ? 'crashed' : ''}`}>
               {multiplier.toFixed(2)}x
             </div>
+          )}
 
-            {gameState === 'CRASHED' && <div className="av-crash-flash" />}
-            {gameState === 'CRASHED' && <div className="av-status-badge crash">FLEW AWAY</div>}
-            {cashoutSuccess && <div className="av-status-badge cashout">CASHED OUT!</div>}
-            
-            {gameState === 'WAITING' && (
-              <div className="av-waiting-text">
-                {timeLeft > 0 ? `Next round in ${(timeLeft/1000).toFixed(1)}s` : 'Starting...'}
-              </div>
-            )}
-          </div>
+          {gameState === 'CRASHED' && <div className="av-status-badge">FLEW AWAY!</div>}
+          
+           {gameState === 'WAITING' && (
+            <div className="av-waiting-text">
+              {timeLeft > 0 ? `Waiting... ${(timeLeft/1000).toFixed(1)}s` : 'Loading...'}
+            </div>
+          )}
 
-          {/* Bet Controls */}
-          <div className="av-controls">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <div className="av-controls-label" style={{ margin: 0 }}>Bet Amount</div>
-              
-              {/* Auto Cashout Toggle */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-tertiary)', padding: '4px 8px', borderRadius: '12px', border: '1px solid var(--border-card)' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: autoCashout ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>AUTO</span>
-                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={autoCashout} onChange={(e) => setAutoCashout(e.target.checked)} style={{ width: '16px', height: '16px', accentColor: 'var(--accent-primary)' }} disabled={hasActiveBet} />
-                </label>
-                {autoCashout && (
-                  <input 
-                    type="number" 
-                    value={autoCashoutMult} 
-                    onChange={(e) => setAutoCashoutMult(e.target.value)} 
-                    style={{ width: '50px', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '0.85rem', fontWeight: 700, outline: 'none' }}
-                    step="0.1"
-                    min="1.01"
-                    disabled={hasActiveBet}
-                  />
-                )}
+          {/* Win Overlay */}
+          {showWinOverlay && (
+            <div className="av-win-overlay">
+              <div className="av-win-card">
+                <div className="av-win-title">CASHED OUT</div>
+                <div className="av-win-multiplier">{multiplier.toFixed(2)}x</div>
+                <div className="av-win-amount">₹{winAmount.toFixed(2)}</div>
               </div>
             </div>
+          )}
 
-            <div className="av-bet-input-wrap">
-              <button className="av-step-btn" onClick={() => setBetAmount(Math.max(10, parseFloat(betAmount) / 2).toString())} disabled={hasActiveBet || isBetLoading}>½</button>
-              <input type="number" value={betAmount} onChange={(e) => setBetAmount(e.target.value)} disabled={hasActiveBet || isBetLoading} />
-              <button className="av-step-btn" onClick={() => setBetAmount((parseFloat(betAmount) * 2).toString())} disabled={hasActiveBet || isBetLoading}>2×</button>
-            </div>
-            <div className="av-quick-bets">
-              {QUICK_BETS.map(q => (
-                <button key={q} className={`av-quick-btn ${betAmount === q.toString() ? 'active' : ''}`} onClick={() => setBetAmount(q.toString())} disabled={hasActiveBet || isBetLoading}>
-                  ₹{q}
-                </button>
-              ))}
-            </div>
-
-            {/* Action Button */}
-            {gameState === 'WAITING' ? (
-              <button 
-                className="av-action-btn av-action-bet" 
-                onClick={handlePlaceBet} 
-                disabled={isBetLoading || hasActiveBet}
-                style={{ background: hasActiveBet ? '#4b5563' : undefined, boxShadow: hasActiveBet ? 'none' : undefined }}
-              >
-                {hasActiveBet ? 'Waiting for Next Round...' : isBetLoading ? 'Placing Bet...' : `Place Bet — ₹${betAmount}`}
-              </button>
-            ) : hasActiveBet ? (
-              <button 
-                className="av-action-btn av-action-cashout" 
-                onClick={handleCashout}
-                disabled={isCashoutLoading}
-              >
-                {isCashoutLoading ? 'Cashing out...' : `CASHOUT ₹${(parseFloat(betAmount) * multiplier).toFixed(2)}`}
-              </button>
-            ) : (
-              <button className="av-action-btn" disabled style={{ background: '#374151', color: '#9ca3af' }}>
-                Waiting for Next Round
-              </button>
-            )}
-          </div>
-
-          {/* Live Multiplayer Sidebar (visible below bet controls) */}
-          {(showChat || showBets) && (
-            <div ref={sidebarRef} className="av-sidebar">
-              {showChat && showBets && (
-                <div className="av-tabs-header">
-                  <button 
-                    className={`av-tab-btn ${activeTab === 'players' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('players')}
-                  >
-                    👥 Players ({simPlayers.length + 1})
-                  </button>
-                  <button 
-                    className={`av-tab-btn ${activeTab === 'chat' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('chat')}
-                  >
-                    💬 Chat
-                  </button>
-                </div>
-              )}
-
-              {activeTab === 'players' && showBets ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', maxHeight: '380px' }}>
-                  {/* Player Row Template */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: cashoutSuccess ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-tertiary)', borderRadius: '12px', border: cashoutSuccess ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid transparent', transition: 'all 0.3s' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>
-                        {user?.name?.substring(0, 2).toUpperCase() || 'YOU'}
-                      </div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: cashoutSuccess ? '#22c55e' : 'var(--text-primary)' }}>You</div>
-                    </div>
-                    {hasActiveBet && !cashoutSuccess && (
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>₹{betAmount}</div>
-                    )}
-                    {cashoutSuccess && (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                        <div style={{ fontSize: '0.7rem', color: '#22c55e', fontWeight: 700 }}>{((winAmount || parseFloat(betAmount)*multiplier) / parseFloat(betAmount)).toFixed(2)}x</div>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#22c55e' }}>₹{winAmount.toFixed(2)}</div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Simulated Players */}
-                  {simPlayers.map((p, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: p.cashedOut ? 'rgba(34, 197, 94, 0.1)' : 'var(--bg-tertiary)', borderRadius: '12px', transition: 'all 0.3s' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)' }}>
-                          {p.name.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: p.cashedOut ? '#22c55e' : 'var(--text-secondary)' }}>{p.name}</div>
-                      </div>
-                      {!p.cashedOut && (
-                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>₹{p.bet}</div>
-                      )}
-                      {p.cashedOut && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                          <div style={{ fontSize: '0.7rem', color: '#22c55e', fontWeight: 700 }}>{p.targetMult.toFixed(2)}x</div>
-                          <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#22c55e' }}>₹{p.winAmount.toFixed(2)}</div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : activeTab === 'chat' && showChat ? (
-                <div className="av-chat-container">
-                  <div className="av-chat-messages" ref={chatEndRef}>
-                    {chatMessages.map((msg) => (
-                      <div key={msg.id} className={`av-chat-msg-row ${msg.type}`}>
-                        <div className="av-chat-msg-meta">
-                          <span className="av-chat-username" style={{ color: getUserColor(msg.username) }}>
-                            {msg.username}
-                            {msg.type === 'user' && <span className="av-chat-tag-you">YOU</span>}
-                            {msg.type === 'system' && <span className="av-chat-tag-system">SYSTEM</span>}
-                          </span>
-                          <span className="av-chat-time">{msg.time}</span>
-                        </div>
-                        <div className="av-chat-text">{msg.text}</div>
-                      </div>
-                    ))}
-                    <div ref={chatEndRef} />
-                  </div>
-                  
-                  <form onSubmit={handleSendMessage} className="av-chat-input-form">
-                    <input 
-                      type="text" 
-                      placeholder="Chat with players..." 
-                      value={userMessage}
-                      onChange={(e) => setUserMessage(e.target.value)}
-                      maxLength={80}
-                    />
-                    <button type="submit" disabled={!userMessage.trim()}>Send</button>
-                  </form>
-                </div>
-              ) : null}
+          {/* Lose Overlay */}
+          {showLoseOverlay && (
+            <div className="av-lose-overlay">
+              <div className="av-lose-card">
+                <div className="av-lose-title">FLEW AWAY</div>
+                <div className="av-lose-multiplier">{multiplier.toFixed(2)}x</div>
+                <div className="av-lose-amount">₹{parseFloat(betAmount).toFixed(2)} lost</div>
+              </div>
             </div>
           )}
         </div>
-      </div>
 
-      {/* Balance */}
-      <div className="av-balances-container" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--border-card)', maxWidth: '340px', margin: '14px auto 0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-          <span style={{ color: 'var(--text-secondary)' }}>Main Wallet:</span>
-          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>₹{mainBalance.toFixed(2)}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-          <span style={{ color: 'var(--text-secondary)' }}>Gaming Bonus:</span>
-          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>₹{gamingBonus.toFixed(2)}</span>
-        </div>
-      </div>
+        {/* Bet Controls */}
+        <div className="av-controls-container">
+          <div className="av-controls-tabs">
+            <button 
+              className={`av-control-tab ${betTab === 'bet' ? 'active' : ''}`}
+              onClick={() => setBetTab('bet')}
+            >
+              Bet
+            </button>
+            <button 
+              className={`av-control-tab ${betTab === 'auto' ? 'active' : ''}`}
+              onClick={() => setBetTab('auto')}
+            >
+              Auto
+            </button>
+          </div>
+          
+          <div className="av-controls-body">
+            <div className="av-bet-section">
+              <div className="av-bet-input-row">
+                <span>Bet Amount</span>
+                <span style={{ color: '#fff', fontSize: '1.15rem', fontWeight: 800, paddingLeft: '6px', fontFamily: 'var(--av-font-montserrat)' }}>₹</span>
+                <input 
+                  type="number" 
+                  value={betAmount} 
+                  onChange={(e) => setBetAmount(e.target.value)} 
+                  disabled={hasActiveBet || isBetLoading} 
+                />
+                <div className="av-bet-btn-group">
+                  <button className="av-bet-adjust-btn" onClick={() => setBetAmount(Math.max(10, parseFloat(betAmount) - 10).toString())} disabled={hasActiveBet || isBetLoading}>-</button>
+                  <button className="av-bet-adjust-btn" onClick={() => setBetAmount((parseFloat(betAmount) + 10).toString())} disabled={hasActiveBet || isBetLoading}>+</button>
+                </div>
+              </div>
+              <div className="av-quick-bets">
+                {[10, 50, 100, 500].map(q => (
+                  <button key={q} className="av-quick-btn" onClick={() => setBetAmount(q.toString())} disabled={hasActiveBet || isBetLoading}>
+                    ₹{q}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-      {/* Win Overlay */}
-      {showWinOverlay && (
-        <div className="av-win-overlay" onClick={() => setShowWinOverlay(false)}>
-          {Array.from({ length: 45 }).map((_, i) => {
-            const left = ((i * 17) % 100);
-            const delay = ((i * 7) % 10) / 10;
-            const duration = 1.5 + ((i * 13) % 15) / 10;
-            const angle = (i * 45) % 360;
-            return (
-              <div 
-                key={i} 
-                className="av-confetti" 
-                style={{
-                  left: `${left}%`, 
-                  top: `-20px`,
-                  background: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-                  animation: `av-confetti-fall ${duration}s ease ${delay}s forwards`,
-                  position: 'absolute', 
-                  transform: `rotate(${angle}deg)`
-                }} 
-              />
-            );
-          })}
-          <div className="av-win-card win-popup-glamorous">
-            <div className="av-win-emoji">🎉</div>
-            <div className="av-win-label">You Won!</div>
-            <div className="av-win-amount">₹{winAmount.toFixed(2)}</div>
-            <div className="av-win-detail">at {multiplierRef.current.toFixed(2)}x multiplier</div>
-            <div className="av-win-dismiss">Tap anywhere to close</div>
+            <div className="av-action-btn-wrap">
+              {hasActiveBet ? (
+                gameState === 'WAITING' ? (
+                  <button 
+                    className="av-action-btn" 
+                    disabled 
+                    style={{ background: '#c0171d', color: '#fff', boxShadow: 'none' }}
+                  >
+                    BET PLACED
+                    <span>Waiting...</span>
+                  </button>
+                ) : (
+                  <button 
+                    className="av-action-btn cashing-out" 
+                    onClick={handleCashout}
+                    disabled={isCashoutLoading}
+                  >
+                    CASHOUT
+                    <span>₹{(parseFloat(betAmount) * multiplier).toFixed(2)}</span>
+                  </button>
+                )
+              ) : gameState === 'WAITING' ? (
+                <button 
+                  className="av-action-btn" 
+                  onClick={handlePlaceBet} 
+                  disabled={isBetLoading}
+                >
+                  BET
+                  <span>Next Round</span>
+                </button>
+              ) : (
+                <button className="av-action-btn" disabled>
+                  WAIT
+                  <span>Next Round</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      )}
 
+        {/* Live Bets Table */}
+        <div className="av-bets-container">
+          <div className="av-bets-tabs">
+            <button 
+              className={`av-bets-tab ${liveBetsTab === 'all' ? 'active' : ''}`}
+              onClick={() => setLiveBetsTab('all')}
+            >
+              All Bets
+            </button>
+            <button 
+              className={`av-bets-tab ${liveBetsTab === 'my' ? 'active' : ''}`}
+              onClick={() => setLiveBetsTab('my')}
+            >
+              My Bets
+            </button>
+            <button 
+              className={`av-bets-tab ${liveBetsTab === 'top' ? 'active' : ''}`}
+              onClick={() => setLiveBetsTab('top')}
+            >
+              Top
+            </button>
+          </div>
+          <table className="av-bets-table">
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left' }}>User</th>
+                <th style={{ textAlign: 'left' }}>Bet</th>
+                <th style={{ textAlign: 'left' }}>Cash Out</th>
+                <th style={{ textAlign: 'left' }}>Multiplier</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(liveBetsTab === 'all' ? simPlayers : (liveBetsTab === 'my' ? myBets : topBets)).slice(0, 15).map((p, i) => (
+                <tr key={i}>
+                  <td>
+                    <div className="av-user-cell">
+                      <div className="av-user-avatar">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      </div>
+                      <span className="av-user-name">{maskName(p.name)}</span>
+                    </div>
+                  </td>
+                  <td>₹{p.bet.toFixed(2)}</td>
+                  <td className="av-val-cashout">{p.cashedOut ? `₹${p.winAmount.toFixed(2)}` : '-'}</td>
+                  <td className="av-val-mult">
+                    {p.cashedOut ? (
+                      <span className={`av-mult-chip ${p.targetMult >= 10 ? 'ultra' : p.targetMult >= 2 ? 'high' : ''}`}>
+                        {p.targetMult.toFixed(2)}x
+                      </span>
+                    ) : '-'}
+                  </td>
+                </tr>
+              ))}
+              {(liveBetsTab === 'all' ? simPlayers : (liveBetsTab === 'my' ? myBets : topBets)).length === 0 && (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    No bets recorded
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Floating native-like Toast Alert */}
       {toast && (
