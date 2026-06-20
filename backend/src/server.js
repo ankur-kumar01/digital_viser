@@ -11,6 +11,7 @@ const { pool } = require('./db');
 const { runMigrations } = require('./migrate');
 const AviatorGameLogic = require('./services/aviatorLogic');
 const ColourTradingLogic = require('./services/colourTradingLogic');
+const LudoLogic = require('./services/ludoLogic');
 
 // Import route files
 const authRoutes = require('./routes/auth');
@@ -48,6 +49,7 @@ const io = new Server(server, {
 // Initialize Game Engines
 const aviatorEngine = new AviatorGameLogic(io);
 const ctEngine = new ColourTradingLogic(io);
+const ludoEngine = new LudoLogic(io);
 
 // Socket.io Authentication Middleware
 io.use((socket, next) => {
@@ -123,6 +125,9 @@ io.on('connection', (socket) => {
       if (typeof callback === 'function') callback({ error: err.message });
     }
   });
+
+  // --- Ludo Multiplayer Sockets ---
+  ludoEngine.handleSocketConnection(socket);
 });
 
 // Middleware

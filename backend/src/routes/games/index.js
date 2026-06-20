@@ -145,6 +145,115 @@ router.get('/simulations/colour-trading-bets', async (req, res) => {
   }
 });
 
+// --- Ludo Multiplayer Endpoints ---
+
+// GET /api/games/ludo/my-bets
+router.get('/ludo/my-bets', authMiddleware, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT lr.id, lr.entry_fee, lr.status, lr.winner_id, lr.created_at,
+              u1.name as host_name, u2.name as challenger_name, uw.name as winner_name
+       FROM ludo_rooms lr
+       LEFT JOIN users u1 ON lr.host_id = u1.id
+       LEFT JOIN users u2 ON lr.challenger_id = u2.id
+       LEFT JOIN users uw ON lr.winner_id = uw.id
+       WHERE lr.host_id = ? OR lr.challenger_id = ?
+       ORDER BY lr.created_at DESC
+       LIMIT 20`,
+      [req.user.userId, req.user.userId]
+    );
+
+    const formatted = rows.map(r => {
+      const betAmt = parseFloat(r.entry_fee) || 0;
+      const isWinner = r.winner_id === req.user.userId;
+      const winPayout = isWinner ? (betAmt * 2 * 0.95) : 0;
+      const opponentName = r.host_id === req.user.userId ? (r.challenger_name || 'LudoBot') : r.host_name;
+      return {
+        id: r.id,
+        name: opponentName,
+        bet: betAmt,
+        cashedOut: r.status === 'completed' && isWinner,
+        targetMult: r.status === 'completed' && isWinner ? 1.9 : 0,
+        winAmount: winPayout,
+        created_at: r.created_at
+      };
+    });
+    res.json(formatted);
+  } catch (err) {
+    console.error('Failed to fetch my Ludo bets:', err);
+    res.status(500).json({ error: 'Failed to fetch my Ludo bets' });
+  }
+});
+
+// GET /api/games/ludo/top-wins
+router.get('/ludo/top-wins', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT lr.id, lr.entry_fee, lr.status, lr.winner_id, lr.created_at,
+              uw.name as winner_name
+       FROM ludo_rooms lr
+       LEFT JOIN users uw ON lr.winner_id = uw.id
+       WHERE lr.status = 'completed' AND lr.winner_id IS NOT NULL AND lr.winner_id != 9999
+       ORDER BY lr.entry_fee DESC
+       LIMIT 50`
+    );
+
+    const formatted = rows.map(r => {
+      const betAmt = parseFloat(r.entry_fee) || 0;
+      const winPayout = betAmt * 2 * 0.95;
+      return {
+        id: r.id,
+        name: r.winner_name || 'User',
+        bet: betAmt,
+        cashedOut: true,
+        targetMult: 1.9,
+        winAmount: winPayout,
+        created_at: r.created_at
+      };
+    });
+    res.json(formatted);
+  } catch (err) {
+    console.error('Failed to fetch top Ludo wins:', err);
+    res.status(500).json({ error: 'Failed to fetch top Ludo wins' });
+  }
+});
+
+// GET /api/games/ludo/recent-bets
+router.get('/ludo/recent-bets', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT lr.id, lr.entry_fee, lr.status, lr.winner_id, lr.created_at,
+              u1.name as host_name, u2.name as challenger_name, uw.name as winner_name
+       FROM ludo_rooms lr
+       LEFT JOIN users u1 ON lr.host_id = u1.id
+       LEFT JOIN users u2 ON lr.challenger_id = u2.id
+       LEFT JOIN users uw ON lr.winner_id = uw.id
+       WHERE lr.status IN ('playing', 'completed')
+       ORDER BY lr.created_at DESC
+       LIMIT 20`
+    );
+
+    const formatted = rows.map(r => {
+      const betAmt = parseFloat(r.entry_fee) || 0;
+      const hasWon = r.status === 'completed' && r.winner_id !== null;
+      const winnerName = r.winner_name || (r.winner_id === 9999 ? 'LudoBot' : 'Player');
+      return {
+        id: r.id,
+        name: hasWon ? winnerName : (r.host_name || 'Player'),
+        bet: betAmt,
+        cashedOut: hasWon,
+        targetMult: hasWon ? 1.9 : 0,
+        winAmount: hasWon ? (betAmt * 2 * 0.95) : 0,
+        created_at: r.created_at
+      };
+    });
+    res.json(formatted);
+  } catch (err) {
+    console.error('Failed to fetch recent Ludo bets:', err);
+    res.status(500).json({ error: 'Failed to fetch recent Ludo bets' });
+  }
+});
+
 // Mount game-specific routes
 router.use('/colourtrading', colourTradingRoutes);
 router.use('/fruitslasher', fruitSlasherRoutes);

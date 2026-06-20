@@ -17,6 +17,7 @@ import { GamesCenter } from './views/GamesCenter';
 import { AviatorGame } from './views/games/aviator';
 import { ColourTradingGame } from './views/games/colourtrading';
 import { FruitSlasherGame } from './views/games/fruitslasher';
+import { LudoGame } from './views/games/ludo';
 import { authAPI, clearToken, getToken, adminAPI, getAdminToken, clearAdminToken, globalConfigAPI } from './api';
 import { setGlobalTimeZone } from './utils/dateFormatter';
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -282,6 +283,9 @@ export const App: React.FC = () => {
             )}
             {currentView === 'game-fruit-slasher' && (
               <FruitSlasherGame onNavigate={setCurrentView} />
+            )}
+            {currentView === 'game-ludo' && (
+              <LudoGame user={user} refreshUser={refreshUser} onNavigate={setCurrentView} />
             )}
           </>
         ) : (
