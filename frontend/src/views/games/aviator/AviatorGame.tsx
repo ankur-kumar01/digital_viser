@@ -1109,9 +1109,6 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
       {/* Header */}
       <div className="av-header">
         <div className="av-header-left">
-          <button className="av-exit-btn" onClick={() => onNavigate('games')} title="Exit Game">
-            <LogOut size={18} />
-          </button>
           <button 
             className="av-audio-btn" 
             onClick={() => setIsMuted(!isMuted)} 
@@ -1129,9 +1126,14 @@ export const AviatorGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) 
             <div></div><div></div><div></div>
           </div>
         </div>
-        <div className="av-balance-box">
-          ₹{(mainBalance || 0).toFixed(2)}
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '6px' }}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="av-balance-box">
+            ₹{(mainBalance || 0).toFixed(2)}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '6px' }}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </div>
+          <button className="av-exit-btn" onClick={() => onNavigate('games')} title="Exit Game">
+            <LogOut size={18} />
+          </button>
         </div>
       </div>
 
