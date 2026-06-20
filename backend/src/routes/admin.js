@@ -1033,7 +1033,6 @@ router.delete('/users/:id', async (req, res) => {
     // Delete in order to respect foreign keys (even if not strictly enforced by ON DELETE CASCADE)
     await conn.query('DELETE FROM aviator_bets WHERE user_id = ?', [userId]);
     await conn.query('DELETE FROM ct_bets WHERE user_id = ?', [userId]);
-    await conn.query('DELETE FROM fruit_bets WHERE user_id = ?', [userId]);
     await conn.query('DELETE FROM user_spin_history WHERE user_id = ?', [userId]);
     await conn.query('DELETE FROM user_spin_streaks WHERE user_id = ?', [userId]);
     await conn.query('DELETE FROM locked_funds WHERE user_id = ?', [userId]);
@@ -1599,8 +1598,6 @@ router.get('/bets', async (req, res) => {
         SELECT id FROM aviator_bets
         UNION ALL
         SELECT id FROM ct_bets
-        UNION ALL
-        SELECT id FROM fruit_bets
       ) combined
     `);
     const total = countResult[0].total;
@@ -1621,14 +1618,6 @@ router.get('/bets', async (req, res) => {
           'colour_trading' as game_type,
           b.round_id, NULL as cashout_multiplier, b.color
         FROM ct_bets b
-        JOIN users u ON b.user_id = u.id
-        UNION ALL
-        SELECT 
-          b.id, b.user_id, u.name as user_name, u.email as user_email,
-          b.bet_amount, b.win_amount, b.status, b.created_at,
-          'fruit_slasher' as game_type,
-          NULL as round_id, b.multiplier_reached as cashout_multiplier, NULL as color
-        FROM fruit_bets b
         JOIN users u ON b.user_id = u.id
       ) all_bets
       ORDER BY created_at DESC

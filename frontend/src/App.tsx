@@ -277,7 +277,7 @@ export const App: React.FC = () => {
               <ColourTradingGame user={user} refreshUser={refreshUser} onNavigate={setCurrentView} />
             )}
             {currentView === 'game-fruit-slasher' && (
-              <FruitSlasherGame user={user} refreshUser={refreshUser} onNavigate={setCurrentView} />
+              <FruitSlasherGame onNavigate={setCurrentView} />
             )}
           </>
         ) : (

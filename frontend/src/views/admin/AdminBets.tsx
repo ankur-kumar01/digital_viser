@@ -46,13 +46,11 @@ export const AdminBets: React.FC = () => {
   const getGameBadge = (game_type: string) => {
     const colors: Record<string, string> = {
       aviator: '#8B5CF6',
-      colour_trading: '#F59E0B',
-      fruit_slasher: '#10B981'
+      colour_trading: '#F59E0B'
     };
     const labels: Record<string, string> = {
       aviator: 'Aviator',
-      colour_trading: 'Colour Trading',
-      fruit_slasher: 'Fruit Slasher'
+      colour_trading: 'Colour Trading'
     };
     return (
       <span style={{
@@ -82,7 +80,7 @@ export const AdminBets: React.FC = () => {
       </div>
 
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-        {['all', 'aviator', 'colour_trading', 'fruit_slasher'].map(game => (
+        {['all', 'aviator', 'colour_trading'].map(game => (
           <button
             key={game}
             onClick={() => setGameFilter(game)}
