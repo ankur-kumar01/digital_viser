@@ -393,7 +393,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
         showToast('Match found! Starting game...');
         socketRef.current?.emit('ludo:play_bot', { entryFee: matchingWager }, (botRes: any) => {
           if (botRes.error) {
-            alert(botRes.error);
+            showToast(botRes.error);
           }
           refreshUser();
         });
@@ -402,7 +402,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
       showToast('Match found! Starting game...');
       socketRef.current?.emit('ludo:play_bot', { entryFee: matchingWager }, (botRes: any) => {
         if (botRes.error) {
-          alert(botRes.error);
+          showToast(botRes.error);
         }
         refreshUser();
       });
@@ -413,10 +413,10 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
   const handleFindMatch = () => {
     const fee = parseFloat(wagerInput);
     if (isNaN(fee) || fee < 10 || fee > 5000) {
-      return alert('Wager fee must be between ₹10 and ₹5000');
+      return showToast('Wager fee must be between ₹10 and ₹5000');
     }
     if (fee > userBalance) {
-      return alert('Insufficient balance to wager ₹' + fee.toFixed(2));
+      return showToast('Insufficient balance to wager ₹' + fee.toFixed(2));
     }
 
     setIsMatching(true);
@@ -427,7 +427,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
     socketRef.current?.emit('ludo:find_match', { entryFee: fee }, (res: any) => {
       if (res.error) {
         setIsMatching(false);
-        alert(res.error);
+        showToast(res.error);
       } else {
         if (res.action === 'created') {
           // We are host, waiting in the pool
@@ -471,7 +471,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
     if (!currentRoom) return;
     socketRef.current?.emit('ludo:cancel_room', { roomId: currentRoom.id }, (res: any) => {
       if (res.error) {
-        alert(res.error);
+        showToast(res.error);
       } else {
         setCurrentRoom(null);
         refreshUser();
@@ -482,14 +482,18 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
   const handleRollDice = () => {
     if (!isPlayerTurn || currentRoom.boardState.phase !== 'roll' || diceRolling) return;
     socketRef.current?.emit('ludo:roll_dice', { roomId: currentRoom.id }, (res: any) => {
-      if (res.error) alert(res.error);
+      if (res.error && !res.error.includes('Waiting for piece move')) {
+        showToast(res.error);
+      }
     });
   };
 
   const handleMovePiece = (pieceIndex: number) => {
     if (!isPlayerTurn || currentRoom.boardState.phase !== 'move') return;
     socketRef.current?.emit('ludo:move_piece', { roomId: currentRoom.id, pieceIndex }, (res: any) => {
-      if (res.error) alert(res.error);
+      if (res.error && !res.error.includes('Waiting for dice roll')) {
+        showToast(res.error);
+      }
     });
   };
 
