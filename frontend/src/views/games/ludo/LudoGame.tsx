@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LogOut, Volume2, VolumeX, Sparkles, Play, Dices, Users, Plus, Shield, RefreshCw } from 'lucide-react';
+import { LogOut, Volume2, VolumeX, Sparkles, Play, Dices, Users, Plus, Star, RefreshCw } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { getToken, gamesAPI, globalConfigAPI } from '../../../api';
 import './LudoGame.css';
@@ -420,7 +420,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
     }
 
     setIsMatching(true);
-    setMatchingTimeLeft(30);
+    setMatchingTimeLeft(10);
     setMatchingWager(fee);
     setMatchingRoomId(null);
 
@@ -538,17 +538,16 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
         if (r < 6 && c < 6) {
           if (r === 0 && c === 0) {
             cells.push(
-              <div key="host-base" className="ludo-base host-base" style={{ gridRow: '1 / 7', gridColumn: '1 / 7' }}>
-                <div className="base-inner-panel">
-                  <div className="base-label">HOST ZONE</div>
-                  <div className="base-slots-grid">
-                    <div className="slot red-slot" />
-                    <div className="slot red-slot" />
-                    <div className="slot red-slot" />
-                    <div className="slot red-slot" />
-                  </div>
-                </div>
+              <div key="host-base" className="ludo-base green-base" style={{ gridRow: '1 / 7', gridColumn: '1 / 7' }}>
+                <div className="base-inner-panel"></div>
               </div>
+            );
+          }
+          if (hostBasePos.some(pos => pos.r === r && pos.c === c)) {
+            cells.push(
+               <div key={`slot-${r}-${c}`} style={{ gridRow: `${r + 1}`, gridColumn: `${c + 1}`, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <div className="slot green-slot" />
+               </div>
             );
           }
           continue;
@@ -558,16 +557,17 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
         if (r < 6 && c > 8) {
           if (r === 0 && c === 9) {
             cells.push(
-              <div key="tr-base" className="ludo-base tr-base" style={{ gridRow: '1 / 7', gridColumn: '10 / 16' }}>
-                <div className="base-inner-panel">
-                  <div className="base-slots-grid">
-                    <div className="slot green-slot" />
-                    <div className="slot green-slot" />
-                    <div className="slot green-slot" />
-                    <div className="slot green-slot" />
-                  </div>
-                </div>
+              <div key="tr-base" className="ludo-base blue-base" style={{ gridRow: '1 / 7', gridColumn: '10 / 16' }}>
+                <div className="base-inner-panel"></div>
               </div>
+            );
+          }
+          const blueBasePos = [{ r: 2, c: 11 }, { r: 2, c: 12 }, { r: 3, c: 11 }, { r: 3, c: 12 }];
+          if (blueBasePos.some(pos => pos.r === r && pos.c === c)) {
+            cells.push(
+               <div key={`slot-${r}-${c}`} style={{ gridRow: `${r + 1}`, gridColumn: `${c + 1}`, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <div className="slot blue-slot" />
+               </div>
             );
           }
           continue;
@@ -577,16 +577,17 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
         if (r > 8 && c < 6) {
           if (r === 9 && c === 0) {
             cells.push(
-              <div key="bl-base" className="ludo-base bl-base" style={{ gridRow: '10 / 16', gridColumn: '1 / 7' }}>
-                <div className="base-inner-panel">
-                  <div className="base-slots-grid">
-                    <div className="slot yellow-slot" />
-                    <div className="slot yellow-slot" />
-                    <div className="slot yellow-slot" />
-                    <div className="slot yellow-slot" />
-                  </div>
-                </div>
+              <div key="bl-base" className="ludo-base red-base" style={{ gridRow: '10 / 16', gridColumn: '1 / 7' }}>
+                <div className="base-inner-panel"></div>
               </div>
+            );
+          }
+          const redBasePos = [{ r: 11, c: 2 }, { r: 11, c: 3 }, { r: 12, c: 2 }, { r: 12, c: 3 }];
+          if (redBasePos.some(pos => pos.r === r && pos.c === c)) {
+            cells.push(
+               <div key={`slot-${r}-${c}`} style={{ gridRow: `${r + 1}`, gridColumn: `${c + 1}`, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <div className="slot red-slot" />
+               </div>
             );
           }
           continue;
@@ -596,17 +597,16 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
         if (r > 8 && c > 8) {
           if (r === 9 && c === 9) {
             cells.push(
-              <div key="challenger-base" className="ludo-base challenger-base" style={{ gridRow: '10 / 16', gridColumn: '10 / 16' }}>
-                <div className="base-inner-panel">
-                  <div className="base-label">OPPONENT</div>
-                  <div className="base-slots-grid">
-                    <div className="slot blue-slot" />
-                    <div className="slot blue-slot" />
-                    <div className="slot blue-slot" />
-                    <div className="slot blue-slot" />
-                  </div>
-                </div>
+              <div key="challenger-base" className="ludo-base yellow-base" style={{ gridRow: '10 / 16', gridColumn: '10 / 16' }}>
+                <div className="base-inner-panel"></div>
               </div>
+            );
+          }
+          if (challengerBasePos.some(pos => pos.r === r && pos.c === c)) {
+            cells.push(
+               <div key={`slot-${r}-${c}`} style={{ gridRow: `${r + 1}`, gridColumn: `${c + 1}`, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <div className="slot yellow-slot" />
+               </div>
             );
           }
           continue;
@@ -618,18 +618,18 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
             cells.push(
               <div key="home-center" className="ludo-home-center" style={{ gridRow: '7 / 10', gridColumn: '7 / 10' }}>
                 <svg viewBox="0 0 100 100" className="home-center-svg">
-                  {/* Left Triangle (Host Home) */}
-                  <polygon points="0,0 50,50 0,100" fill="var(--host-color)" opacity="0.85" />
-                  {/* Right Triangle (Challenger Home) */}
-                  <polygon points="100,0 50,50 100,100" fill="var(--challenger-color)" opacity="0.85" />
-                  {/* Top Triangle */}
-                  <polygon points="0,0 50,50 100,0" fill="#2dcf89" opacity="0.3" />
-                  {/* Bottom Triangle */}
-                  <polygon points="0,100 50,50 100,100" fill="#ffb300" opacity="0.3" />
+                  {/* Left Triangle (Host/Green Home) */}
+                  <polygon points="0,0 50,50 0,100" fill="#4caf50" />
+                  {/* Right Triangle (Challenger/Yellow Home) */}
+                  <polygon points="100,0 50,50 100,100" fill="#ffeb3b" />
+                  {/* Top Triangle (Blue) */}
+                  <polygon points="0,0 50,50 100,0" fill="#2196f3" />
+                  {/* Bottom Triangle (Red) */}
+                  <polygon points="0,100 50,50 100,100" fill="#f44336" />
                   
-                  {/* Crown symbol in center */}
-                  <circle cx="50" cy="50" r="10" fill="#141518" />
-                  <path d="M47 48 L48 45 L50 48 L52 45 L53 48 L53 52 L47 52 Z" fill="#ffb300" />
+                  {/* Inner divider lines */}
+                  <line x1="0" y1="0" x2="100" y2="100" stroke="#1d2026" strokeWidth="2" />
+                  <line x1="0" y1="100" x2="100" y2="0" stroke="#1d2026" strokeWidth="2" />
                 </svg>
               </div>
             );
@@ -676,7 +676,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
             className={cellClass}
             style={{ gridRow: `${r + 1}`, gridColumn: `${c + 1}` }}
           >
-            {isSafe && <Shield size={10} className="safe-shield-icon" />}
+            {isSafe && <Star size={14} className="safe-star-icon" fill="currentColor" />}
             {cellLabel && <span className="cell-arrow-label">{cellLabel}</span>}
           </div>
         );
@@ -922,11 +922,14 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
           {currentRoom.boardState.status !== 'waiting' && (
             <div className="players-vs-panel">
               <div className={`player-card host-card ${currentRoom.boardState.turn === 'host' ? 'active-turn' : ''}`}>
-                <div className="player-indicator pink-indicator" />
-                <div className="player-name-wrap">
-                  <span className="p-label">Host (Red)</span>
-                  <span className="p-name">{maskName(currentRoom.hostName)}</span>
+                <div className="player-avatar-circle">
+                  <Users size={14} />
                 </div>
+                <div className="player-info-col">
+                  <span className="p-name" title={maskName(currentRoom.hostName)}>{maskName(currentRoom.hostName)}</span>
+                  <span className="p-score">Score: {currentRoom.boardState.hostPieces.reduce((a:number,b:number)=>a+(b===58?100:b),0)}</span>
+                </div>
+                <div className="player-indicator green-indicator" />
                 {currentRoom.boardState.turn === 'host' && (
                   <span className="turn-timer">{turnTimeLeft}s</span>
                 )}
@@ -935,10 +938,13 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
               <div className="vs-badge">VS</div>
 
               <div className={`player-card challenger-card ${currentRoom.boardState.turn === 'challenger' ? 'active-turn' : ''}`}>
-                <div className="player-indicator blue-indicator" />
-                <div className="player-name-wrap">
-                  <span className="p-label">Challenger (Blue)</span>
-                  <span className="p-name">{maskName(currentRoom.challengerName)}</span>
+                <div className="player-indicator yellow-indicator" />
+                <div className="player-info-col">
+                  <span className="p-name" title={maskName(currentRoom.challengerName)}>{maskName(currentRoom.challengerName)}</span>
+                  <span className="p-score">Score: {currentRoom.boardState.challengerPieces.reduce((a:number,b:number)=>a+(b===58?100:b),0)}</span>
+                </div>
+                <div className="player-avatar-circle">
+                  <Users size={14} />
                 </div>
                 {currentRoom.boardState.turn === 'challenger' && (
                   <span className="turn-timer">{turnTimeLeft}s</span>
