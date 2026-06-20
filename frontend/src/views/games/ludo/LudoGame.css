@@ -877,12 +877,10 @@
 .piece-3d-wrapper {
   position: relative;
   width: 20px;
-  height: 32px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  margin-top: -12px;
+  justify-content: center;
   pointer-events: none;
 }
 

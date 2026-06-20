@@ -795,8 +795,8 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
             style={{
               top: `${(piece.r / 15) * 100}%`,
               left: `${(piece.c / 15) * 100}%`,
-              width: '6.66%',
-              height: '6.66%',
+              width: `${100 / 15}%`,
+              height: `${100 / 15}%`,
               transform: `translate(${dx}%, ${dy}%) scale(${scale})`,
               zIndex: canMoveThisPiece ? 20 : 10
             }}
