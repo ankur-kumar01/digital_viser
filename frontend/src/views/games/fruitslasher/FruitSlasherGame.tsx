@@ -213,8 +213,12 @@ export const FruitSlasherGame: React.FC<Props> = ({ onNavigate }) => {
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [screenShake, setScreenShake] = useState<boolean>(false);
   const [highScore, setHighScore] = useState<number>(() => {
-    const stored = localStorage.getItem(HIGH_SCORE_KEY);
-    return stored ? parseInt(stored, 10) : 0;
+    try {
+      const stored = localStorage.getItem(HIGH_SCORE_KEY);
+      return stored ? parseInt(stored, 10) : 0;
+    } catch (e) {
+      return 0;
+    }
   });
 
   const audioSynthRef = useRef<GameAudioSynth | null>(null);
@@ -249,25 +253,10 @@ export const FruitSlasherGame: React.FC<Props> = ({ onNavigate }) => {
 
   useEffect(() => {
     const resizeCanvas = () => {
-      const container = canvasAreaRef.current;
       const canvas = canvasRef.current;
-      if (!container || !canvas) return;
-
-      const containerWidth = container.clientWidth;
-      const containerHeight = container.clientHeight;
-      const aspect = 16 / 9;
-
-      let displayWidth: number, displayHeight: number;
-      if (containerWidth / containerHeight > aspect) {
-        displayHeight = containerHeight;
-        displayWidth = displayHeight * aspect;
-      } else {
-        displayWidth = containerWidth;
-        displayHeight = displayWidth / aspect;
-      }
-
-      canvas.style.width = `${displayWidth}px`;
-      canvas.style.height = `${displayHeight}px`;
+      if (!canvas) return;
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
     };
 
     resizeCanvas();
@@ -286,7 +275,11 @@ export const FruitSlasherGame: React.FC<Props> = ({ onNavigate }) => {
   const saveHighScore = (newScore: number) => {
     if (newScore > highScore) {
       setHighScore(newScore);
-      localStorage.setItem(HIGH_SCORE_KEY, newScore.toString());
+      try {
+        localStorage.setItem(HIGH_SCORE_KEY, newScore.toString());
+      } catch (e) {
+        console.warn('localStorage access blocked:', e);
+      }
     }
   };
 
@@ -882,7 +875,7 @@ export const FruitSlasherGame: React.FC<Props> = ({ onNavigate }) => {
             <Sparkles size={56} color="#8B5CF6" style={{ marginBottom: '16px' }} />
             <h3 className="fruitslasher-banner-title">Fruit Slasher</h3>
             <div className="fruitslasher-instruction-card">
-              <p><strong>How to Play:</strong> Tap <strong>"PLAY"</strong> to start.</p>
+              <p><strong>How to Play:</strong> Tap <strong>"FREE PLAY"</strong> to start.</p>
               <ul>
                 <li>Swipe your screen or drag your mouse to slice flying fruits.</li>
                 <li>Each fruit sliced adds to your score.</li>
@@ -901,7 +894,7 @@ export const FruitSlasherGame: React.FC<Props> = ({ onNavigate }) => {
               onClick={handleStartGame}
             >
               <Play size={20} />
-              <span>Play</span>
+              <span>Free Play</span>
             </button>
           </div>
         )}
@@ -926,7 +919,7 @@ export const FruitSlasherGame: React.FC<Props> = ({ onNavigate }) => {
               onClick={handleStartGame}
             >
               <Play size={20} />
-              <span>Play Again</span>
+              <span>Free Play Again</span>
             </button>
           </div>
         )}
