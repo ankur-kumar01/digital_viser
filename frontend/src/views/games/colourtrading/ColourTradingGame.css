@@ -140,11 +140,12 @@
   align-items: center;
   color: var(--ct-accent-red);
   font-family: var(--ct-font-montserrat);
-  font-size: 1.2rem;
+  font-size: clamp(0.9rem, 4vw, 1.2rem);
   font-weight: 900;
   font-style: italic;
   letter-spacing: -0.5px;
   user-select: none;
+  white-space: nowrap;
 }
 
 .ct-logo-wings {
@@ -175,11 +176,12 @@
   color: var(--ct-accent-green);
   font-family: var(--ct-font-montserrat);
   font-weight: 800;
-  font-size: 0.85rem;
+  font-size: clamp(0.7rem, 3.5vw, 0.85rem);
   background: rgba(60, 208, 30, 0.08);
   border: 1px solid rgba(60, 208, 30, 0.15);
   padding: 4px 8px;
   border-radius: 6px;
+  white-space: nowrap;
 }
 
 /* History Strip */
