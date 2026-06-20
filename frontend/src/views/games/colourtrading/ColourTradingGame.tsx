@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, Volume2, VolumeX, LogOut } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { getToken, gamesAPI, globalConfigAPI } from '../../../api';
 import './ColourTradingGame.css';
@@ -25,6 +25,25 @@ const numberColors: Record<string, string> = {
   '5': 'linear-gradient(135deg, #22c55e 50%, #8b5cf6 50%)', // Green/Violet
   '1': '#22c55e', '3': '#22c55e', '7': '#22c55e', '9': '#22c55e', // Green
   '2': '#ef4444', '4': '#ef4444', '6': '#ef4444', '8': '#ef4444'  // Red
+};
+
+const maskName = (name: any) => {
+  if (!name) return '***';
+  const nameStr = String(name);
+  const cleanPhone = nameStr.replace(/[\s\-\+\(\)]/g, '');
+  const isPhone = /^\d+$/.test(cleanPhone);
+  if (isPhone) {
+    return '***' + cleanPhone.slice(-4);
+  }
+  if (nameStr.length <= 2) {
+    return nameStr + '***';
+  }
+  if (nameStr.length <= 4) {
+    return nameStr[0] + '***' + nameStr[nameStr.length - 1];
+  }
+  const first = nameStr.substring(0, 2);
+  const last = nameStr.substring(nameStr.length - 2);
+  return `${first}***${last}`;
 };
 
 export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => {
@@ -62,6 +81,10 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
   const [dbBets, setDbBets] = useState<any[]>([]);
   const [poolTotal, setPoolTotal] = useState(18500);
   const [config, setConfig] = useState<any>(null);
+  const [liveBetsTab, setLiveBetsTab] = useState<'all' | 'my' | 'top'>('all');
+  const [myBets, setMyBets] = useState<any[]>([]);
+  const [topBets, setTopBets] = useState<any[]>([]);
+  const [recentBets, setRecentBets] = useState<any[]>([]);
 
   const showLiveBets = config ? config.enable_colour_trading_bet_simulation !== false : false;
 
@@ -81,6 +104,16 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
     gamesAPI.getColourTradingBets().then(setDbBets).catch(console.error);
     globalConfigAPI.getConfig().then(setConfig).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (liveBetsTab === 'all') {
+      gamesAPI.getRealRecentColourTradingBets().then(setRecentBets).catch(console.error);
+    } else if (liveBetsTab === 'my') {
+      gamesAPI.getRealMyColourTradingBets().then(setMyBets).catch(console.error);
+    } else if (liveBetsTab === 'top') {
+      gamesAPI.getRealTopColourTradingBets().then(setTopBets).catch(console.error);
+    }
+  }, [liveBetsTab, isBettingPhase, periodCount]);
 
   // Sound persisted state toggle
   const [isMuted, setIsMuted] = useState(() => {
@@ -407,21 +440,32 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
   return (
     <div className="ct-container fade-in">
       {/* Header */}
-      <div className="ct-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={() => onNavigate('games')} className="ct-back-btn">
-            <ArrowLeft size={20} />
+      <div className="ct-header">
+        <div className="ct-header-left">
+          <button className="ct-exit-btn" onClick={() => onNavigate('games')} title="Exit Game">
+            <LogOut size={18} />
           </button>
-          <div>
-            <h2 className="ct-title">Colour Trading</h2>
-            <p className="ct-subtitle">Predict the color or number & win big!</p>
+          <button 
+            className="ct-audio-btn" 
+            onClick={() => setIsMuted(prev => !prev)} 
+            title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
+          >
+            {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </button>
+        </div>
+        <div className="ct-logo">
+          <div className="ct-logo-wings">
+            <div></div><div></div><div></div>
+          </div>
+          Colour Trade
+          <div className="ct-logo-wings ct-logo-wings-reverse">
+            <div></div><div></div><div></div>
           </div>
         </div>
-
-        {/* Persisted speaker mute toggle */}
-        <button className="ct-audio-btn" onClick={() => setIsMuted(prev => !prev)}>
-          {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-        </button>
+        <div className="ct-balance-box">
+          ₹{(userBalance || 0).toFixed(2)}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '6px' }}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        </div>
       </div>
 
       {/* Collapsible Trend Roadmap Grid & Stats */}
@@ -674,16 +718,104 @@ export const ColourTradingGame: React.FC<Props> = ({ user, refreshUser, onNaviga
         </>
       )}
 
-      {/* Balance */}
-      <div className="ct-balances-container" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid var(--border-card)', maxWidth: '340px', margin: '14px auto 0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-          <span style={{ color: 'var(--text-secondary)' }}>Main Wallet:</span>
-          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>₹{mainBalance.toFixed(2)}</span>
+      {/* Balances Card */}
+      <div className="ct-balances-container">
+        <div className="ct-balance-row">
+          <span className="ct-balance-label">Main Wallet:</span>
+          <span className="ct-balance-val">₹{mainBalance.toFixed(2)}</span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-          <span style={{ color: 'var(--text-secondary)' }}>Gaming Bonus:</span>
-          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>₹{gamingBonus.toFixed(2)}</span>
+        <div className="ct-balance-row">
+          <span className="ct-balance-label">Gaming Bonus:</span>
+          <span className="ct-balance-val">₹{gamingBonus.toFixed(2)}</span>
         </div>
+      </div>
+
+      {/* Betting History Tables */}
+      <div className="ct-bets-container">
+        <div className="ct-bets-tabs">
+          <button 
+            type="button"
+            className={`ct-bets-tab ${liveBetsTab === 'all' ? 'active' : ''}`}
+            onClick={() => setLiveBetsTab('all')}
+          >
+            All Bets
+          </button>
+          <button 
+            type="button"
+            className={`ct-bets-tab ${liveBetsTab === 'my' ? 'active' : ''}`}
+            onClick={() => setLiveBetsTab('my')}
+          >
+            My Bets
+          </button>
+          <button 
+            type="button"
+            className={`ct-bets-tab ${liveBetsTab === 'top' ? 'active' : ''}`}
+            onClick={() => setLiveBetsTab('top')}
+          >
+            Top
+          </button>
+        </div>
+        <table className="ct-bets-table">
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left' }}>User</th>
+              <th style={{ textAlign: 'left' }}>Bet</th>
+              <th style={{ textAlign: 'left' }}>Payout</th>
+              <th style={{ textAlign: 'left' }}>Multiplier</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(() => {
+              const list = liveBetsTab === 'all' ? recentBets : (liveBetsTab === 'my' ? myBets : topBets);
+              const safeList = Array.isArray(list) ? list : [];
+              const displayLimit = liveBetsTab === 'all' ? 10 : (liveBetsTab === 'my' ? 20 : 15);
+              return safeList.slice(0, displayLimit).map((p, i) => {
+                if (!p) return null;
+                const pBet = typeof p.bet === 'number' ? p.bet : (parseFloat(p.bet) || 0);
+                const pWin = typeof p.winAmount === 'number' ? p.winAmount : (parseFloat(p.winAmount) || 0);
+                const pMult = typeof p.targetMult === 'number' ? p.targetMult : (parseFloat(p.targetMult) || 0);
+                return (
+                  <tr key={i}>
+                    <td>
+                      <div className="ct-user-cell">
+                        <div className="ct-user-avatar">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                        <span className="ct-user-name">{maskName(p.name)}</span>
+                        {p.colorChoice && (
+                          <span 
+                            className="ct-table-choice-badge"
+                            style={{
+                              background: isNaN(parseInt(p.colorChoice)) ? colorMap[p.colorChoice]?.bg : numberColors[p.colorChoice]
+                            }}
+                          >
+                            {isNaN(parseInt(p.colorChoice)) ? p.colorChoice : `Num ${p.colorChoice}`}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td>₹{pBet.toFixed(2)}</td>
+                    <td className="ct-val-payout">{p.cashedOut ? `₹${pWin.toFixed(2)}` : '-'}</td>
+                    <td className="ct-val-mult">
+                      {p.cashedOut ? (
+                        <span className={`ct-mult-chip ${pMult >= 9 ? 'ultra' : pMult >= 2 ? 'high' : ''}`}>
+                          {pMult.toFixed(2)}x
+                        </span>
+                      ) : '-'}
+                    </td>
+                  </tr>
+                );
+              });
+            })()}
+            {(liveBetsTab === 'all' ? recentBets : (liveBetsTab === 'my' ? myBets : topBets)).length === 0 && (
+              <tr>
+                <td colSpan={4} style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                  No bets recorded
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* Slide-Up Bottom Bet Slip Drawer */}
