@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { walletAPI, uploadFile } from '../api';
-import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info, Clock, XCircle, Ban } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
 interface WithdrawProps {
@@ -25,6 +25,11 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
   // Dynamic Form State
   const [customData, setCustomData] = useState<Record<string, any>>({});
 
+  // Recent withdrawals
+  const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [withdrawalsLoading, setWithdrawalsLoading] = useState(true);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
+
   useEffect(() => {
     const fetchMethods = async () => {
       try {
@@ -41,7 +46,47 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
       }
     };
     fetchMethods();
+    fetchWithdrawals();
   }, []);
+
+  const fetchWithdrawals = async () => {
+    setWithdrawalsLoading(true);
+    try {
+      const data = await walletAPI.getMyWithdrawals();
+      setWithdrawals(data);
+    } catch (err) {
+      console.error('Failed to fetch withdrawals');
+    } finally {
+      setWithdrawalsLoading(false);
+    }
+  };
+
+  const handleCancelWithdrawal = async (id: number) => {
+    if (!window.confirm('Cancel this withdrawal request? Your funds will be refunded.')) return;
+    setCancellingId(id);
+    try {
+      await walletAPI.cancelWithdrawal(id);
+      fetchWithdrawals();
+      await refreshUser();
+    } catch (err: any) {
+      alert(err?.error || 'Failed to cancel withdrawal');
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  const statusIcon = (status: string) => {
+    if (status === 'pending') return <Clock size={14} />;
+    if (status === 'approved') return <CheckCircle2 size={14} />;
+    return <XCircle size={14} />;
+  };
+
+  const statusStyle = (status: string): React.CSSProperties => ({
+    display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 10px', borderRadius: '20px',
+    fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px',
+    background: status === 'pending' ? 'rgba(245,158,11,0.15)' : status === 'approved' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+    color: status === 'pending' ? '#f59e0b' : status === 'approved' ? '#10b981' : '#ef4444',
+  });
 
   // Account age check for fee
   const accountAgeDays = useMemo(() => {
@@ -312,6 +357,62 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
           )}
         </div>
       )}
+
+      {/* Recent Withdrawals History */}
+      <div className="glass-card" style={{ padding: '20px' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Clock size={18} /> Recent Withdrawals
+        </h3>
+        {withdrawalsLoading ? (
+          <LoadingSpinner message="Loading history..." />
+        ) : withdrawals.length === 0 ? (
+          <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '20px', fontSize: '0.9rem' }}>No recent withdrawals</p>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Amount</th>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Method</th>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Wallet</th>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Status</th>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Date</th>
+                  <th style={{ textAlign: 'right', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {withdrawals.map((w: any) => {
+                  const wd = typeof w.custom_data === 'string' ? JSON.parse(w.custom_data) : (w.custom_data || {});
+                  return (
+                    <tr key={w.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '12px', fontWeight: 600 }}>₹{parseFloat(w.amount || '0').toFixed(2)}</td>
+                      <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{w.payment_method || '-'}</td>
+                      <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{wd.source_wallet || 'normal'}</td>
+                      <td style={{ padding: '12px' }}><span style={statusStyle(w.status)}>{statusIcon(w.status)}{w.status}</span></td>
+                      <td style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{new Date(w.created_at).toLocaleString()}</td>
+                      <td style={{ padding: '12px', textAlign: 'right' }}>
+                        {w.status === 'pending' && (
+                          <button
+                            onClick={() => handleCancelWithdrawal(w.id)}
+                            disabled={cancellingId === w.id}
+                            style={{
+                              background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)',
+                              padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
+                              display: 'inline-flex', alignItems: 'center', gap: '4px',
+                            }}
+                          >
+                            <Ban size={12} /> {cancellingId === w.id ? '...' : 'Cancel'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

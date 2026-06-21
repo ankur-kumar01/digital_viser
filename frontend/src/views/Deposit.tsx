@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { walletAPI, uploadFile } from '../api';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Clock, XCircle, Ban } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
@@ -13,7 +13,7 @@ interface DepositProps {
   refreshUser: () => Promise<void>;
 }
 
-export const Deposit: React.FC<DepositProps> = () => {
+export const Deposit: React.FC<DepositProps> = ({ refreshUser }) => {
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentChannels, setPaymentChannels] = useState<any[]>([]);
@@ -25,6 +25,11 @@ export const Deposit: React.FC<DepositProps> = () => {
 
   // Dynamic Form State
   const [customData, setCustomData] = useState<Record<string, any>>({});
+
+  // Recent deposits
+  const [deposits, setDeposits] = useState<any[]>([]);
+  const [depositsLoading, setDepositsLoading] = useState(true);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchMethods = async () => {
@@ -49,7 +54,46 @@ export const Deposit: React.FC<DepositProps> = () => {
       }
     };
     fetchMethods();
+    fetchDeposits();
   }, []);
+
+  const fetchDeposits = async () => {
+    setDepositsLoading(true);
+    try {
+      const data = await walletAPI.getMyDeposits();
+      setDeposits(data);
+    } catch (err) {
+      console.error('Failed to fetch deposits');
+    } finally {
+      setDepositsLoading(false);
+    }
+  };
+
+  const handleCancelDeposit = async (id: number) => {
+    if (!window.confirm('Cancel this deposit request?')) return;
+    setCancellingId(id);
+    try {
+      await walletAPI.cancelDeposit(id);
+      fetchDeposits();
+    } catch (err: any) {
+      alert(err?.error || 'Failed to cancel deposit');
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  const statusIcon = (status: string) => {
+    if (status === 'pending') return <Clock size={14} />;
+    if (status === 'approved') return <CheckCircle2 size={14} />;
+    return <XCircle size={14} />;
+  };
+
+  const statusStyle = (status: string): React.CSSProperties => ({
+    display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 10px', borderRadius: '20px',
+    fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px',
+    background: status === 'pending' ? 'rgba(245,158,11,0.15)' : status === 'approved' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+    color: status === 'pending' ? '#f59e0b' : status === 'approved' ? '#10b981' : '#ef4444',
+  });
 
   const selectedMethod = paymentChannels.find(m => m.name === paymentMethod);
   const adminInstructions = selectedMethod?.admin_instructions ? (typeof selectedMethod.admin_instructions === 'string' ? JSON.parse(selectedMethod.admin_instructions) : selectedMethod.admin_instructions) : [];
@@ -259,6 +303,57 @@ export const Deposit: React.FC<DepositProps> = () => {
           )}
         </div>
       )}
+
+      {/* Recent Deposits History */}
+      <div className="glass-card" style={{ padding: '20px' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Clock size={18} /> Recent Deposits
+        </h3>
+        {depositsLoading ? (
+          <LoadingSpinner message="Loading history..." />
+        ) : deposits.length === 0 ? (
+          <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '20px', fontSize: '0.9rem' }}>No recent deposits</p>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Amount</th>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Method</th>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Status</th>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Date</th>
+                  <th style={{ textAlign: 'right', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deposits.map((d: any) => (
+                  <tr key={d.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '12px', fontWeight: 600 }}>₹{parseFloat(d.amount || '0').toFixed(2)}</td>
+                    <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{d.payment_method || '-'}</td>
+                    <td style={{ padding: '12px' }}><span style={statusStyle(d.status)}>{statusIcon(d.status)}{d.status}</span></td>
+                    <td style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{new Date(d.created_at).toLocaleString()}</td>
+                    <td style={{ padding: '12px', textAlign: 'right' }}>
+                      {d.status === 'pending' && (
+                        <button
+                          onClick={() => handleCancelDeposit(d.id)}
+                          disabled={cancellingId === d.id}
+                          style={{
+                            background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)',
+                            padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
+                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                          }}
+                        >
+                          <Ban size={12} /> {cancellingId === d.id ? '...' : 'Cancel'}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

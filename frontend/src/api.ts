@@ -165,6 +165,10 @@ export const walletAPI = {
   getTransactions: () => request('GET', '/wallet/transactions'),
   getActiveMethods: () => request('GET', '/wallet/active-methods'),
   getConfig: () => request('GET', '/wallet/config'),
+  getMyDeposits: () => request('GET', '/wallet/deposits'),
+  getMyWithdrawals: () => request('GET', '/wallet/withdrawals'),
+  cancelDeposit: (id: number) => request('POST', `/wallet/deposits/${id}/cancel`),
+  cancelWithdrawal: (id: number) => request('POST', `/wallet/withdrawals/${id}/cancel`),
 };
 
 export const fdrAPI = {

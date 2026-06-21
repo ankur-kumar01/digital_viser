@@ -191,4 +191,107 @@ router.get('/config', async (req, res) => {
   }
 });
 
+// GET /deposits — list user's deposits (last 10)
+router.get('/deposits', async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const [rows] = await pool.query(
+      'SELECT * FROM deposits WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
+      [userId]
+    );
+    res.json(rows.map(r => ({ ...r, amount: parseFloat(r.amount) })));
+  } catch (err) {
+    console.error('Fetch deposits error:', err);
+    res.status(500).json({ error: 'Server error fetching deposits.' });
+  }
+});
+
+// GET /withdrawals — list user's withdrawals (last 10)
+router.get('/withdrawals', async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const [rows] = await pool.query(
+      'SELECT * FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
+      [userId]
+    );
+    res.json(rows.map(r => ({ ...r, amount: parseFloat(r.amount) })));
+  } catch (err) {
+    console.error('Fetch withdrawals error:', err);
+    res.status(500).json({ error: 'Server error fetching withdrawals.' });
+  }
+});
+
+// POST /deposits/:id/cancel — cancel a pending deposit
+router.post('/deposits/:id/cancel', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const userId = req.user.userId;
+    const depositId = parseInt(req.params.id);
+
+    const [deposits] = await conn.query(
+      'SELECT * FROM deposits WHERE id = ? AND user_id = ? FOR UPDATE',
+      [depositId, userId]
+    );
+    if (deposits.length === 0) return res.status(404).json({ error: 'Deposit not found' });
+    if (deposits[0].status !== 'pending') return res.status(400).json({ error: 'Only pending deposits can be cancelled' });
+
+    await conn.beginTransaction();
+    await conn.query('UPDATE deposits SET status = "rejected" WHERE id = ?', [depositId]);
+    await conn.query(
+      'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+      [userId, 'deposit_cancelled', deposits[0].amount, `Deposit request cancelled by user`]
+    );
+    await conn.commit();
+
+    res.json({ success: true, message: 'Deposit cancelled' });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Cancel deposit error:', err);
+    res.status(500).json({ error: 'Server error cancelling deposit.' });
+  } finally {
+    conn.release();
+  }
+});
+
+// POST /withdrawals/:id/cancel — cancel a pending withdrawal and refund
+router.post('/withdrawals/:id/cancel', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const userId = req.user.userId;
+    const withdrawalId = parseInt(req.params.id);
+
+    const [withdrawals] = await conn.query(
+      'SELECT * FROM withdrawals WHERE id = ? AND user_id = ? FOR UPDATE',
+      [withdrawalId, userId]
+    );
+    if (withdrawals.length === 0) return res.status(404).json({ error: 'Withdrawal not found' });
+    if (withdrawals[0].status !== 'pending') return res.status(400).json({ error: 'Only pending withdrawals can be cancelled' });
+
+    const w = withdrawals[0];
+    const customData = typeof w.custom_data === 'string' ? JSON.parse(w.custom_data) : (w.custom_data || {});
+    const sourceWallet = customData.source_wallet || 'normal';
+    const walletColumn = sourceWallet === 'bonus' ? 'bonus_balance' : sourceWallet === 'referral' ? 'referral_balance' : 'balance';
+
+    await conn.beginTransaction();
+    await conn.query('UPDATE withdrawals SET status = "rejected" WHERE id = ?', [withdrawalId]);
+    // Refund the deducted amount back to the original wallet
+    await conn.query(`UPDATE users SET ${walletColumn} = ${walletColumn} + ? WHERE id = ?`, [parseFloat(w.amount), userId]);
+    await conn.query(
+      'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+      [userId, 'withdrawal_cancelled', parseFloat(w.amount), `Withdrawal request cancelled by user — refund to ${sourceWallet} wallet`]
+    );
+    await conn.commit();
+
+    // Fetch updated balance
+    const [rows] = await conn.query(`SELECT ${walletColumn} as updated_balance FROM users WHERE id = ?`, [userId]);
+    res.json({ success: true, message: 'Withdrawal cancelled and refunded', balance: parseFloat(rows[0].updated_balance) });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Cancel withdrawal error:', err);
+    res.status(500).json({ error: 'Server error cancelling withdrawal.' });
+  } finally {
+    conn.release();
+  }
+});
+
 module.exports = router;
