@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LogOut, Volume2, VolumeX, Sparkles, Play, Dices, Users, Plus, Star, RefreshCw } from 'lucide-react';
+import { LogOut, Volume2, VolumeX, Sparkles, Play, Dices, Users, Plus, Star, RefreshCw, Trophy } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
-import { getToken, gamesAPI, globalConfigAPI } from '../../../api';
+import { getToken, gamesAPI, globalConfigAPI, ludoAPI } from '../../../api';
 import './LudoGame.css';
 
 interface Props {
@@ -123,6 +123,16 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
   const [matchingRoomId, setMatchingRoomId] = useState<number | null>(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
+  // Tournament states
+  const [gameMode, setGameMode] = useState<'quick' | 'tournament'>('quick');
+  const [tournaments, setTournaments] = useState<any[]>([]);
+  const [myTournaments, setMyTournaments] = useState<any[]>([]);
+  const [selectedTournament, setSelectedTournament] = useState<any | null>(null);
+  const [tournamentStandings, setTournamentStandings] = useState<any[]>([]);
+  const [myTournamentStats, setMyTournamentStats] = useState<any | null>(null);
+  const [tJoinLoading, setTJoinLoading] = useState(false);
+  const [tLoading, setTLoading] = useState(false);
+
   // Game animations & alerts
   const [diceRolling, setDiceRolling] = useState(false);
   const [showWinOverlay, setShowWinOverlay] = useState(false);
@@ -159,6 +169,61 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
       console.warn('localStorage access blocked:', e);
     }
   }, [isMuted]);
+
+  // Fetch tournaments
+  useEffect(() => {
+    if (gameMode !== 'tournament' || currentRoom) return;
+    fetchTournaments();
+    fetchMyTournaments();
+  }, [gameMode, currentRoom]);
+
+  const fetchTournaments = async () => {
+    setTLoading(true);
+    try {
+      const t = await ludoAPI.getTournaments();
+      setTournaments(t);
+    } catch (err) {
+      console.error('Failed to fetch tournaments:', err);
+    } finally {
+      setTLoading(false);
+    }
+  };
+
+  const fetchMyTournaments = async () => {
+    try {
+      const t = await ludoAPI.getMyTournaments();
+      setMyTournaments(t);
+    } catch (err) {
+      console.error('Failed to fetch my tournaments:', err);
+    }
+  };
+
+  const handleJoinTournament = async (tournamentId: number) => {
+    setTJoinLoading(true);
+    try {
+      const result = await ludoAPI.joinTournament(tournamentId);
+      if (result.success) {
+        refreshUser();
+        fetchTournaments();
+        fetchMyTournaments();
+        showToast('Joined tournament! Select a match wager to play.');
+        setSelectedTournament(tournamentId);
+      }
+    } catch (err: any) {
+      alert(err?.error || 'Failed to join tournament');
+    } finally {
+      setTJoinLoading(false);
+    }
+  };
+
+  const viewTournamentStandings = async (t: any) => {
+    try {
+      const data: any = await ludoAPI.getTournamentStandings(t.id);
+      setTournamentStandings(data.standings || []);
+    } catch (err) {
+      console.error('Failed to fetch standings:', err);
+    }
+  };
 
   // Load Ludo Bets tables
   const loadBetsHistory = () => {
@@ -887,7 +952,93 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
             </div>
           </div>
 
-          {isMatching ? (
+          {/* Mode Toggle */}
+          <div className="ludo-mode-toggle">
+            <button className={`mode-btn ${gameMode === 'quick' ? 'active' : ''}`} onClick={() => setGameMode('quick')}>
+              <Dices size={16} /> Quick Match
+            </button>
+            <button className={`mode-btn ${gameMode === 'tournament' ? 'active' : ''}`} onClick={() => setGameMode('tournament')}>
+              <Trophy size={16} /> Tournaments
+            </button>
+          </div>
+
+          {gameMode === 'tournament' ? (
+            /* Tournament Lobby */
+            <div className="tournament-lobby">
+              {/* My Tournaments */}
+              {myTournaments.length > 0 && (
+                <div className="my-tournaments-section">
+                  <h3 className="panel-subtitle">My Tournaments</h3>
+                  {myTournaments.map((t: any) => (
+                    <div key={t.tournament_id || t.id} className="tournament-card my-tournament-card">
+                      <div className="tournament-card-header">
+                        <Trophy size={18} />
+                        <strong>{t.name}</strong>
+                        <span className={`t-status-badge ${t.status}`}>{t.status}</span>
+                      </div>
+                      <div className="tournament-card-stats">
+                        <span>Score: <b>{t.total_score}</b></span>
+                        <span>Matches: <b>{t.matches_played}/{t.num_matches}</b></span>
+                        <span>Rank: <b>{t.rank ? `#${t.rank}` : '-'}</b></span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Available Tournaments */}
+              <h3 className="panel-subtitle">Available Tournaments</h3>
+              {tLoading ? (
+                <div className="loading-text">Loading tournaments...</div>
+              ) : tournaments.length === 0 ? (
+                <div className="empty-state">No tournaments available. Check back later!</div>
+              ) : (
+                <div className="tournaments-grid">
+                  {tournaments.map((t: any) => {
+                    const joined = myTournaments.some((mt: any) => (mt.tournament_id || mt.id) === t.id);
+                    return (
+                      <div key={t.id} className="tournament-card">
+                        <div className="tournament-card-header">
+                          <Trophy size={20} className="trophy-icon" />
+                          <strong>{t.name}</strong>
+                          <span className={`t-status-badge ${t.status}`}>{t.status}</span>
+                        </div>
+                        <p className="tournament-desc">{t.description}</p>
+                        <div className="tournament-card-stats">
+                          <span>Fee: <b>₹{parseFloat(t.entry_fee).toFixed(0)}</b></span>
+                          <span>Prize: <b>₹{parseFloat(t.prize_pool).toFixed(0)}</b></span>
+                          <span>Players: <b>{t.participant_count ?? 0}/{t.max_participants}</b></span>
+                          <span>Matches: <b>{t.num_matches}</b></span>
+                        </div>
+                        <div className="tournament-card-footer">
+                          {t.status === 'upcoming' && (
+                            <button
+                              className={`lobby-primary-btn ${joined ? 'joined-btn' : ''}`}
+                              onClick={() => handleJoinTournament(t.id)}
+                              disabled={tJoinLoading || joined || (t.participant_count || 0) >= t.max_participants}
+                              style={{ flex: 1 }}
+                            >
+                              {joined ? 'Joined' : 'Join Tournament'}
+                            </button>
+                          )}
+                          {t.status === 'active' && (
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                              {t.participant_count > 0 ? `${t.participant_count} players competing` : 'Active'}
+                            </div>
+                          )}
+                          {t.status === 'active' && (
+                            <button className="lobby-secondary-btn" onClick={() => viewTournamentStandings(t)} style={{ flex: 1 }}>
+                              Leaderboard
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : isMatching ? (
             /* Matchmaking Overlay Panel */
             <div className="wager-creation-section matchmaking-panel text-center">
               <div className="matchmaking-radar-container">
@@ -913,6 +1064,12 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
             /* Wager Input Selection */
             <div className="wager-creation-section">
               <h3 className="panel-subtitle">Select Match Wager</h3>
+              {selectedTournament && (
+                <div className="tournament-match-badge">
+                  <Trophy size={14} />
+                  Playing in tournament match — ₹
+                </div>
+              )}
               <div className="wager-amount-selector">
                 <span className="wager-label">Wager Amount (₹)</span>
                 <div className="wager-input-wrap">
@@ -1158,6 +1315,46 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
             <div className="lose-title">Defeat</div>
             <div className="lose-subtitle">Your opponent won the match.</div>
             <div className="close-tip">Click anywhere to close</div>
+          </div>
+        </div>
+      )}
+
+      {/* Tournament Standings Modal */}
+      {tournamentStandings.length > 0 && !selectedTournament && (
+        <div className="ludo-overlay animate-fade-in" onClick={() => setTournamentStandings([])}>
+          <div className="t-standings-modal animate-scale-up" onClick={e => e.stopPropagation()}>
+            <div className="t-standings-header">
+              <h3>Tournament Standings</h3>
+              <button className="t-close-btn" onClick={() => setTournamentStandings([])}>✕</button>
+            </div>
+            <div className="t-standings-body">
+              {tournamentStandings.length === 0 ? (
+                <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '20px' }}>No participants yet</p>
+              ) : (
+                <table className="t-standings-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Player</th>
+                      <th>Score</th>
+                      <th>Matches</th>
+                      <th>Prize</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tournamentStandings.map((p: any, i: number) => (
+                      <tr key={p.id || i} className={p.user_id === user?.id ? 'highlight-row' : ''}>
+                        <td>{i + 1}</td>
+                        <td>{p.user_name || `User #${p.user_id}`}</td>
+                        <td><strong>{p.total_score}</strong></td>
+                        <td>{p.matches_played}</td>
+                        <td>{parseFloat(p.prize_amount || '0') > 0 ? `₹${parseFloat(p.prize_amount).toFixed(2)}` : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </div>
       )}

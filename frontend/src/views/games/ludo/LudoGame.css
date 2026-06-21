@@ -1482,3 +1482,226 @@
   gap: 12px;
   justify-content: center;
 }
+
+/* ========== Mode Toggle ========== */
+.ludo-mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.mode-btn.active {
+  border-color: var(--accent);
+  background: rgba(99,102,241,0.15);
+  color: var(--accent);
+}
+
+/* ========== Tournament Lobby ========== */
+.tournament-lobby {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.my-tournaments-section {
+  background: rgba(99,102,241,0.08);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.tournaments-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.tournament-card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tournament-card.my-tournament-card {
+  border-color: rgba(99,102,241,0.3);
+  background: rgba(99,102,241,0.06);
+}
+
+.tournament-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tournament-card-header .trophy-icon {
+  color: #f59e0b;
+}
+
+.t-status-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.t-status-badge.upcoming {
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
+}
+
+.t-status-badge.active {
+  background: rgba(16,185,129,0.15);
+  color: #34d399;
+}
+
+.t-status-badge.completed {
+  background: rgba(107,114,128,0.15);
+  color: #9ca3af;
+}
+
+.t-status-badge.cancelled {
+  background: rgba(239,68,68,0.15);
+  color: #f87171;
+}
+
+.tournament-desc {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.tournament-card-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.tournament-card-stats span b {
+  color: var(--text-primary);
+}
+
+.tournament-card-footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.joined-btn {
+  opacity: 0.6;
+  cursor: default !important;
+}
+
+.tournament-match-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #f59e0b;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: rgba(245,158,11,0.1);
+  border-radius: 8px;
+}
+
+.loading-text {
+  text-align: center;
+  padding: 30px;
+  color: var(--text-secondary);
+}
+
+/* ========== Tournament Standings Modal ========== */
+.t-standings-modal {
+  background: var(--card-bg);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 24px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+.t-standings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.t-standings-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.t-close-btn {
+  background: rgba(255,255,255,0.08);
+  border: none;
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.t-standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.t-standings-table th {
+  text-align: left;
+  padding: 8px 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-weight: 600;
+}
+
+.t-standings-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.t-standings-table tr.highlight-row {
+  background: rgba(99,102,241,0.1);
+}
+
+.t-standings-table tr:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}

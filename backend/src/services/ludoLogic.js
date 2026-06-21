@@ -724,6 +724,10 @@ class LudoLogic {
     return { boardState };
   }
 
+  _calculateScore(pieces) {
+    return pieces.reduce((a, b) => a + (b === 58 ? 100 : b), 0);
+  }
+
   async resolveWin(roomId, winnerId, entryFee) {
     const conn = await pool.getConnection();
     try {
@@ -732,6 +736,7 @@ class LudoLogic {
       const [rooms] = await conn.query('SELECT * FROM ludo_rooms WHERE id = ? FOR UPDATE', [roomId]);
       if (rooms[0].status !== 'playing') throw new Error('Match already resolved');
 
+      const room = rooms[0];
       const houseEdge = this._houseEdge || 5;
       const totalPool = parseFloat(entryFee) * 2;
       const winPayout = totalPool * (1 - houseEdge / 100);
@@ -753,6 +758,28 @@ class LudoLogic {
 
       await conn.commit();
 
+      // --- Tournament score tracking ---
+      if (room.tournament_id) {
+        try {
+          const boardState = typeof room.board_state === 'string' ? JSON.parse(room.board_state) : room.board_state;
+          const loserId = room.host_id === winnerId ? room.challenger_id : room.host_id;
+
+          // Calculate scores for both players
+          const winnerScore = this._calculateScore(winnerId === room.host_id ? boardState.hostPieces : boardState.challengerPieces);
+          const loserScore = this._calculateScore(loserId === room.host_id ? boardState.hostPieces : boardState.challengerPieces);
+
+          // Update winner's tournament stats
+          await this._updateTournamentScore(room.tournament_id, winnerId, winnerScore);
+          // Update loser's tournament stats (if not a bot)
+          if (loserId < 10000 && loserId !== 9999) {
+            await this._updateTournamentScore(room.tournament_id, loserId, loserScore);
+          }
+        } catch (err) {
+          console.error('Tournament score tracking error:', err);
+        }
+      }
+      // --- End tournament score tracking ---
+
       this.io.to(`ludo_room_${roomId}`).emit('ludo:game_over', {
         winnerId,
         winPayout,
@@ -765,6 +792,42 @@ class LudoLogic {
       console.error('Ludo win resolution error:', err);
     } finally {
       conn.release();
+    }
+  }
+
+  async _updateTournamentScore(tournamentId, userId, matchScore) {
+    try {
+      // Get tournament info + participant
+      const [tournaments] = await pool.query(
+        'SELECT num_matches FROM ludo_tournaments WHERE id = ?',
+        [tournamentId]
+      );
+      if (tournaments.length === 0) return;
+      const numMatches = tournaments[0].num_matches;
+
+      const [participants] = await pool.query(
+        'SELECT * FROM ludo_tournament_participants WHERE tournament_id = ? AND user_id = ?',
+        [tournamentId, userId]
+      );
+      if (participants.length === 0) return;
+
+      const p = participants[0];
+      let bestScores = [];
+      try { bestScores = JSON.parse(p.best_scores) || []; } catch (_) { bestScores = []; }
+      bestScores.push(matchScore);
+
+      // Keep only the best N scores where N = numMatches
+      bestScores.sort((a, b) => b - a);
+      if (bestScores.length > numMatches) bestScores = bestScores.slice(0, numMatches);
+
+      const totalScore = bestScores.reduce((a, b) => a + b, 0);
+
+      await pool.query(
+        'UPDATE ludo_tournament_participants SET total_score = ?, matches_played = matches_played + 1, best_scores = ? WHERE id = ?',
+        [totalScore, JSON.stringify(bestScores), p.id]
+      );
+    } catch (err) {
+      console.error('Error updating tournament score:', err);
     }
   }
 

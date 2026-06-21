@@ -1,8 +1,10 @@
 const { pool } = require('../db');
+const { finalizeTournament } = require('../routes/adminLudo');
 
 class LudoCleanup {
   constructor() {
     this.interval = null;
+    this.tournamentInterval = null;
   }
 
   start() {
@@ -11,6 +13,21 @@ class LudoCleanup {
     console.log('🕹️ Ludo cleanup cron started (every 15min)');
     // Run immediately on start
     setTimeout(() => this.cleanup(), 10000);
+
+    // Tournament check every 5 minutes
+    this.tournamentInterval = setInterval(() => this.processTournaments(), 5 * 60 * 1000);
+    setTimeout(() => this.processTournaments(), 5000);
+  }
+
+  stop() {
+    if (this.interval) {
+      clearInterval(this.interval);
+      this.interval = null;
+    }
+    if (this.tournamentInterval) {
+      clearInterval(this.tournamentInterval);
+      this.tournamentInterval = null;
+    }
   }
 
   stop() {
@@ -62,6 +79,33 @@ class LudoCleanup {
 
     } catch (err) {
       console.error('❌ Ludo cleanup error:', err);
+    }
+  }
+
+  async processTournaments() {
+    try {
+      // Auto-activate tournaments that have reached start_time
+      const [toActivate] = await pool.query(
+        `UPDATE ludo_tournaments SET status = 'active' WHERE status = 'upcoming' AND start_time <= NOW()`
+      );
+      if (toActivate.affectedRows > 0) {
+        console.log(`🏆 Activated ${toActivate.affectedRows} tournaments`);
+      }
+
+      // Finalize tournaments that have reached end_time
+      const [toFinalize] = await pool.query(
+        `SELECT id FROM ludo_tournaments WHERE status = 'active' AND end_time <= NOW()`
+      );
+      for (const t of toFinalize) {
+        try {
+          await finalizeTournament(t.id, pool);
+          console.log(`🏆 Finalized tournament #${t.id}`);
+        } catch (err) {
+          console.error(`🏆 Failed to finalize tournament #${t.id}:`, err.message);
+        }
+      }
+    } catch (err) {
+      console.error('❌ Tournament processing error:', err);
     }
   }
 }

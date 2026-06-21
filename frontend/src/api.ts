@@ -296,6 +296,32 @@ export const adminAPI = {
   getUserFdrPlanBlocks: (userId: number) => adminRequest('GET', `/admin/users/${userId}/fdr-plan-blocks`),
   blockUserFdrPlan: (userId: number, planId: number) => adminRequest('POST', `/admin/users/${userId}/fdr-plan-blocks`, { plan_id: planId }),
   unblockUserFdrPlan: (userId: number, planId: number) => adminRequest('DELETE', `/admin/users/${userId}/fdr-plan-blocks/${planId}`),
+  // Ludo Admin
+  getLudoSettings: () => adminRequest('GET', '/admin/ludo/settings'),
+  updateLudoSettings: (data: any) => adminRequest('PUT', '/admin/ludo/settings', data),
+  getLudoRooms: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/ludo/rooms?page=${page}&limit=${limit}`),
+  getLudoRoomDetail: (id: number) => adminRequest('GET', `/admin/ludo/rooms/${id}`),
+  deleteLudoRoom: (id: number) => adminRequest('DELETE', `/admin/ludo/rooms/${id}`),
+  getLudoStats: () => adminRequest('GET', '/admin/ludo/stats'),
+  getLudoBots: () => adminRequest('GET', '/admin/bots'),
+  createLudoBot: (data: any) => adminRequest('POST', '/admin/bots', data),
+  updateLudoBot: (id: number, data: any) => adminRequest('PUT', `/admin/bots/${id}`, data),
+  deleteLudoBot: (id: number) => adminRequest('DELETE', `/admin/bots/${id}`),
+  getLudoTournaments: () => adminRequest('GET', '/admin/ludo/tournaments'),
+  createLudoTournament: (data: any) => adminRequest('POST', '/admin/ludo/tournaments', data),
+  updateLudoTournament: (id: number, data: any) => adminRequest('PUT', `/admin/ludo/tournaments/${id}`, data),
+  deleteLudoTournament: (id: number) => adminRequest('DELETE', `/admin/ludo/tournaments/${id}`),
+  getLudoTournamentStandings: (id: number) => adminRequest('GET', `/admin/ludo/tournaments/${id}/standings`),
+  processLudoTournament: (id: number) => adminRequest('POST', `/admin/ludo/tournaments/${id}/process`),
+};
+
+export const ludoAPI = {
+  getTournaments: () => request('GET', '/ludo/tournaments'),
+  getTournamentDetail: (id: number) => request('GET', `/ludo/tournaments/${id}`),
+  joinTournament: (id: number) => request('POST', `/ludo/tournaments/${id}/join`),
+  getTournamentStandings: (id: number) => request('GET', `/ludo/tournaments/${id}/standings`),
+  getMyTournaments: () => request('GET', '/ludo/tournaments/joined'),
+  getMyTournamentStats: (id: number) => request('GET', `/ludo/tournaments/${id}/my-stats`),
 };
 
 // Activity tracking

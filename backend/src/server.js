@@ -169,6 +169,7 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/fantasy', require('./middleware/auth'), fantasyRoutes);
 app.use('/api/admin/ludo', require('./routes/adminLudo'));
 app.use('/api/admin/bots', require('./routes/adminBots'));
+app.use('/api/ludo', require('./routes/ludoTournaments'));
 
 // Public Config Endpoint
 app.get('/api/config', async (req, res) => {
