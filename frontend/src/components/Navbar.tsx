@@ -15,20 +15,16 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar,
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-      minimumFractionDigits: 4,
-      maximumFractionDigits: 4
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(numeric || 0);
   };
 
   const [basePortfolioValue, setBasePortfolioValue] = useState<number | null>(null);
-  const [livePortfolioValue, setLivePortfolioValue] = useState<number | null>(null);
-  const [globalYieldPerMs, setGlobalYieldPerMs] = useState<number>(0);
 
   useEffect(() => {
     if (!user) {
       setBasePortfolioValue(null);
-      setLivePortfolioValue(null);
-      setGlobalYieldPerMs(0);
       return;
     }
     
@@ -67,15 +63,12 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar,
 
         if (isMounted) {
           setBasePortfolioValue(baseTotal + initialUnaccrued);
-          setLivePortfolioValue(baseTotal + initialUnaccrued);
-          setGlobalYieldPerMs(totalYieldPerMs);
         }
       } catch (err) {
         if (isMounted) {
           const balanceNum = typeof user.balance === 'string' ? parseFloat(user.balance) : (user.balance || 0);
           const gamingBonusNum = typeof user.gaming_bonus_balance === 'string' ? parseFloat(user.gaming_bonus_balance) : (user.gaming_bonus_balance || 0);
           setBasePortfolioValue(balanceNum + gamingBonusNum);
-          setLivePortfolioValue(balanceNum + gamingBonusNum);
         }
       }
     };
@@ -84,15 +77,6 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar,
 
     return () => { isMounted = false; };
   }, [user]);
-
-  useEffect(() => {
-    if (globalYieldPerMs > 0 && livePortfolioValue !== null) {
-      const interval = setInterval(() => {
-        setLivePortfolioValue(prev => (prev || 0) + (globalYieldPerMs * 100));
-      }, 100);
-      return () => clearInterval(interval);
-    }
-  }, [globalYieldPerMs]);
 
   return (
     <div className="navbar-container">
@@ -153,7 +137,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar,
               whiteSpace: 'nowrap',
               fontVariantNumeric: 'tabular-nums'
             }}>
-              {user ? (livePortfolioValue !== null ? formatBalance(livePortfolioValue) : formatBalance(user.balance)) : '₹0'}
+              {user ? (basePortfolioValue !== null ? formatBalance(basePortfolioValue) : formatBalance(user.balance)) : '₹0'}
             </span>
           </div>
         )}

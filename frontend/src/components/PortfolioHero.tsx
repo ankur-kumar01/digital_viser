@@ -72,7 +72,7 @@ export const PortfolioHero: React.FC<PortfolioHeroProps> = ({ user, totalFDRFund
   const referralNum = typeof user?.referral_balance === 'string' ? parseFloat(user.referral_balance) : (user?.referral_balance || 0);
   const lockedReferralNum = typeof user?.locked_referral_balance === 'string' ? parseFloat(user.locked_referral_balance) : (user?.locked_referral_balance || 0);
   const unlockedReferral = Math.max(0, referralNum - lockedReferralNum);
-  const totalPortfolioValue = balanceNum + gamingBonusNum + unlockedReferral + totalFDRFunds + totalInterestEarned + liveYieldIncrement;
+  const totalPortfolioValue = balanceNum + gamingBonusNum + unlockedReferral + totalFDRFunds + totalInterestEarned;
   const liveTotalInterest = totalInterestEarned + liveYieldIncrement;
 
   const formatCurrency = (val: number, isLive = false) => {
@@ -121,7 +121,7 @@ export const PortfolioHero: React.FC<PortfolioHeroProps> = ({ user, totalFDRFund
           </p>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap' }}>
             <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-              {formatCurrency(totalPortfolioValue, true)}
+              {formatCurrency(totalPortfolioValue, false)}
             </h1>
             <div 
               style={{ 
