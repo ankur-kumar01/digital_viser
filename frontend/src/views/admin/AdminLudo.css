@@ -244,7 +244,7 @@
   background: var(--bg-card, #ffffff);
   border-radius: 20px;
   border: 1px solid var(--border-color, #e2e8f0);
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: 0 10px 40px rgba(0,0,0,0.04);
 }
 
@@ -354,4 +354,43 @@
 
 .ludo-modal-body {
   padding: 32px;
+}
+
+
+/* Responsive enhancements */
+@media (max-width: 768px) {
+  .ludo-dashboard {
+    padding: 16px;
+  }
+  .ludo-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 2px;
+  }
+  .ludo-tab {
+    padding: 10px 16px;
+    font-size: 0.95rem;
+  }
+  .ludo-table th, .ludo-table td {
+    padding: 12px 16px;
+    font-size: 0.85rem;
+  }
+  .admin-ludo-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 1.3rem;
+  }
+  .ludo-stat-card {
+    padding: 20px 16px;
+  }
+  .ludo-stat-value {
+    font-size: 2rem;
+  }
+  .ludo-modal-body {
+    padding: 20px;
+  }
+  .ludo-modal-header h3 {
+    font-size: 1.15rem;
+  }
 }

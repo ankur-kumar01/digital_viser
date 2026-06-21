@@ -16,6 +16,8 @@ export const AdminLudo: React.FC = () => {
   // Rooms
   const [rooms, setRooms] = useState<any[]>([]);
   const [roomDetail, setRoomDetail] = useState<{ room: any; moves: any[] } | null>(null);
+  const [roomPage, setRoomPage] = useState(1);
+  const [roomTotalPages, setRoomTotalPages] = useState(1);
 
   // Stats
   const [stats, setStats] = useState<any>(null);
@@ -31,6 +33,12 @@ export const AdminLudo: React.FC = () => {
     fetchData();
   }, [activeTab]);
 
+  useEffect(() => {
+    if (activeTab === 'rooms') {
+      fetchData();
+    }
+  }, [roomPage]);
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -38,8 +46,9 @@ export const AdminLudo: React.FC = () => {
         const s = await adminRequest('GET', '/admin/ludo/settings');
         setLudoSettings(s);
       } else if (activeTab === 'rooms') {
-        const data = await adminRequest('GET', '/admin/ludo/rooms');
-        setRooms(data);
+        const data = await adminRequest('GET', `/admin/ludo/rooms?page=${roomPage}&limit=20`);
+        setRooms(data.rooms || []);
+        setRoomTotalPages(Math.ceil((data.total || 0) / 20) || 1);
       } else if (activeTab === 'stats') {
         const s = await adminRequest('GET', '/admin/ludo/stats');
         setStats(s);
@@ -250,7 +259,8 @@ export const AdminLudo: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
                 <button className="ludo-btn ludo-btn-secondary" onClick={fetchData}><RefreshCw size={16} /> Refresh</button>
               </div>
-              <table className="ludo-table">
+              <div className="ludo-table-wrapper">
+                <table className="ludo-table">
                 <thead>
                   <tr>
                     <th>#</th>
@@ -287,6 +297,17 @@ export const AdminLudo: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
+              
+              {roomTotalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Page {roomPage} of {roomTotalPages}</span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="ludo-btn ludo-btn-sm ludo-btn-secondary" onClick={() => setRoomPage(p => Math.max(1, p - 1))} disabled={roomPage === 1}>Previous</button>
+                    <button className="ludo-btn ludo-btn-sm ludo-btn-secondary" onClick={() => setRoomPage(p => Math.min(roomTotalPages, p + 1))} disabled={roomPage >= roomTotalPages}>Next</button>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -325,7 +346,8 @@ export const AdminLudo: React.FC = () => {
                 <button className="ludo-btn ludo-btn-primary" onClick={openCreateTournament}><Plus size={16} /> Create Tournament</button>
                 <button className="ludo-btn ludo-btn-secondary" onClick={fetchData} style={{ marginLeft: '8px' }}><RefreshCw size={16} /> Refresh</button>
               </div>
-              <table className="ludo-table">
+              <div className="ludo-table-wrapper">
+                <table className="ludo-table">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -370,6 +392,7 @@ export const AdminLudo: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
             </>
           )}
         </>

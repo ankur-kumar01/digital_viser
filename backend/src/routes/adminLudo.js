@@ -69,6 +69,13 @@ router.put('/settings', async (req, res) => {
 // GET /api/admin/ludo/rooms
 router.get('/rooms', async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const [countResult] = await pool.query('SELECT COUNT(*) as total FROM ludo_rooms');
+    const total = countResult[0].total;
+
     const [rows] = await pool.query(`
       SELECT lr.*, u1.name AS host_name, u2.name AS challenger_name, uw.name AS winner_name
       FROM ludo_rooms lr
@@ -76,9 +83,10 @@ router.get('/rooms', async (req, res) => {
       LEFT JOIN users u2 ON lr.challenger_id = u2.id
       LEFT JOIN users uw ON lr.winner_id = uw.id
       ORDER BY lr.created_at DESC
-      LIMIT 100
-    `);
-    res.json(rows);
+      LIMIT ? OFFSET ?
+    `, [limit, offset]);
+    
+    res.json({ rooms: rows, total, page, limit });
   } catch (err) {
     console.error('Failed to fetch ludo rooms:', err);
     res.status(500).json({ error: 'Failed to fetch ludo rooms' });
