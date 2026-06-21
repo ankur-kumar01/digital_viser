@@ -1504,12 +1504,13 @@ router.get('/referrals/stats', async (req, res) => {
 
     // Top Referrers
     const [topReferrers] = await pool.query(`
-      SELECT u.id, u.name, COUNT(r.id) as total_referrals, COALESCE(SUM(t.amount), 0) as total_earned
+      SELECT 
+        u.id, 
+        u.name, 
+        (SELECT COUNT(*) FROM users r WHERE r.invited_by = u.id) as total_referrals,
+        (SELECT COALESCE(SUM(t.amount), 0) FROM transactions t WHERE t.user_id = u.id AND t.type IN ('referral_commission', 'fdr_referral_commission')) as total_earned
       FROM users u
-      LEFT JOIN users r ON r.invited_by = u.id
-      LEFT JOIN transactions t ON t.user_id = u.id AND t.type IN ('referral_commission', 'fdr_referral_commission')
       WHERE u.id IN (SELECT DISTINCT invited_by FROM users WHERE invited_by IS NOT NULL)
-      GROUP BY u.id
       ORDER BY total_referrals DESC
       LIMIT 10
     `);
