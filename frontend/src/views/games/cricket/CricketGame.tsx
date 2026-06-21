@@ -313,20 +313,32 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
           </div>
 
           <div className="cric-match-list">
-            {matches.map(m => (
-              <div key={m.id} className="cric-match-card" onClick={() => loadMatchDetails(m)}>
+            {matches.map((m, index) => (
+              <div key={m.id} className="cric-match-card slide-up" style={{ animationDelay: `${index * 0.1}s` }} onClick={() => loadMatchDetails(m)}>
                 <div className="cric-match-header">
                   {m.title}
                   <span className={`cric-status-badge cric-status-${m.status}`}>{m.status.toUpperCase()}</span>
                 </div>
                 <div className="cric-match-teams">
                   <div className="cric-team">
-                    <img src={m.team_a_logo} alt={m.team_a} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <div className="cric-team-logo-wrapper">
+                      <img src={m.team_a_logo} alt={m.team_a} onError={(e) => { 
+                        (e.target as HTMLImageElement).style.display = 'none'; 
+                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                      }} />
+                      <div className="cric-team-fallback hidden">{m.team_a.substring(0, 2).toUpperCase()}</div>
+                    </div>
                     <span>{m.team_a}</span>
                   </div>
                   <div className="cric-vs">VS</div>
                   <div className="cric-team">
-                    <img src={m.team_b_logo} alt={m.team_b} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <div className="cric-team-logo-wrapper">
+                      <img src={m.team_b_logo} alt={m.team_b} onError={(e) => { 
+                        (e.target as HTMLImageElement).style.display = 'none'; 
+                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                      }} />
+                      <div className="cric-team-fallback hidden">{m.team_b.substring(0, 2).toUpperCase()}</div>
+                    </div>
                     <span>{m.team_b}</span>
                   </div>
                 </div>
@@ -355,7 +367,7 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
       {/* ===== MATCH DETAILS ===== */}
       {viewState === 'match_details' && selectedMatch && (
         <div className="cric-match-details">
-          <div className="cric-back" onClick={() => setViewState('dashboard')}>← Back to Matches</div>
+          <div className="cric-back" onClick={() => setViewState('dashboard')}>← Back</div>
           
           <div className="cric-match-hero">
             <h2>{selectedMatch.short_title}</h2>
@@ -394,10 +406,10 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
 
           <h3>Contests ({contests.length})</h3>
           <div className="cric-contest-list">
-            {contests.map(c => {
+            {contests.map((c, index) => {
               const isJoined = joinedContestIds.has(c.id);
               return (
-                <div key={c.id} className={`cric-contest-card ${isJoined ? 'joined' : ''}`}>
+                <div key={c.id} className={`cric-contest-card slide-up ${isJoined ? 'joined' : ''}`} style={{ animationDelay: `${index * 0.1}s` }}>
                   <div className="cric-contest-header">
                     <h3>{c.name}</h3>
                     <div className="cric-prize">₹{parseFloat(c.prize_pool).toFixed(2)}</div>
@@ -475,10 +487,10 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
               </div>
 
               <div className="cric-player-list">
-                {getFilteredSquad().map(p => {
+                {getFilteredSquad().map((p, index) => {
                   const isSelected = selectedPlayers.includes(p.id);
                   return (
-                    <div key={p.id} className={`cric-player-card ${isSelected ? 'selected' : ''}`} onClick={() => handlePlayerToggle(p.id)}>
+                    <div key={p.id} className={`cric-player-card slide-up ${isSelected ? 'selected' : ''}`} data-role={p.role} style={{ animationDelay: `${index * 0.05}s` }} onClick={() => handlePlayerToggle(p.id)}>
                       <div className="cric-player-info">
                         <div className="cric-player-name">{p.name}</div>
                         <div className="cric-player-role">{p.role.toUpperCase()} | {p.team_name}</div>
@@ -501,11 +513,11 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
             <>
               <h3>{editingTeamId ? 'Change' : 'Choose'} Captain & Vice Captain</h3>
               <div className="cric-player-list">
-                {selectedPlayers.map(id => {
+                {selectedPlayers.map((id, index) => {
                   const p = squad.find(s => s.id === id);
                   if (!p) return null;
                   return (
-                    <div key={p.id} className="cric-cvc-card">
+                    <div key={p.id} className="cric-cvc-card slide-up" style={{ animationDelay: `${index * 0.05}s` }}>
                       <div className="cric-player-info">
                         <div className="cric-player-name">{p.name}</div>
                         <div className="cric-player-role">{p.role.toUpperCase()} | {p.team_name}</div>
@@ -539,7 +551,7 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
       {/* ===== LEADERBOARD ===== */}
       {viewState === 'leaderboard' && selectedContest && (
         <div className="cric-leaderboard">
-          <div className="cric-back" onClick={() => setViewState('match_details')}>← Back to Contest</div>
+          <div className="cric-back" onClick={() => setViewState('match_details')}>← Back</div>
           <h2>{selectedContest.name} — Leaderboard</h2>
           <p style={{color: 'var(--text-secondary)', marginBottom: '15px'}}>
             Prize Pool: ₹{parseFloat(selectedContest.prize_pool).toFixed(2)} | 
@@ -551,7 +563,7 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
           ) : (
             <div className="cric-leaderboard-table">
               {leaderboard.map((e: any, i: number) => (
-                <div key={e.id} className={`cric-lb-row ${e.user_id === user?.id ? 'cric-lb-mine' : ''} ${i < 3 ? 'cric-lb-top' : ''}`}>
+                <div key={e.id} className={`cric-lb-row slide-up ${e.user_id === user?.id ? 'cric-lb-mine' : ''} ${i < 3 ? 'cric-lb-top' : ''}`} style={{ animationDelay: `${i * 0.05}s` }}>
                   <div className="cric-lb-rank">
                     {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
                   </div>

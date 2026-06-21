@@ -1,9 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  --cric-bg-dark: #0b0f19;
+  --cric-bg-card: #151b2b;
+  --cric-bg-card-hover: #1e2638;
+  --cric-text-main: #ffffff;
+  --cric-text-muted: #94a3b8;
+  --cric-primary: #3b82f6;
+  --cric-primary-glow: rgba(59, 130, 246, 0.5);
+  --cric-accent: #10b981;
+  --cric-accent-glow: rgba(16, 185, 129, 0.4);
+  --cric-border-light: rgba(255, 255, 255, 0.08);
+  --cric-danger: #ef4444;
+  --cric-warning: #f59e0b;
+}
+
 .cric-container {
-  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  background-color: var(--cric-bg-dark);
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
   min-height: 100vh;
-  padding-bottom: 80px;
-  color: var(--text-primary);
-  font-family: 'Inter', sans-serif;
+  padding-bottom: 90px;
+  color: var(--cric-text-main);
+  font-family: 'Inter', -apple-system, sans-serif;
+  overflow-x: hidden;
 }
 
 /* Header */
@@ -11,185 +32,266 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  background: rgba(15, 23, 42, 0.85);
+  padding: 16px 20px;
+  background: rgba(11, 15, 25, 0.85);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--cric-border-light);
   position: sticky;
   top: 0;
   z-index: 50;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  gap: 10px;
 }
 
 .cric-logo {
-  font-size: clamp(1.1rem, 4vw, 1.3rem);
+  font-size: clamp(0.9rem, 4vw, 1.25rem);
   font-weight: 800;
   color: #fff;
   display: flex;
   align-items: center;
   gap: 8px;
-  white-space: nowrap !important;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  white-space: nowrap;
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cric-balance {
-  background: linear-gradient(90deg, #3b82f6, #2563eb);
-  color: white;
-  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--cric-border-light);
+  padding: 6px 10px;
   border-radius: 20px;
   font-weight: 700;
-  font-size: 0.95rem;
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+  font-size: clamp(0.8rem, 3vw, 0.95rem);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  color: var(--cric-accent);
+  white-space: nowrap;
+}
+
+.cric-info-btn, .cric-icon-btn, .cric-exit-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--cric-border-light);
+  color: var(--cric-text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.cric-info-btn:hover, .cric-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.cric-exit-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--cric-danger);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Base Layout */
+.cric-dashboard, .cric-match-details, .cric-create-team, .cric-leaderboard, .cric-my-entries, .cric-how-to-play {
+  padding: 20px 16px;
+  max-width: 600px; /* Mobile focused max width */
+  margin: 0 auto;
+  width: 100%;
 }
 
 .cric-back {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--cric-border-light);
+  width: max-content;
+  padding: 6px 16px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  gap: 6px;
+  color: var(--cric-text-muted);
+  font-weight: 600;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s;
+  margin-bottom: 20px;
 }
 
 .cric-back:hover {
-  background: rgba(239, 68, 68, 0.8);
-  transform: rotate(-10deg);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
-/* Layout */
-.cric-dashboard, .cric-match-details, .cric-create-team {
-  padding: 20px 16px;
-  max-width: 800px;
-  margin: 0 auto;
-  animation: fadeIn 0.4s ease-out;
+/* Animations */
+.slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.cric-title {
-  margin-bottom: 24px;
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: white;
+/* Dashboard Filter Tabs */
+.cric-dashboard-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 20px;
 }
 
-.cric-title::before {
-  content: '';
-  display: block;
-  width: 4px;
-  height: 24px;
-  background: #3b82f6;
-  border-radius: 4px;
-  box-shadow: 0 0 10px #3b82f6;
+.cric-filter-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px;
+  border-radius: 24px;
+  border: 1px solid var(--cric-border-light);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-/* Match Card */
+.cric-filter-tabs::-webkit-scrollbar { display: none; }
+
+.cric-filter-tab {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: none;
+  background: transparent;
+  color: var(--cric-text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.3s;
+}
+
+.cric-filter-tab.active {
+  background: var(--cric-primary);
+  color: #fff;
+  box-shadow: 0 4px 12px var(--cric-primary-glow);
+}
+
+.cric-refresh-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--cric-border-light);
+  color: var(--cric-text-muted);
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+
+/* Match Card - Clean & Modern */
 .cric-match-card {
-  background: rgba(30, 41, 59, 0.6);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--cric-bg-card);
+  border: 1px solid var(--cric-border-light);
   border-radius: 16px;
   padding: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.cric-match-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .cric-match-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
-  border-color: rgba(59, 130, 246, 0.4);
-  background: rgba(30, 41, 59, 0.8);
-}
-
-.cric-match-card:hover::before {
-  opacity: 1;
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
 }
 
 .cric-match-header {
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--cric-text-muted);
   text-align: center;
   margin-bottom: 16px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .cric-match-teams {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  align-items: stretch;
+  margin-bottom: 16px;
+  gap: 10px;
 }
 
 .cric-team {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  width: 35%;
+  justify-content: center;
+  gap: 10px;
+  flex: 1;
+  width: 40%;
 }
 
 .cric-team img {
-  width: 64px;
-  height: 64px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-  background: white;
+  background: #fff;
+  padding: 2px;
+  border: 2px solid var(--cric-border-light);
+}
+
+.cric-team-logo-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+}
+
+.cric-team-fallback {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--cric-text-muted);
+  border: 2px solid var(--cric-border-light);
+}
+
+.hidden {
+  display: none !important;
 }
 
 .cric-team span {
   font-weight: 700;
-  font-size: 1.1rem;
-  color: white;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  font-size: clamp(0.85rem, 3vw, 0.95rem);
+  color: #fff;
+  text-align: center;
+  line-height: 1.3;
 }
 
 .cric-vs {
-  font-weight: 900;
-  font-size: 1.5rem;
-  color: #fbbf24;
-  font-style: italic;
-  text-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
-  background: rgba(251, 191, 36, 0.1);
-  width: 48px;
-  height: 48px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: var(--cric-text-muted);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 6px 10px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  border: 1px solid rgba(251, 191, 36, 0.2);
+  align-self: center;
+  height: max-content;
 }
 
 .cric-match-footer {
@@ -197,81 +299,155 @@
   justify-content: space-between;
   align-items: center;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 0.9rem;
-  color: #94a3b8;
+  border-top: 1px solid var(--cric-border-light);
+  font-size: 0.85rem;
+  color: var(--cric-text-muted);
+  font-weight: 500;
 }
 
+/* Badges */
 .cric-status-badge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.cric-status-badge.upcoming { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
-.cric-status-badge.live { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); animation: pulseLive 2s infinite; }
-.cric-status-badge.completed { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.cric-status-badge.upcoming { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.cric-status-badge.live { background: rgba(239, 68, 68, 0.15); color: #f87171; animation: pulse 2s infinite; }
+.cric-status-badge.completed { background: rgba(16, 185, 129, 0.15); color: #34d399; }
 
-@keyframes pulseLive {
+@keyframes pulse {
   0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Match Details Hero */
+.cric-match-hero {
+  text-align: center;
+  margin-bottom: 24px;
+  background: var(--cric-bg-card);
+  border: 1px solid var(--cric-border-light);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.cric-match-hero h2 {
+  font-size: 1.2rem;
+  color: #fff;
+  font-weight: 800;
+  margin: 0 0 12px 0;
+  line-height: 1.3;
+}
+
+.cric-action-bar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+/* Buttons */
+.cric-btn-primary {
+  background: var(--cric-primary);
+  color: #fff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.cric-btn-primary:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.cric-btn-primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.cric-btn-primary:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--cric-text-muted);
+  cursor: not-allowed;
+}
+
+.cric-btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--cric-border-light);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.cric-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Contest Cards */
 .cric-contest-card {
-  background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--cric-bg-card);
+  border: 1px solid var(--cric-border-light);
   border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 20px;
+  padding: 16px;
+  margin-bottom: 16px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
 }
 
-.cric-contest-card::before {
-  content: '🏆';
-  position: absolute;
-  right: -10px;
-  top: -10px;
-  font-size: 5rem;
-  opacity: 0.05;
-  transform: rotate(15deg);
+.cric-contest-card.joined {
+  border-color: var(--cric-accent);
+  background: linear-gradient(to bottom right, var(--cric-bg-card), rgba(16, 185, 129, 0.05));
 }
 
 .cric-contest-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
-.cric-contest-name {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: white;
+.cric-contest-header h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
 }
 
 .cric-prize {
-  color: #10b981;
-  font-weight: 900;
-  font-size: 1.4rem;
-  text-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+  color: var(--cric-accent);
+  font-weight: 800;
+  font-size: 1.25rem;
 }
 
 .cric-contest-body {
-  margin-bottom: 20px;
-  padding: 15px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
 }
 
 .cric-entry {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #e2e8f0;
   margin-bottom: 12px;
@@ -280,89 +456,55 @@
 }
 
 .cric-spot-bar {
-  height: 8px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 4px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
   overflow: hidden;
   margin-bottom: 8px;
-  position: relative;
 }
 
 .cric-spot-fill {
   height: 100%;
-  background: linear-gradient(90deg, #f59e0b, #ef4444);
-  border-radius: 4px;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
-  transition: width 0.5s ease-out;
+  background: var(--cric-warning);
+  border-radius: 3px;
 }
 
 .cric-spots span {
-  font-size: 0.85rem;
-  color: #f87171;
-  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--cric-text-muted);
 }
 
 .cric-contest-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 
-/* Buttons */
-.cric-btn-primary {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: white;
-  border: none;
-  padding: 10px 24px;
-  border-radius: 8px;
+.cric-joined-badge {
+  color: var(--cric-accent);
   font-weight: 700;
-  font-size: 1rem;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
-  transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.cric-btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
-  background: linear-gradient(135deg, #4f46e5, #3b82f6);
-}
-
-.cric-btn-primary:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.cric-btn-primary:disabled {
-  background: #334155;
-  color: #64748b;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.cric-full-btn {
-  width: 100%;
-  padding: 16px;
-  font-size: 1.1rem;
-  margin-top: 24px;
-  border-radius: 12px;
-}
-
-/* Create Team */
-.cric-team-status {
+  font-size: 0.9rem;
   display: flex;
-  justify-content: space-around;
-  background: rgba(30, 41, 59, 0.8);
+  align-items: center;
+  gap: 4px;
+}
+
+/* Team Creation */
+.cric-team-status {
+  background: rgba(11, 15, 25, 0.95);
   backdrop-filter: blur(10px);
   padding: 16px;
-  border-radius: 12px;
-  margin-bottom: 24px;
-  font-weight: 700;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+  border-radius: 16px;
+  margin-bottom: 20px;
+  border: 1px solid var(--cric-border-light);
   position: sticky;
   top: 70px;
   z-index: 40;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
 }
 
 .cric-team-status > div {
@@ -373,44 +515,47 @@
 }
 
 .cric-team-status span {
-  font-size: 0.8rem;
-  color: #94a3b8;
-  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--cric-text-muted);
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .cric-team-status strong {
-  font-size: 1.3rem;
-  color: white;
+  font-size: 1.25rem;
+  color: #fff;
+  font-weight: 800;
 }
 
-.cric-team-status strong.danger {
-  color: #ef4444;
-}
-
+/* Player Cards */
 .cric-player-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 16px;
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 12px 16px;
+  background: var(--cric-bg-card);
+  border: 1px solid var(--cric-border-light);
   border-radius: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
+  border-left: 4px solid transparent;
 }
 
 .cric-player-card:hover {
-  background: rgba(51, 65, 85, 0.8);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--cric-bg-card-hover);
 }
 
 .cric-player-card.selected {
   background: rgba(16, 185, 129, 0.1);
-  border-color: #10b981;
-  box-shadow: inset 4px 0 0 #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+  border-left-color: var(--cric-accent);
 }
+
+.cric-player-card[data-role="batsman"] { border-left-color: #3b82f6; }
+.cric-player-card[data-role="bowler"] { border-left-color: #ef4444; }
+.cric-player-card[data-role="all-rounder"] { border-left-color: #10b981; }
+.cric-player-card[data-role="wicket-keeper"] { border-left-color: #8b5cf6; }
 
 .cric-player-info {
   display: flex;
@@ -420,496 +565,203 @@
 
 .cric-player-name {
   font-weight: 700;
-  font-size: 1.05rem;
-  color: #f8fafc;
+  font-size: 1rem;
+  color: #fff;
 }
 
 .cric-player-role {
-  font-size: 0.8rem;
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.cric-player-role::before {
-  content: '';
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #3b82f6;
+  font-size: 0.75rem;
+  color: var(--cric-text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
 }
 
 .cric-player-credits {
   font-weight: 800;
-  font-size: 1.1rem;
-  color: #fbbf24;
-  background: rgba(251, 191, 36, 0.1);
-  padding: 4px 12px;
-  border-radius: 20px;
-  border: 1px solid rgba(251, 191, 36, 0.2);
+  font-size: 1rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 10px;
+  border-radius: 6px;
 }
 
-/* CVC Selection */
+/* C/VC Selection */
+.cric-cvc-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--cric-bg-card);
+  border: 1px solid var(--cric-border-light);
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
 .cric-cvc-actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .cric-cvc-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  background: rgba(15, 23, 42, 0.6);
-  color: #94a3b8;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--cric-border-light);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--cric-text-muted);
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  line-height: 1;
+  transition: all 0.2s;
 }
 
 .cric-cvc-btn span {
   font-size: 0.65rem;
   font-weight: 600;
   margin-top: 2px;
-  opacity: 0.7;
-}
-
-.cric-cvc-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  transform: scale(1.05);
 }
 
 .cric-cvc-btn.active {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  border-color: #34d399;
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
-  transform: scale(1.1);
+  background: var(--cric-primary);
+  color: #fff;
+  border-color: var(--cric-primary);
 }
 
-.cric-error {
-  background: rgba(239, 68, 68, 0.1);
-  color: #fca5a5;
-  padding: 16px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 600;
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.1);
-}
-
-/* Empty State */
-.cric-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  text-align: center;
-  color: #94a3b8;
-  background: rgba(30, 41, 59, 0.3);
-  border-radius: 16px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-}
-
-.cric-empty-state svg {
-  margin-bottom: 16px;
-  opacity: 0.5;
-  color: #3b82f6;
-}
-
-.cric-empty-state h3 {
-  color: white;
-  margin-bottom: 8px;
-  font-size: 1.3rem;
-}
-
-/* Dashboard tabs */
-.cric-dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.cric-filter-tabs {
-  display: flex;
-  gap: 8px;
-}
-
-.cric-filter-tab {
-  padding: 8px 18px;
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: transparent;
-  color: #94a3b8;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.85rem;
-}
-
-.cric-filter-tab:hover {
-  background: rgba(59, 130, 246, 0.1);
-  color: white;
-}
-
-.cric-filter-tab.active {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: white;
-  border-color: transparent;
-}
-
-.cric-refresh-btn {
-  background: rgba(255,255,255,0.1);
-  border: none;
-  color: #94a3b8;
-  padding: 8px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.cric-refresh-btn:hover {
-  background: rgba(255,255,255,0.15);
-  color: white;
-}
-
-.cric-match-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* Match hero */
-.cric-match-hero {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.cric-match-hero h2 {
-  font-size: 1.3rem;
-  color: white;
-  font-weight: 800;
-}
-
-/* My teams */
-.cric-my-teams {
-  margin-bottom: 24px;
-}
-
-.cric-my-teams h4 {
-  color: #94a3b8;
-  margin-bottom: 12px;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.cric-teams-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.cric-team-card-small {
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 10px;
-  padding: 12px 16px;
-  min-width: 150px;
-}
-
-.cric-team-card-header {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #e2e8f0;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.cric-rank-badge {
-  background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 0.75rem;
-}
-
-.cric-team-card-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.cric-small-btn {
-  background: rgba(255,255,255,0.08);
-  border: none;
-  color: #94a3b8;
-  padding: 4px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.cric-small-btn:hover {
-  background: rgba(255,255,255,0.15);
-  color: white;
-}
-
-/* Joined state */
-.cric-contest-card.joined {
-  border-color: rgba(16, 185, 129, 0.4);
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
-}
-
-.cric-joined-badge {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-  padding: 6px 16px;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.cric-gtd-badge {
-  display: inline-block;
-  background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  margin-top: 8px;
-}
-
-/* Player filters */
+/* Filters */
 .cric-filters {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 16px;
   flex-wrap: wrap;
 }
 
 .cric-filter-group {
+  flex: 1;
+  min-width: 120px;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .cric-filter-group label {
-  color: #94a3b8;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
+  color: var(--cric-text-muted);
   font-weight: 600;
 }
 
 .cric-filter-group select {
-  background: rgba(30, 41, 59, 0.8);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: white;
-  padding: 6px 12px;
+  background: var(--cric-bg-card);
+  border: 1px solid var(--cric-border-light);
+  color: #fff;
+  padding: 10px;
   border-radius: 8px;
-  font-size: 0.85rem;
-  cursor: pointer;
+  font-size: 0.9rem;
+  outline: none;
 }
 
-/* Role breakdown */
-.cric-role-breakdown {
-  font-size: 0.8rem;
-  color: #94a3b8;
+/* My Teams Row */
+.cric-teams-row {
   display: flex;
-  gap: 10px;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  scrollbar-width: none;
+}
+.cric-teams-row::-webkit-scrollbar { display: none; }
+
+.cric-team-card-small {
+  background: var(--cric-bg-card);
+  border: 1px solid var(--cric-border-light);
+  border-radius: 12px;
+  padding: 12px;
+  min-width: 140px;
+}
+
+.cric-team-card-header {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 /* Leaderboard */
-.cric-leaderboard {
-  padding: 20px 16px;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.cric-leaderboard h2 {
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: white;
-  margin-bottom: 5px;
-}
-
 .cric-lb-row {
   display: flex;
   align-items: center;
-  padding: 14px 16px;
-  background: rgba(30, 41, 59, 0.4);
-  border: 1px solid rgba(255,255,255,0.05);
+  padding: 12px 16px;
+  background: var(--cric-bg-card);
+  border: 1px solid var(--cric-border-light);
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.cric-lb-top { border-left: 3px solid var(--cric-warning); }
+.cric-lb-mine { background: rgba(59, 130, 246, 0.1); border-color: var(--cric-primary); }
+
+.cric-lb-rank { width: 40px; font-weight: 800; font-size: 1.1rem; color: #fff; }
+.cric-lb-name { flex: 1; font-weight: 600; color: #fff; font-size: 0.95rem; }
+.cric-lb-pts { font-weight: 700; color: var(--cric-text-muted); margin-right: 16px; font-size: 0.95rem; }
+.cric-lb-prize { font-weight: 800; color: var(--cric-accent); min-width: 60px; text-align: right; font-size: 0.95rem; }
+
+/* Empty / Error */
+.cric-empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed var(--cric-border-light);
+  border-radius: 16px;
+  color: var(--cric-text-muted);
+}
+
+.cric-empty-state h3 {
+  color: #fff;
+  font-size: 1.2rem;
+  margin: 12px 0 8px 0;
+}
+
+.cric-error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  padding: 12px 16px;
   border-radius: 10px;
-  margin-bottom: 8px;
-  transition: all 0.2s;
-}
-
-.cric-lb-row:hover {
-  background: rgba(30, 41, 59, 0.7);
-}
-
-.cric-lb-top {
-  background: rgba(251, 191, 36, 0.05);
-  border-color: rgba(251, 191, 36, 0.15);
-}
-
-.cric-lb-mine {
-  border-color: rgba(59, 130, 246, 0.4);
-  box-shadow: inset 3px 0 0 #3b82f6;
-}
-
-.cric-lb-rank {
-  width: 50px;
-  font-weight: 800;
-  font-size: 1.1rem;
-  color: #f8fafc;
-}
-
-.cric-lb-name {
-  flex: 1;
-  font-weight: 600;
-  color: #e2e8f0;
-}
-
-.cric-lb-pts {
-  font-weight: 700;
-  color: #fbbf24;
-  margin-right: 20px;
-}
-
-.cric-lb-prize {
-  font-weight: 800;
-  color: #10b981;
-  min-width: 80px;
-  text-align: right;
-}
-
-/* My entries */
-.cric-my-entries, .cric-how-to-play {
-  padding: 20px 16px;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.cric-my-entries h2, .cric-how-to-play h2 {
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: white;
-  margin-bottom: 20px;
-}
-
-.cric-entry-card {
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
-}
-
-.cric-entry-match {
-  font-size: 0.8rem;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
-}
-
-.cric-entry-contest {
-  font-weight: 700;
-  color: white;
-  margin-bottom: 8px;
-}
-
-.cric-entry-details {
-  display: flex;
-  gap: 16px;
-  font-size: 0.85rem;
-  color: #94a3b8;
-}
-
-.cric-entry-won {
-  color: #10b981;
-  font-weight: 700;
-}
-
-.cric-entry-pending {
-  color: #f59e0b;
-  font-weight: 600;
-}
-
-/* How to play */
-.cric-rules {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.cric-rule {
-  background: rgba(30, 41, 59, 0.4);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px;
-  padding: 16px 20px;
-}
-
-.cric-rule h4 {
-  color: #fbbf24;
-  margin-bottom: 6px;
-  font-size: 1rem;
-}
-
-.cric-rule p {
-  color: #94a3b8;
-  line-height: 1.6;
+  margin-bottom: 16px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
   font-size: 0.9rem;
-}
-
-.cric-btn-secondary {
-  background: rgba(255,255,255,0.08);
-  color: #e2e8f0;
-  border: 1px solid rgba(255,255,255,0.1);
-  padding: 10px 20px;
-  border-radius: 8px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
 }
 
-.cric-btn-secondary:hover {
-  background: rgba(255,255,255,0.12);
-  color: white;
+/* Dialog */
+.cric-dialog-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 1000;
 }
 
-.cric-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-  color: #94a3b8;
-  gap: 10px;
+.cric-dialog {
+  background: var(--cric-bg-card);
+  border-top: 1px solid var(--cric-border-light);
+  border-radius: 20px 20px 0 0;
+  padding: 24px;
+  width: 100%; max-width: 600px;
+  animation: slideUp 0.3s ease-out;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.cric-team-select-card {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--cric-border-light); border-radius: 12px;
+  margin-bottom: 8px; cursor: pointer;
 }
 
-.spin {
-  animation: spin 1s linear infinite;
-}
+.cric-team-select-card:hover { border-color: var(--cric-primary); }
+
+.cric-loading { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 40px; color: var(--cric-text-muted); font-weight: 600; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
