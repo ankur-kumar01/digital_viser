@@ -255,18 +255,20 @@ export const AdminGames: React.FC = () => {
                     {g.is_active ? <Pause size={18} /> : <Play size={18} />}
                     {g.is_active ? 'Disable Game' : 'Enable Game'}
                   </button>
-                  <button 
-                    onClick={() => {
-                      setLimitsModalOpen(g);
-                      setEditMinBet(g.min_bet?.toString() || '10');
-                      setEditMaxBet(g.max_bet?.toString() || '100000');
-                    }}
-                    className="btn btn-secondary"
-                    style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    title="Edit Bet Limits"
-                  >
-                    <DollarSign size={18} />
-                  </button>
+                  {g.slug !== 'ludo' && (
+                    <button 
+                      onClick={() => {
+                        setLimitsModalOpen(g);
+                        setEditMinBet(g.min_bet?.toString() || '10');
+                        setEditMaxBet(g.max_bet?.toString() || '100000');
+                      }}
+                      className="btn btn-secondary"
+                      style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      title="Edit Bet Limits"
+                    >
+                      <DollarSign size={18} />
+                    </button>
+                  )}
                   {g.slug === 'aviator' && (
                     <button 
                       onClick={() => setSettingsModalOpen('aviator')}
