@@ -460,7 +460,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
         
         // Launch bot match
         showToast('Match found! Starting game...');
-        socketRef.current?.emit('ludo:play_bot', { entryFee: matchingWager }, (botRes: any) => {
+        socketRef.current?.emit('ludo:play_bot', { entryFee: matchingWager, tournamentId: selectedTournament }, (botRes: any) => {
           if (botRes.error) {
             showToast(botRes.error);
           }
@@ -469,7 +469,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
       });
     } else {
       showToast('Match found! Starting game...');
-      socketRef.current?.emit('ludo:play_bot', { entryFee: matchingWager }, (botRes: any) => {
+      socketRef.current?.emit('ludo:play_bot', { entryFee: matchingWager, tournamentId: selectedTournament }, (botRes: any) => {
         if (botRes.error) {
           showToast(botRes.error);
         }
@@ -479,13 +479,17 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
   };
 
   // Actions
-  const handleFindMatch = () => {
-    const fee = parseFloat(wagerInput);
-    if (isNaN(fee) || fee < 10 || fee > 5000) {
-      return showToast('Wager fee must be between ₹10 and ₹5000');
-    }
-    if (fee > userBalance) {
-      return showToast('Insufficient balance to wager ₹' + fee.toFixed(2));
+  const handleFindMatch = (overrideFee?: number, overrideTournamentId?: number) => {
+    const fee = overrideFee !== undefined ? overrideFee : parseFloat(wagerInput);
+    const tId = overrideTournamentId !== undefined ? overrideTournamentId : selectedTournament;
+
+    if (!tId) {
+      if (isNaN(fee) || fee < 10 || fee > 5000) {
+        return showToast('Wager fee must be between ₹10 and ₹5000');
+      }
+      if (fee > userBalance) {
+        return showToast('Insufficient balance to wager ₹' + fee.toFixed(2));
+      }
     }
 
     setIsMatching(true);
@@ -493,7 +497,10 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
     setMatchingWager(fee);
     setMatchingRoomId(null);
 
-    socketRef.current?.emit('ludo:find_match', { entryFee: fee }, (res: any) => {
+    // Ensure we set selectedTournament in state so matchmaking timeout uses it
+    if (tId) setSelectedTournament(tId);
+
+    socketRef.current?.emit('ludo:find_match', { entryFee: fee, tournamentId: tId }, (res: any) => {
       if (res.error) {
         setIsMatching(false);
         showToast(res.error);
@@ -519,16 +526,20 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
     }
   };
 
-  const handlePlayBot = () => {
-    const fee = parseFloat(wagerInput);
-    if (isNaN(fee) || fee < 10 || fee > 5000) {
-      return alert('Wager fee must be between ₹10 and ₹5000');
-    }
-    if (fee > userBalance) {
-      return alert('Insufficient balance to play wager ₹' + fee.toFixed(2));
+  const handlePlayBot = (overrideFee?: number, overrideTournamentId?: number) => {
+    const fee = overrideFee !== undefined ? overrideFee : parseFloat(wagerInput);
+    const tId = overrideTournamentId !== undefined ? overrideTournamentId : selectedTournament;
+
+    if (!tId) {
+      if (isNaN(fee) || fee < 10 || fee > 5000) {
+        return alert('Wager fee must be between ₹10 and ₹5000');
+      }
+      if (fee > userBalance) {
+        return alert('Insufficient balance to play wager ₹' + fee.toFixed(2));
+      }
     }
     setIsCreatingRoom(true);
-    socketRef.current?.emit('ludo:play_bot', { entryFee: fee }, (res: any) => {
+    socketRef.current?.emit('ludo:play_bot', { entryFee: fee, tournamentId: tId }, (res: any) => {
       if (res.error) {
         setIsCreatingRoom(false);
         alert(res.error);
@@ -981,6 +992,20 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
                         <span>Matches: <b>{t.matches_played}/{t.num_matches}</b></span>
                         <span>Rank: <b>{t.rank ? `#${t.rank}` : '-'}</b></span>
                       </div>
+                      {t.status === 'active' && (
+                        <div className="tournament-card-footer" style={{ marginTop: '10px' }}>
+                          <button 
+                            className="lobby-primary-btn" 
+                            style={{ width: '100%' }}
+                            onClick={() => {
+                              setSelectedTournament(t.tournament_id || t.id);
+                              handleFindMatch(0, t.tournament_id || t.id);
+                            }}
+                          >
+                            Play Match
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1011,7 +1036,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
                           <span>Matches: <b>{t.num_matches}</b></span>
                         </div>
                         <div className="tournament-card-footer">
-                          {t.status === 'upcoming' && (
+                          {(t.status === 'upcoming' || t.status === 'active') && (
                             <button
                               className={`lobby-primary-btn ${joined ? 'joined-btn' : ''}`}
                               onClick={() => handleJoinTournament(t.id)}
@@ -1065,9 +1090,14 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
             <div className="wager-creation-section">
               <h3 className="panel-subtitle">Select Match Wager</h3>
               {selectedTournament && (
-                <div className="tournament-match-badge">
-                  <Trophy size={14} />
-                  Playing in tournament match — ₹
+                <div className="tournament-match-badge" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <Trophy size={14} style={{ display: 'inline', marginRight: '4px' }} />
+                    Playing in tournament match
+                  </div>
+                  <button style={{ color: '#ff6b6b', background: 'transparent', border: 'none', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setSelectedTournament(null)}>
+                    Clear
+                  </button>
                 </div>
               )}
               <div className="wager-amount-selector">

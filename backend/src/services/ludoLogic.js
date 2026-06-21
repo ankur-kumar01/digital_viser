@@ -24,7 +24,8 @@ class LudoLogic {
     } catch (_) {}
   }
 
-  _validateWager(entryFee) {
+  _validateWager(entryFee, tournamentId = null) {
+    if (tournamentId && entryFee === 0) return;
     if (isNaN(entryFee) || entryFee < (this._minBet || 10) || entryFee > (this._maxBet || 5000)) {
       throw new Error(`Wager entry fee must be between ₹${this._minBet || 10} and ₹${this._maxBet || 5000}`);
     }
@@ -159,14 +160,23 @@ class LudoLogic {
 
     socket.on('ludo:find_match', async (data, callback) => {
       const entryFee = parseFloat(data.entryFee);
+      const tournamentId = data.tournamentId || null;
       try {
-        this._validateWager(entryFee);
+        this._validateWager(entryFee, tournamentId);
 
         // Search for a waiting room with same entry fee not created by this user
-        const [existingRooms] = await pool.query(
-          'SELECT id FROM ludo_rooms WHERE status = "waiting" AND entry_fee = ? AND host_id != ? ORDER BY created_at ASC LIMIT 1',
-          [entryFee, userId]
-        );
+        let query = 'SELECT id FROM ludo_rooms WHERE status = "waiting" AND entry_fee = ? AND host_id != ?';
+        let params = [entryFee, userId];
+        
+        if (tournamentId) {
+          query += ' AND tournament_id = ?';
+          params.push(tournamentId);
+        } else {
+          query += ' AND tournament_id IS NULL';
+        }
+        query += ' ORDER BY created_at ASC LIMIT 1';
+
+        const [existingRooms] = await pool.query(query, params);
 
         if (existingRooms.length > 0) {
           const roomId = existingRooms[0].id;
@@ -176,7 +186,7 @@ class LudoLogic {
           if (typeof callback === 'function') callback({ success: true, action: 'joined', room: result });
           this.broadcastRoomsList();
         } else {
-          const result = await this.createRoom(userId, entryFee);
+          const result = await this.createRoom(userId, entryFee, tournamentId);
           socket.join(`ludo_room_${result.id}`);
           socket.emit('ludo:join_room_notify', { roomId: result.id });
           if (typeof callback === 'function') callback({ success: true, action: 'created', room: result });
@@ -189,8 +199,9 @@ class LudoLogic {
 
     socket.on('ludo:create_room', async (data, callback) => {
       const entryFee = parseFloat(data.entryFee);
+      const tournamentId = data.tournamentId || null;
       try {
-        const result = await this.createRoom(userId, entryFee);
+        const result = await this.createRoom(userId, entryFee, tournamentId);
         socket.join(`ludo_room_${result.id}`);
         socket.emit('ludo:join_room_notify', { roomId: result.id });
         if (typeof callback === 'function') callback({ success: true, room: result });
@@ -214,8 +225,9 @@ class LudoLogic {
 
     socket.on('ludo:play_bot', async (data, callback) => {
       const entryFee = parseFloat(data.entryFee);
+      const tournamentId = data.tournamentId || null;
       try {
-        const result = await this.playWithBot(userId, entryFee, socket);
+        const result = await this.playWithBot(userId, entryFee, socket, tournamentId);
         if (typeof callback === 'function') callback({ success: true, room: result });
       } catch (err) {
         if (typeof callback === 'function') callback({ error: err.message });
@@ -286,8 +298,8 @@ class LudoLogic {
     }
   }
 
-  async createRoom(hostId, entryFee) {
-    this._validateWager(entryFee);
+  async createRoom(hostId, entryFee, tournamentId = null) {
+    this._validateWager(entryFee, tournamentId);
 
     const conn = await pool.getConnection();
     try {
@@ -325,8 +337,8 @@ class LudoLogic {
       };
 
       const [result] = await conn.query(
-        'INSERT INTO ludo_rooms (entry_fee, host_id, board_state, status) VALUES (?, ?, ?, "waiting")',
-        [entryFee, hostId, JSON.stringify(initialBoard)]
+        'INSERT INTO ludo_rooms (entry_fee, host_id, board_state, status, tournament_id) VALUES (?, ?, ?, "waiting", ?)',
+        [entryFee, hostId, JSON.stringify(initialBoard), tournamentId]
       );
 
       await conn.commit();
@@ -446,11 +458,11 @@ class LudoLogic {
     }
   }
 
-  async playWithBot(hostId, entryFee, socket) {
+  async playWithBot(hostId, entryFee, socket, tournamentId = null) {
     const bot = await this._getActiveBot();
     if (!bot) throw new Error('No active bot available. Please contact admin.');
 
-    this._validateWager(entryFee);
+    this._validateWager(entryFee, tournamentId);
 
     const conn = await pool.getConnection();
     try {
@@ -493,8 +505,8 @@ class LudoLogic {
       const hostName = hostRows[0]?.name || 'Player 1';
 
       const [result] = await conn.query(
-        'INSERT INTO ludo_rooms (entry_fee, host_id, challenger_id, board_state, status) VALUES (?, ?, ?, ?, "playing")',
-        [entryFee, hostId, challengerId, JSON.stringify(initialBoard)]
+        'INSERT INTO ludo_rooms (entry_fee, host_id, challenger_id, board_state, status, tournament_id) VALUES (?, ?, ?, ?, "playing", ?)',
+        [entryFee, hostId, challengerId, JSON.stringify(initialBoard), tournamentId]
       );
 
       const roomId = result.insertId;
