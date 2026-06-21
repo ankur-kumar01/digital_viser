@@ -337,6 +337,10 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
       setCurrentRoom(prev => prev ? { ...prev, boardState: data.boardState } : null);
     });
 
+    socket.on('ludo:join_room_notify', (data: { roomId: number }) => {
+      // Track room for disconnect handling
+    });
+
     socket.on('ludo:game_over', (data: { winnerId: number; winPayout: number; roomId: number }) => {
       const isWinner = data.winnerId === user?.id;
       setWinPayout(data.winPayout);
@@ -589,7 +593,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
           continue;
         }
 
-        // Green Base (Inactive top-right)
+        // Blue Base (top-right)
         if (r < 6 && c > 8) {
           if (r === 0 && c === 9) {
             cells.push(
@@ -609,7 +613,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
           continue;
         }
 
-        // Yellow Base (Inactive bottom-left)
+        // Red Base (bottom-left)
         if (r > 8 && c < 6) {
           if (r === 9 && c === 0) {
             cells.push(

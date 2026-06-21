@@ -4,20 +4,55 @@ class LudoLogic {
   constructor(io) {
     this.io = io;
     this.rooms = new Map(); // local tracking of active rooms timers/states
-    this.ensureBotUser();
+    this.disconnectTimers = new Map(); // socket disconnect grace timers: roomId -> timer
+    this.socketUserRooms = new Map(); // socket.id -> { roomId, userId }
+    this._turnTimeout = 16000; // default, will be overridden from settings
+    this._cacheSettings();
   }
 
-  async ensureBotUser() {
+  async _cacheSettings() {
     try {
-      await pool.query(`
-        INSERT INTO users (id, name, email, password_hash)
-        VALUES (9999, 'Guest_7842', 'bot@ludoclash.com', 'disabled')
-        ON DUPLICATE KEY UPDATE name = 'Guest_7842'
-      `);
-      console.log('LudoBot user verified in database (ID: 9999)');
-    } catch (err) {
-      console.error('Failed to verify LudoBot user in database:', err);
+      const [rows] = await pool.query(
+        "SELECT setting_key, setting_value FROM system_settings WHERE setting_key LIKE 'ludo_%'"
+      );
+      for (const row of rows) {
+        if (row.setting_key === 'ludo_turn_timeout') this._turnTimeout = parseInt(row.setting_value) || 16000;
+        if (row.setting_key === 'ludo_min_bet') this._minBet = parseFloat(row.setting_value) || 10;
+        if (row.setting_key === 'ludo_max_bet') this._maxBet = parseFloat(row.setting_value) || 5000;
+        if (row.setting_key === 'ludo_house_edge') this._houseEdge = parseFloat(row.setting_value) || 5;
+      }
+    } catch (_) {}
+  }
+
+  _validateWager(entryFee) {
+    if (isNaN(entryFee) || entryFee < (this._minBet || 10) || entryFee > (this._maxBet || 5000)) {
+      throw new Error(`Wager entry fee must be between ₹${this._minBet || 10} and ₹${this._maxBet || 5000}`);
     }
+  }
+
+  async _getActiveBot() {
+    const [bots] = await pool.query(
+      'SELECT id, name FROM game_bots WHERE is_active = 1 ORDER BY RAND() LIMIT 1'
+    );
+    if (bots.length === 0) {
+      // Fallback: ensure the default bot exists
+      await pool.query(`
+        INSERT IGNORE INTO game_bots (id, name, email, password_hash, is_active)
+        VALUES (1, 'Guest_7842', 'bot@ludoclash.com', 'disabled', 1)
+      `);
+      await pool.query(`
+        INSERT IGNORE INTO users (id, name, email, password_hash)
+        VALUES (9999, 'Guest_7842', 'bot@ludoclash.com', 'disabled')
+      `);
+      return { userId: 9999, name: 'Guest_7842' };
+    }
+    const botUserId = 10000 + bots[0].id;
+    // Ensure users row exists
+    await pool.query(
+      'INSERT IGNORE INTO users (id, name, email, password_hash) VALUES (?, ?, ?, "disabled")',
+      [botUserId, bots[0].name, bots[0].email]
+    );
+    return { userId: botUserId, name: bots[0].name };
   }
 
   handleSocketConnection(socket) {
@@ -25,6 +60,42 @@ class LudoLogic {
 
     // Send active rooms lists to user
     this.sendRoomsList(socket);
+
+    // Track disconnect for auto-forfeit
+    socket.on('ludo:join_room_notify', (data) => {
+      const roomId = parseInt(data.roomId);
+      this.socketUserRooms.set(socket.id, { roomId, userId });
+    });
+
+    socket.on('disconnect', () => {
+      // Cancel any reconnection timer if user reconnects
+      const session = this.socketUserRooms.get(socket.id);
+      if (session) {
+        const { roomId } = session;
+        this.socketUserRooms.delete(socket.id);
+
+        // Start 30-second grace timer
+        if (this.disconnectTimers.has(roomId)) {
+          clearTimeout(this.disconnectTimers.get(roomId));
+        }
+        this.disconnectTimers.set(roomId, setTimeout(async () => {
+          try {
+            const [rooms] = await pool.query('SELECT * FROM ludo_rooms WHERE id = ?', [roomId]);
+            if (rooms.length === 0 || rooms[0].status !== 'playing') return;
+
+            const room = rooms[0];
+            const winnerId = room.host_id === userId ? room.challenger_id : room.host_id;
+            if (winnerId) {
+              await this.resolveWin(roomId, winnerId, room.entry_fee);
+              console.log(`🕹️ Auto-forfeit: Room #${roomId} — user ${userId} disconnected`);
+            }
+          } catch (err) {
+            console.error('Disconnect forfeit error:', err);
+          }
+          this.disconnectTimers.delete(roomId);
+        }, 30000));
+      }
+    });
 
     socket.on('ludo:get_rooms', () => {
       this.sendRoomsList(socket);
@@ -44,6 +115,8 @@ class LudoLogic {
 
         if (rooms.length > 0) {
           const room = rooms[0];
+          // Cancel any disconnect timer — user has reconnected
+          this._cancelDisconnectTimer(room.id);
           const boardState = typeof room.board_state === 'string' ? JSON.parse(room.board_state) : room.board_state;
           const gameRoomData = {
             id: room.id,
@@ -55,6 +128,7 @@ class LudoLogic {
             boardState
           };
           socket.join(`ludo_room_${room.id}`);
+          this.socketUserRooms.set(socket.id, { roomId: room.id, userId });
           if (typeof callback === 'function') callback({ success: true, room: gameRoomData });
         } else {
           if (typeof callback === 'function') callback({ success: false });
@@ -86,9 +160,7 @@ class LudoLogic {
     socket.on('ludo:find_match', async (data, callback) => {
       const entryFee = parseFloat(data.entryFee);
       try {
-        if (isNaN(entryFee) || entryFee < 10 || entryFee > 5000) {
-          throw new Error('Wager entry fee must be between ₹10 and ₹5000');
-        }
+        this._validateWager(entryFee);
 
         // Search for a waiting room with same entry fee not created by this user
         const [existingRooms] = await pool.query(
@@ -98,12 +170,15 @@ class LudoLogic {
 
         if (existingRooms.length > 0) {
           const roomId = existingRooms[0].id;
+          this._cancelDisconnectTimer(roomId);
           const result = await this.joinRoom(userId, roomId, socket);
+          socket.emit('ludo:join_room_notify', { roomId });
           if (typeof callback === 'function') callback({ success: true, action: 'joined', room: result });
           this.broadcastRoomsList();
         } else {
           const result = await this.createRoom(userId, entryFee);
           socket.join(`ludo_room_${result.id}`);
+          socket.emit('ludo:join_room_notify', { roomId: result.id });
           if (typeof callback === 'function') callback({ success: true, action: 'created', room: result });
           this.broadcastRoomsList();
         }
@@ -117,6 +192,7 @@ class LudoLogic {
       try {
         const result = await this.createRoom(userId, entryFee);
         socket.join(`ludo_room_${result.id}`);
+        socket.emit('ludo:join_room_notify', { roomId: result.id });
         if (typeof callback === 'function') callback({ success: true, room: result });
         this.broadcastRoomsList();
       } catch (err) {
@@ -128,6 +204,7 @@ class LudoLogic {
       const roomId = parseInt(data.roomId);
       try {
         const result = await this.joinRoom(userId, roomId, socket);
+        socket.emit('ludo:join_room_notify', { roomId });
         if (typeof callback === 'function') callback({ success: true, room: result });
         this.broadcastRoomsList();
       } catch (err) {
@@ -159,6 +236,7 @@ class LudoLogic {
     socket.on('ludo:roll_dice', async (data, callback) => {
       const roomId = parseInt(data.roomId);
       try {
+        this._cancelDisconnectTimer(roomId);
         const result = await this.rollDice(userId, roomId);
         if (typeof callback === 'function') callback({ success: true, roll: result.roll, phase: result.phase });
       } catch (err) {
@@ -209,9 +287,7 @@ class LudoLogic {
   }
 
   async createRoom(hostId, entryFee) {
-    if (isNaN(entryFee) || entryFee < 10 || entryFee > 5000) {
-      throw new Error('Wager entry fee must be between ₹10 and ₹5000');
-    }
+    this._validateWager(entryFee);
 
     const conn = await pool.getConnection();
     try {
@@ -356,6 +432,7 @@ class LudoLogic {
 
       // Notify users inside this room
       socket.join(`ludo_room_${roomId}`);
+      this.socketUserRooms.set(socket.id, { roomId, userId: challengerId });
       this.io.to(`ludo_room_${roomId}`).emit('ludo:game_start', gameRoomData);
       
       this.startTurnTimeout(roomId);
@@ -370,9 +447,10 @@ class LudoLogic {
   }
 
   async playWithBot(hostId, entryFee, socket) {
-    if (isNaN(entryFee) || entryFee < 10 || entryFee > 5000) {
-      throw new Error('Wager entry fee must be between ₹10 and ₹5000');
-    }
+    const bot = await this._getActiveBot();
+    if (!bot) throw new Error('No active bot available. Please contact admin.');
+
+    this._validateWager(entryFee);
 
     const conn = await pool.getConnection();
     try {
@@ -409,8 +487,8 @@ class LudoLogic {
         missedTurns: { host: 0, challenger: 0 }
       };
 
-      const challengerId = 9999; // simulated bot ID
-      const challengerName = 'Guest_7842';
+      const challengerId = bot.userId;
+      const challengerName = bot.name;
       const [hostRows] = await conn.query('SELECT name FROM users WHERE id = ?', [hostId]);
       const hostName = hostRows[0]?.name || 'Player 1';
 
@@ -434,6 +512,7 @@ class LudoLogic {
       };
 
       socket.join(`ludo_room_${roomId}`);
+      socket.emit('ludo:join_room_notify', { roomId });
       this.startTurnTimeout(roomId);
       // Notify client
       setTimeout(() => {
@@ -467,9 +546,7 @@ class LudoLogic {
     if (isChallenger && currentTurn !== 'challenger') throw new Error('It is not your turn');
     if (boardState.phase !== 'roll') throw new Error('Waiting for piece move, not roll');
 
-    // Reset missed turns since player is active
     boardState.missedTurns = boardState.missedTurns || { host: 0, challenger: 0 };
-    boardState.missedTurns[currentTurn] = 0;
 
     // Roll random 1-6
     const roll = Math.floor(Math.random() * 6) + 1;
@@ -559,9 +636,7 @@ class LudoLogic {
     if (isChallenger && currentTurn !== 'challenger') throw new Error('It is not your turn');
     if (boardState.phase !== 'move') throw new Error('You must roll the dice first');
 
-    // Reset missed turns since player is active
     boardState.missedTurns = boardState.missedTurns || { host: 0, challenger: 0 };
-    boardState.missedTurns[currentTurn] = 0;
 
     const pieces = isHost ? boardState.hostPieces : boardState.challengerPieces;
     if (pieceIndex < 0 || pieceIndex > 3) throw new Error('Invalid piece index');
@@ -657,15 +732,13 @@ class LudoLogic {
       const [rooms] = await conn.query('SELECT * FROM ludo_rooms WHERE id = ? FOR UPDATE', [roomId]);
       if (rooms[0].status !== 'playing') throw new Error('Match already resolved');
 
-      // Fetch house edge setting
-      const [settings] = await conn.query('SELECT setting_value FROM system_settings WHERE setting_key = "ludo_house_edge"');
-      const houseEdge = parseFloat(settings[0]?.setting_value) || 5;
-
+      const houseEdge = this._houseEdge || 5;
       const totalPool = parseFloat(entryFee) * 2;
       const winPayout = totalPool * (1 - houseEdge / 100);
 
-      // If winner is bot (9999), no payout is given
-      if (winnerId !== 9999) {
+      // If winner is a bot, no payout is given
+      const isBot = winnerId >= 10000 || winnerId === 9999;
+      if (!isBot) {
         await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [winPayout, winnerId]);
         await conn.query(
           'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
@@ -706,12 +779,24 @@ class LudoLogic {
         const room = rooms[0];
         const boardState = typeof room.board_state === 'string' ? JSON.parse(room.board_state) : room.board_state;
         
-        // Auto forfeit / pass turn
         const missedPlayer = boardState.turn;
         console.log(`Ludo Room #${roomId}: Player "${missedPlayer}" missed turn timeout`);
 
         boardState.missedTurns = boardState.missedTurns || { host: 0, challenger: 0 };
         boardState.missedTurns[missedPlayer] = (boardState.missedTurns[missedPlayer] || 0) + 1;
+
+        // Auto-forfeit after 3 consecutive missed turns
+        if (boardState.missedTurns[missedPlayer] >= 3) {
+          const winnerId = missedPlayer === 'host' ? room.challenger_id : room.host_id;
+          if (winnerId) {
+            await this.resolveWin(roomId, winnerId, room.entry_fee);
+            this.io.to(`ludo_room_${roomId}`).emit('ludo:turn_passed', {
+              boardState,
+              reason: `Opponent missed 3 turns. You win by forfeit!`
+            });
+            return;
+          }
+        }
 
         // Pass turn
         boardState.phase = 'roll';
@@ -731,7 +816,7 @@ class LudoLogic {
       } catch (err) {
         console.error('Error handling turn timeout:', err);
       }
-    }, 16000); // 16 seconds turn limit
+    }, this._turnTimeout);
 
     this.rooms.set(roomId, timer);
   }
@@ -743,8 +828,17 @@ class LudoLogic {
     }
   }
 
+  _cancelDisconnectTimer(roomId) {
+    if (this.disconnectTimers.has(roomId)) {
+      clearTimeout(this.disconnectTimers.get(roomId));
+      this.disconnectTimers.delete(roomId);
+      console.log(`🕹️ Disconnect timer cancelled for Room #${roomId}`);
+    }
+  }
+
   checkTriggerBotTurn(roomId, currentTurn, challengerId) {
-    if (challengerId === 9999 && currentTurn === 'challenger') {
+    // Bot user IDs start at 10000+, also check legacy 9999
+    if ((challengerId >= 10000 || challengerId === 9999) && currentTurn === 'challenger') {
       setTimeout(() => this.executeBotTurn(roomId), 1500);
     }
   }
@@ -757,6 +851,8 @@ class LudoLogic {
       const room = rooms[0];
       const boardState = typeof room.board_state === 'string' ? JSON.parse(room.board_state) : room.board_state;
       if (boardState.turn !== 'challenger') return;
+
+      const botUserId = room.challenger_id;
 
       // 1. Roll Dice
       const roll = Math.floor(Math.random() * 6) + 1;
@@ -775,7 +871,6 @@ class LudoLogic {
       // 2. Select piece to move
       const hasMoves = this.checkValidMoves('challenger', boardState, roll);
       if (!hasMoves) {
-        // Auto pass
         setTimeout(async () => {
           boardState.phase = 'roll';
           boardState.turn = 'host';
@@ -793,21 +888,78 @@ class LudoLogic {
         return;
       }
 
-      // Pick piece (bot decision logic)
+      // 3. Smart bot AI: pick the best piece
       setTimeout(async () => {
         const pieces = boardState.challengerPieces;
+        const hostPieces = boardState.hostPieces;
+        const safeZones = [1, 9, 14, 22, 27, 35, 40, 48];
         let selectedIndex = -1;
+        let bestScore = -999;
 
-        // Try to release on 6
-        if (roll === 6) {
-          selectedIndex = pieces.findIndex(pos => pos === 0);
+        for (let idx = 0; idx < 4; idx++) {
+          const pos = pieces[idx];
+          if (pos === 0 && roll !== 6) continue; // Can't move from base
+          if (pos > 0 && pos + roll > 58) continue; // Would overshoot home
+
+          let score = 0;
+
+          if (pos === 0 && roll === 6) {
+            // Releasing from base is good
+            score = 5;
+          }
+
+          const newPos = pos === 0 && roll === 6 ? 1 : pos + roll;
+
+          // Capturing opponent piece = HIGH priority
+          const hostToChallengerPos = (p) => (p + 26) % 52 || 52;
+          const challengerToHostPos = (p) => (p + 26) % 52 || 52;
+          for (let hIdx = 0; hIdx < 4; hIdx++) {
+            const hPos = hostPieces[hIdx];
+            if (hPos > 0 && hPos < 53) {
+              const mappedHostPos = challengerToHostPos(hPos);
+              if (mappedHostPos === newPos) {
+                score += 20; // Capture!
+              }
+            }
+          }
+
+          // Avoid unsafe squares (can be captured next turn)
+          if (newPos < 53 && !safeZones.includes(newPos)) {
+            // Check if opponent is close enough to capture this position
+            for (let hIdx = 0; hIdx < 4; hIdx++) {
+              const hPos = hostPieces[hIdx];
+              if (hPos > 0 && hPos < 53) {
+                const mappedHostPos = challengerToHostPos(hPos);
+                // If opponent is within 6 squares behind, this is dangerous
+                const diff = (mappedHostPos - newPos + 52) % 52;
+                if (diff > 0 && diff <= 6) {
+                  score -= 8; // Danger!
+                }
+              }
+            }
+          }
+
+          // Prioritize pieces closer to home
+          if (newPos > 0) {
+            score += Math.floor(newPos / 10); // 0-5 points based on progress
+          }
+
+          // Prefer safe positions
+          if (safeZones.includes(newPos)) {
+            score += 4;
+          }
+
+          if (score > bestScore) {
+            bestScore = score;
+            selectedIndex = idx;
+          }
         }
 
-        // If no piece to release, pick a random piece that is valid to move
+        // Fallback to any valid move
         if (selectedIndex === -1) {
           const validIndices = [];
           pieces.forEach((pos, idx) => {
-            if (pos > 0 && pos + roll <= 58) {
+            if ((pos === 0 && roll === 6) || (pos > 0 && pos + roll <= 58)) {
               validIndices.push(idx);
             }
           });
@@ -816,13 +968,8 @@ class LudoLogic {
           }
         }
 
-        // Fallback
-        if (selectedIndex === -1) {
-          selectedIndex = pieces.findIndex(pos => (pos === 0 && roll === 6) || (pos > 0 && pos + roll <= 58));
-        }
-
         if (selectedIndex !== -1) {
-          await this.movePiece(9999, roomId, selectedIndex);
+          await this.movePiece(botUserId, roomId, selectedIndex);
         }
       }, 1000);
 

@@ -42,6 +42,8 @@ import { AdminBigWins } from './views/admin/AdminBigWins';
 import { AdminGameSimulations } from './views/admin/AdminGameSimulations';
 import { AdminSpinWheel } from './views/admin/AdminSpinWheel';
 import { AdminFantasy } from './views/admin/AdminFantasy';
+import { AdminLudo } from './views/admin/AdminLudo';
+import { AdminBots } from './views/admin/AdminBots';
 import { AdminReferrals } from './views/admin/AdminReferrals';
 import { AdminTransactions } from './views/admin/AdminTransactions';
 import { AdminBets } from './views/admin/AdminBets';
@@ -325,6 +327,8 @@ export const App: React.FC = () => {
             {currentView === 'admin-game-simulations' && <AdminGameSimulations />}
             {currentView === 'admin-spin-wheel' && <AdminSpinWheel />}
             {currentView === 'admin-fantasy-cricket' && <AdminFantasy />}
+            {currentView === 'admin-ludo' && <AdminLudo />}
+            {currentView === 'admin-bots' && <AdminBots />}
             {currentView === 'admin-transactions' && <AdminTransactions />}
             {currentView === 'admin-bets' && <AdminBets />}
             {currentView === 'admin-login-history' && <AdminLoginHistory />}

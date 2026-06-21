@@ -193,7 +193,7 @@ router.get('/ludo/top-wins', async (req, res) => {
               uw.name as winner_name
        FROM ludo_rooms lr
        LEFT JOIN users uw ON lr.winner_id = uw.id
-       WHERE lr.status = 'completed' AND lr.winner_id IS NOT NULL AND lr.winner_id != 9999
+       WHERE lr.status = 'completed' AND lr.winner_id IS NOT NULL AND lr.winner_id != 9999 AND lr.winner_id < 10000
        ORDER BY lr.entry_fee DESC
        LIMIT 50`
     );

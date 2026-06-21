@@ -234,7 +234,7 @@
   margin: 0 0 8px 0;
   background: linear-gradient(90deg, #ffffff 0%, #ff4757 100%);
   -webkit-background-clip: text;
-  -webkit-text-fillColor: transparent;
+  -webkit-text-fill-color: transparent;
   text-shadow: 0 0 20px rgba(255, 71, 87, 0.3);
   color: #ff4757; /* Fallback */
 }

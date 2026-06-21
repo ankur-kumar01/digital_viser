@@ -12,6 +12,7 @@ const { runMigrations } = require('./migrate');
 const AviatorGameLogic = require('./services/aviatorLogic');
 const ColourTradingLogic = require('./services/colourTradingLogic');
 const LudoLogic = require('./services/ludoLogic');
+const LudoCleanup = require('./cron/ludoCleanup');
 
 // Import route files
 const authRoutes = require('./routes/auth');
@@ -52,6 +53,7 @@ const io = new Server(server, {
 const aviatorEngine = new AviatorGameLogic(io);
 const ctEngine = new ColourTradingLogic(io);
 const ludoEngine = new LudoLogic(io);
+const ludoCleanupCron = new LudoCleanup();
 
 // Socket.io Authentication Middleware
 io.use((socket, next) => {
@@ -165,6 +167,8 @@ app.use('/api/admin/fantasy', adminFantasyRoutes);
 app.use('/api/spin', spinRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/fantasy', require('./middleware/auth'), fantasyRoutes);
+app.use('/api/admin/ludo', require('./routes/adminLudo'));
+app.use('/api/admin/bots', require('./routes/adminBots'));
 
 // Public Config Endpoint
 app.get('/api/config', async (req, res) => {
@@ -271,6 +275,8 @@ server.listen(PORT, async () => {
     // Verify database connection after server is running
     await pool.query('SELECT 1');
     console.log('✅ Database connection successful');
+    // Start Ludo cleanup cron
+    ludoCleanupCron.start();
   } catch (err) {
     console.error('❌ Failed to run startup tasks (DB/Migrations):', err.message);
     console.error('💡 TIP: Check your .env credentials. Visit /api/health to see live database status.');
