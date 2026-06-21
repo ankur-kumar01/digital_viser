@@ -12,30 +12,148 @@ class FantasyApiService {
     this.baseUrl = 'https://api.cricapi.com/v1'; 
   }
 
+  async getApiKey() {
+    try {
+      const [rows] = await pool.query("SELECT setting_value FROM system_settings WHERE setting_key = 'sports_api_key'");
+      if (rows.length > 0 && rows[0].setting_value) {
+        return rows[0].setting_value;
+      }
+    } catch (err) {
+      console.error('Error fetching API key:', err);
+    }
+    return process.env.CRICKET_API_KEY || '';
+  }
+
   // --- API Abstraction Layer ---
 
   async fetchUpcomingMatches() {
-    if (this.useMock) {
+    const apiKey = await this.getApiKey();
+    if (!apiKey) {
+      console.log('No API key found, using mock matches');
       return this._getMockMatches();
     }
-    // TODO: Implement real API call (e.g., fetch(this.baseUrl + '/matches...'))
-    return [];
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/currentMatches?apikey=${apiKey}&offset=0`);
+      const data = await response.json();
+      
+      if (data.status !== 'success') {
+        throw new Error(data.reason || 'Failed to fetch matches');
+      }
+
+      // Map CricAPI matches to our DB format
+      return data.data.map(m => ({
+        api_match_id: m.id,
+        title: m.name,
+        short_title: m.shortName || m.name,
+        subtitle: m.matchType,
+        format: m.matchType === 't20' ? 'T20' : (m.matchType === 'odi' ? 'ODI' : 'Test'),
+        team_a: m.teams?.[0] || 'Team A',
+        team_a_logo: m.teamInfo?.[0]?.img || 'https://via.placeholder.com/100?text=Team+A',
+        team_b: m.teams?.[1] || 'Team B',
+        team_b_logo: m.teamInfo?.[1]?.img || 'https://via.placeholder.com/100?text=Team+B',
+        start_time: new Date(m.dateTimeGMT).toISOString().slice(0, 19).replace('T', ' '),
+        status: m.matchStarted ? 'live' : 'upcoming'
+      }));
+    } catch (error) {
+      console.error('API Error:', error);
+      return this._getMockMatches(); // Fallback
+    }
   }
 
   async fetchMatchSquads(apiMatchId) {
-    if (this.useMock) {
+    const apiKey = await this.getApiKey();
+    if (!apiKey) {
       return this._getMockSquads(apiMatchId);
     }
-    // TODO: Implement real API call
-    return [];
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/match_squad?apikey=${apiKey}&id=${apiMatchId}`);
+      const data = await response.json();
+      
+      if (data.status !== 'success') {
+        throw new Error(data.reason || 'Failed to fetch squads');
+      }
+
+      const players = [];
+      data.data.forEach(team => {
+        team.players.forEach(p => {
+          players.push({
+            api_player_id: p.id,
+            name: p.name,
+            team_name: team.teamName,
+            role: p.role ? p.role.toLowerCase() : 'batsman',
+            credit_value: 8.5 // CricAPI doesn't provide credits, mock default
+          });
+        });
+      });
+      return players;
+    } catch (error) {
+      console.error('API Error:', error);
+      return this._getMockSquads(apiMatchId); // Fallback
+    }
   }
 
   async fetchLiveScorecard(apiMatchId) {
-    if (this.useMock) {
+    const apiKey = await this.getApiKey();
+    if (!apiKey) {
       return this._getMockScorecard(apiMatchId);
     }
-    // TODO: Implement real API call
-    return { players: [] };
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/match_scorecard?apikey=${apiKey}&id=${apiMatchId}`);
+      const data = await response.json();
+      
+      if (data.status !== 'success') {
+        throw new Error(data.reason || 'Failed to fetch scorecard');
+      }
+
+      // Very simplified extraction of player stats from CricAPI scorecard
+      const players = [];
+      const matchStatus = data.data.matchEnded ? 'completed' : 'live';
+      
+      if (data.data.scorecard) {
+        data.data.scorecard.forEach(innings => {
+          if (innings.batting) {
+            innings.batting.forEach(b => {
+              players.push({
+                api_player_id: b.batsman.id,
+                stats: {
+                  runs: parseInt(b.r) || 0,
+                  boundaries: parseInt(b['4s']) || 0,
+                  sixes: parseInt(b['6s']) || 0,
+                  is_out: b.dismissal !== 'not out',
+                  is_duck: parseInt(b.r) === 0 && b.dismissal !== 'not out',
+                  wickets: 0, catches: 0 // Will override below if they bowled
+                }
+              });
+            });
+          }
+          if (innings.bowling) {
+            innings.bowling.forEach(b => {
+              const existing = players.find(p => p.api_player_id === b.bowler.id);
+              if (existing) {
+                existing.stats.wickets = parseInt(b.w) || 0;
+              } else {
+                players.push({
+                  api_player_id: b.bowler.id,
+                  stats: { runs: 0, boundaries: 0, sixes: 0, is_out: false, is_duck: false, wickets: parseInt(b.w) || 0, catches: 0 }
+                });
+              }
+            });
+          }
+        });
+      }
+
+      return {
+        status: matchStatus,
+        winning_team: data.data.matchWinner || null,
+        players
+      };
+    } catch (error) {
+      console.error('API Error:', error);
+      return this._getMockScorecard(apiMatchId); // Fallback
+    }
   }
 
   // --- Mock Data Generators (For Development) ---
