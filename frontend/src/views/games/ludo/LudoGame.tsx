@@ -480,8 +480,8 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
 
   // Actions
   const handleFindMatch = (overrideFee?: number, overrideTournamentId?: number) => {
-    const fee = overrideFee !== undefined ? overrideFee : parseFloat(wagerInput);
-    const tId = overrideTournamentId !== undefined ? overrideTournamentId : selectedTournament;
+    const fee = typeof overrideFee === 'number' ? overrideFee : parseFloat(wagerInput);
+    const tId = typeof overrideTournamentId === 'number' ? overrideTournamentId : selectedTournament;
 
     if (!tId) {
       if (isNaN(fee) || fee < 10 || fee > 5000) {
@@ -527,8 +527,8 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
   };
 
   const handlePlayBot = (overrideFee?: number, overrideTournamentId?: number) => {
-    const fee = overrideFee !== undefined ? overrideFee : parseFloat(wagerInput);
-    const tId = overrideTournamentId !== undefined ? overrideTournamentId : selectedTournament;
+    const fee = typeof overrideFee === 'number' ? overrideFee : parseFloat(wagerInput);
+    const tId = typeof overrideTournamentId === 'number' ? overrideTournamentId : selectedTournament;
 
     if (!tId) {
       if (isNaN(fee) || fee < 10 || fee > 5000) {
