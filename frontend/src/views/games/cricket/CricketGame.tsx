@@ -322,22 +322,34 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
                 <div className="cric-match-teams">
                   <div className="cric-team">
                     <div className="cric-team-logo-wrapper">
-                      <img src={m.team_a_logo} alt={m.team_a} onError={(e) => { 
-                        (e.target as HTMLImageElement).style.display = 'none'; 
-                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                      }} />
-                      <div className="cric-team-fallback hidden">{m.team_a.substring(0, 2).toUpperCase()}</div>
+                      {m.team_a_logo ? (
+                        <>
+                          <img src={m.team_a_logo} alt={m.team_a} onError={(e) => { 
+                            (e.target as HTMLImageElement).style.display = 'none'; 
+                            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                          }} />
+                          <div className="cric-team-fallback hidden">{m.team_a.substring(0, 2).toUpperCase()}</div>
+                        </>
+                      ) : (
+                        <div className="cric-team-fallback">{m.team_a.substring(0, 2).toUpperCase()}</div>
+                      )}
                     </div>
                     <span>{m.team_a}</span>
                   </div>
                   <div className="cric-vs">VS</div>
                   <div className="cric-team">
                     <div className="cric-team-logo-wrapper">
-                      <img src={m.team_b_logo} alt={m.team_b} onError={(e) => { 
-                        (e.target as HTMLImageElement).style.display = 'none'; 
-                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                      }} />
-                      <div className="cric-team-fallback hidden">{m.team_b.substring(0, 2).toUpperCase()}</div>
+                      {m.team_b_logo ? (
+                        <>
+                          <img src={m.team_b_logo} alt={m.team_b} onError={(e) => { 
+                            (e.target as HTMLImageElement).style.display = 'none'; 
+                            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                          }} />
+                          <div className="cric-team-fallback hidden">{m.team_b.substring(0, 2).toUpperCase()}</div>
+                        </>
+                      ) : (
+                        <div className="cric-team-fallback">{m.team_b.substring(0, 2).toUpperCase()}</div>
+                      )}
                     </div>
                     <span>{m.team_b}</span>
                   </div>

@@ -92,7 +92,7 @@ class FantasyApiService {
     // Rate limit: don't call squad API more than once every 15 min per match
     if (!this._checkRateLimit(`squad_${apiMatchId}`, 900000)) {
       console.log(`⏳ [API Quota] Skipping squad sync for ${apiMatchId}`);
-      return this._getMockSquads(apiMatchId);
+      return []; // Return empty array instead of mock data so we don't pollute the database with fakes for real matches
     }
     
     try {
@@ -127,7 +127,7 @@ class FantasyApiService {
       return players;
     } catch (error) {
       console.error('API Error:', error);
-      return this._getMockSquads(apiMatchId);
+      return []; // Return empty array on error instead of mock data
     }
   }
 
@@ -144,7 +144,7 @@ class FantasyApiService {
       if (this._mockScorecardCache[apiMatchId]) {
         return this._mockScorecardCache[apiMatchId];
       }
-      return this._getMockScorecard(apiMatchId);
+      return { status: 'live', players: [] }; // Return empty scorecard structure instead of mock
     }
     
     try {
@@ -229,9 +229,9 @@ class FantasyApiService {
         subtitle: 'IPL 2026 - Match 1',
         format: 'T20',
         team_a: 'Mumbai Indians',
-        team_a_logo: 'https://via.placeholder.com/100/004ba0/ffffff?text=MI',
+        team_a_logo: '',
         team_b: 'Chennai Super Kings',
-        team_b_logo: 'https://via.placeholder.com/100/ffff00/000000?text=CSK',
+        team_b_logo: '',
         start_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' '),
         status: 'upcoming'
       },
@@ -242,9 +242,9 @@ class FantasyApiService {
         subtitle: 'IPL 2026 - Match 2',
         format: 'T20',
         team_a: 'Royal Challengers Bangalore',
-        team_a_logo: 'https://via.placeholder.com/100/ec1c24/ffffff?text=RCB',
+        team_a_logo: '',
         team_b: 'Kolkata Knight Riders',
-        team_b_logo: 'https://via.placeholder.com/100/3a225d/ffffff?text=KKR',
+        team_b_logo: '',
         start_time: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' '),
         status: 'upcoming'
       }
@@ -278,13 +278,36 @@ class FantasyApiService {
         { api_player_id: 'csk_11', name: 'Rachin Ravindra', team_name: 'CSK', role: 'all-rounder', credit_value: 8.5 },
       ];
     }
+    const firstNames = ['Virat', 'Smriti', 'Rahul', 'Harmanpreet', 'Ben', 'Meg', 'Pat', 'Ellyse', 'Kane', 'Babar', 'Shaheen', 'Rashid', 'Shakib', 'Kagiso', 'Quinton', 'David', 'Sophie', 'Mithali', 'Sachin', 'Alyssa', 'Nat', 'Suzie'];
+    const lastNames = ['Kohli', 'Mandhana', 'Dravid', 'Kaur', 'Stokes', 'Lanning', 'Cummins', 'Perry', 'Williamson', 'Azam', 'Afridi', 'Khan', 'Al Hasan', 'Rabada', 'de Kock', 'Warner', 'Devine', 'Raj', 'Tendulkar', 'Healy', 'Sciver', 'Bates'];
     
+    // Simple deterministic hash based on matchId
+    let hash = 0;
+    for (let i = 0; i < apiMatchId.length; i++) hash = apiMatchId.charCodeAt(i) + ((hash << 5) - hash);
+    hash = Math.abs(hash);
+
     const squad = [];
     for (let i = 1; i <= 11; i++) {
-      squad.push({ api_player_id: `teamA_${i}`, name: `Team A Player ${i}`, team_name: 'Team A', role: i === 1 ? 'wicket-keeper' : i < 6 ? 'batsman' : i < 8 ? 'all-rounder' : 'bowler', credit_value: 8.0 });
+      const fName = firstNames[(hash + i * 2) % firstNames.length];
+      const lName = lastNames[(hash + i * 3) % lastNames.length];
+      squad.push({ 
+        api_player_id: `teamA_${i}_${apiMatchId}`, 
+        name: `${fName} ${lName}`, 
+        team_name: 'Team A', 
+        role: i === 1 ? 'wicket-keeper' : i < 6 ? 'batsman' : i < 8 ? 'all-rounder' : 'bowler', 
+        credit_value: 8.0 + ((hash + i) % 3) * 0.5 
+      });
     }
     for (let i = 1; i <= 11; i++) {
-      squad.push({ api_player_id: `teamB_${i}`, name: `Team B Player ${i}`, team_name: 'Team B', role: i === 1 ? 'wicket-keeper' : i < 6 ? 'batsman' : i < 8 ? 'all-rounder' : 'bowler', credit_value: 8.0 });
+      const fName = firstNames[(hash + i * 5 + 1) % firstNames.length];
+      const lName = lastNames[(hash + i * 7 + 1) % lastNames.length];
+      squad.push({ 
+        api_player_id: `teamB_${i}_${apiMatchId}`, 
+        name: `${fName} ${lName}`, 
+        team_name: 'Team B', 
+        role: i === 1 ? 'wicket-keeper' : i < 6 ? 'batsman' : i < 8 ? 'all-rounder' : 'bowler', 
+        credit_value: 8.0 + ((hash + i + 1) % 3) * 0.5 
+      });
     }
     return squad;
   }
