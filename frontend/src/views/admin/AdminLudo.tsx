@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { adminRequest, adminAPI } from '../../api';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { Settings, Gamepad2, BarChart3, Trophy, Save, RefreshCw, Trash2, Eye, Edit3, Plus, X, Play, DollarSign, Users } from 'lucide-react';
-import './AdminFantasy.css';
+import './AdminLudo.css';
 
 export const AdminLudo: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'settings' | 'rooms' | 'stats' | 'tournaments'>('settings');
@@ -177,32 +177,32 @@ export const AdminLudo: React.FC = () => {
   };
 
   const getTournamentStatusBadge = (status: string) => {
-    const cls = status === 'active' ? 'af-status-live' : status === 'completed' ? 'af-status-upcoming' : 'af-status-cancelled';
-    return <span className={`af-status-badge ${cls}`}>{status}</span>;
+    const cls = status === 'active' ? 'ludo-badge-live' : status === 'completed' ? 'ludo-badge-upcoming' : 'ludo-badge-cancelled';
+    return <span className={`ludo-badge ${cls}`}>{status}</span>;
   };
 
   const getStatusBadge = (status: string) => {
-    const cls = status === 'playing' ? 'af-status-live' : status === 'completed' ? 'af-status-upcoming' : 'af-status-cancelled';
-    return <span className={`af-status-badge ${cls}`}>{status}</span>;
+    const cls = status === 'playing' ? 'ludo-badge-live' : status === 'completed' ? 'ludo-badge-upcoming' : 'ludo-badge-cancelled';
+    return <span className={`ludo-badge ${cls}`}>{status}</span>;
   };
 
   return (
-    <div className="admin-fantasy-container">
-      <h2 style={{ marginBottom: '20px' }}><Gamepad2 size={22} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Ludo Management</h2>
+    <div className="ludo-dashboard">
+      <h2 className="ludo-header"><Gamepad2 size={28} style={{ color: '#3b82f6' }} /> Ludo Management</h2>
 
       {/* Tabs */}
-      <div className="admin-fantasy-tabs">
-        <button className={activeTab === 'settings' ? 'active' : ''} onClick={() => setActiveTab('settings')}>
-          <Settings size={16} /> Settings
+      <div className="ludo-tabs">
+        <button className={`ludo-tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
+          <Settings size={18} /> Settings
         </button>
-        <button className={activeTab === 'rooms' ? 'active' : ''} onClick={() => setActiveTab('rooms')}>
-          <Gamepad2 size={16} /> Active Rooms
+        <button className={`ludo-tab ${activeTab === 'rooms' ? 'active' : ''}`} onClick={() => setActiveTab('rooms')}>
+          <Gamepad2 size={18} /> Active Rooms
         </button>
-        <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => setActiveTab('stats')}>
-          <BarChart3 size={16} /> Statistics
+        <button className={`ludo-tab ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>
+          <BarChart3 size={18} /> Statistics
         </button>
-        <button className={activeTab === 'tournaments' ? 'active' : ''} onClick={() => setActiveTab('tournaments')}>
-          <Trophy size={16} /> Tournaments
+        <button className={`ludo-tab ${activeTab === 'tournaments' ? 'active' : ''}`} onClick={() => setActiveTab('tournaments')}>
+          <Trophy size={18} /> Tournaments
         </button>
       </div>
 
@@ -210,34 +210,34 @@ export const AdminLudo: React.FC = () => {
         <>
           {/* SETTINGS TAB */}
           {activeTab === 'settings' && (
-            <div className="af-form-container">
+            <div className="ludo-form-container">
               {settingsMsg && (
                 <div style={{ padding: '10px 16px', background: settingsMsg.startsWith('Error') ? 'rgba(255,71,87,0.1)' : 'rgba(46,204,113,0.1)', border: `1px solid ${settingsMsg.startsWith('Error') ? '#ff4757' : '#2ecc71'}`, borderRadius: '8px', marginBottom: '16px', color: settingsMsg.startsWith('Error') ? '#ff4757' : '#2ecc71', fontWeight: 600, fontSize: '0.85rem' }}>
                   {settingsMsg}
                 </div>
               )}
-              <div className="af-form-grid">
-                <div className="af-form-group">
+              <div className="ludo-form-grid">
+                <div className="ludo-form-group">
                   <label>House Edge (%)</label>
                   <input type="number" step="0.1" min="0" max="100" value={ludoSettings.ludo_house_edge || '5'} onChange={e => handleSettingChange('ludo_house_edge', e.target.value)} />
                   <small>Platform commission deducted from each match pool</small>
                 </div>
-                <div className="af-form-group">
+                <div className="ludo-form-group">
                   <label>Minimum Wager (₹)</label>
                   <input type="number" min="1" value={ludoSettings.ludo_min_bet || '10'} onChange={e => handleSettingChange('ludo_min_bet', e.target.value)} />
                 </div>
-                <div className="af-form-group">
+                <div className="ludo-form-group">
                   <label>Maximum Wager (₹)</label>
                   <input type="number" min="1" value={ludoSettings.ludo_max_bet || '5000'} onChange={e => handleSettingChange('ludo_max_bet', e.target.value)} />
                 </div>
-                <div className="af-form-group">
+                <div className="ludo-form-group">
                   <label>Turn Timeout (ms)</label>
                   <input type="number" min="5000" max="120000" step="1000" value={ludoSettings.ludo_turn_timeout || '16000'} onChange={e => handleSettingChange('ludo_turn_timeout', e.target.value)} />
                   <small>Milliseconds before a turn auto-skips (default: 16000 = 16s)</small>
                 </div>
               </div>
               <div style={{ marginTop: '20px' }}>
-                <button className="af-btn af-btn-primary" onClick={handleSaveSettings} disabled={settingsSaving}>
+                <button className="ludo-btn ludo-btn-primary" onClick={handleSaveSettings} disabled={settingsSaving}>
                   <Save size={16} /> {settingsSaving ? 'Saving...' : 'Save Settings'}
                 </button>
               </div>
@@ -248,9 +248,9 @@ export const AdminLudo: React.FC = () => {
           {activeTab === 'rooms' && (
             <>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-                <button className="af-btn af-btn-secondary" onClick={fetchData}><RefreshCw size={16} /> Refresh</button>
+                <button className="ludo-btn ludo-btn-secondary" onClick={fetchData}><RefreshCw size={16} /> Refresh</button>
               </div>
-              <table className="af-table">
+              <table className="ludo-table">
                 <thead>
                   <tr>
                     <th>#</th>
@@ -277,9 +277,9 @@ export const AdminLudo: React.FC = () => {
                       <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{new Date(room.created_at).toLocaleString()}</td>
                       <td>
                         <div style={{ display: 'flex', gap: '6px' }}>
-                          <button className="af-btn af-btn-sm af-btn-secondary" onClick={() => viewRoomDetail(room.id)} title="View Details"><Eye size={14} /></button>
+                          <button className="ludo-btn ludo-btn-sm ludo-btn-secondary" onClick={() => viewRoomDetail(room.id)} title="View Details"><Eye size={14} /></button>
                           {(room.status === 'playing' || room.status === 'waiting') && (
-                            <button className="af-btn af-btn-sm af-btn-danger" onClick={() => handleDeleteRoom(room)} title="Cancel & Refund"><Trash2 size={14} /></button>
+                            <button className="ludo-btn ludo-btn-sm ludo-btn-danger" onClick={() => handleDeleteRoom(room)} title="Cancel & Refund"><Trash2 size={14} /></button>
                           )}
                         </div>
                       </td>
@@ -292,27 +292,27 @@ export const AdminLudo: React.FC = () => {
 
           {/* STATS TAB */}
           {activeTab === 'stats' && stats && (
-            <div className="af-form-container">
+            <div className="ludo-form-container">
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-                <div className="af-stat-card">
-                  <div className="af-stat-value">{stats.totalRooms ?? 0}</div>
-                  <div className="af-stat-label">Total Rooms</div>
+                <div className="ludo-stat-card">
+                  <div className="ludo-stat-value">{stats.totalRooms ?? 0}</div>
+                  <div className="ludo-stat-label">Total Rooms</div>
                 </div>
-                <div className="af-stat-card">
-                  <div className="af-stat-value" style={{ color: '#2ecc71' }}>{stats.activeRooms ?? 0}</div>
-                  <div className="af-stat-label">Active Now</div>
+                <div className="ludo-stat-card">
+                  <div className="ludo-stat-value" style={{ color: '#2ecc71' }}>{stats.activeRooms ?? 0}</div>
+                  <div className="ludo-stat-label">Active Now</div>
                 </div>
-                <div className="af-stat-card">
-                  <div className="af-stat-value" style={{ color: '#3498db' }}>{stats.completedRooms ?? 0}</div>
-                  <div className="af-stat-label">Completed</div>
+                <div className="ludo-stat-card">
+                  <div className="ludo-stat-value" style={{ color: '#3498db' }}>{stats.completedRooms ?? 0}</div>
+                  <div className="ludo-stat-label">Completed</div>
                 </div>
-                <div className="af-stat-card">
-                  <div className="af-stat-value">₹{parseFloat(stats.totalRevenue || '0').toFixed(2)}</div>
-                  <div className="af-stat-label">Total Revenue</div>
+                <div className="ludo-stat-card">
+                  <div className="ludo-stat-value">₹{parseFloat(stats.totalRevenue || '0').toFixed(2)}</div>
+                  <div className="ludo-stat-label">Total Revenue</div>
                 </div>
-                <div className="af-stat-card">
-                  <div className="af-stat-value">{stats.totalPlayers ?? 0}</div>
-                  <div className="af-stat-label">Unique Players</div>
+                <div className="ludo-stat-card">
+                  <div className="ludo-stat-value">{stats.totalPlayers ?? 0}</div>
+                  <div className="ludo-stat-label">Unique Players</div>
                 </div>
               </div>
             </div>
@@ -322,10 +322,10 @@ export const AdminLudo: React.FC = () => {
           {activeTab === 'tournaments' && (
             <>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-                <button className="af-btn af-btn-primary" onClick={openCreateTournament}><Plus size={16} /> Create Tournament</button>
-                <button className="af-btn af-btn-secondary" onClick={fetchData} style={{ marginLeft: '8px' }}><RefreshCw size={16} /> Refresh</button>
+                <button className="ludo-btn ludo-btn-primary" onClick={openCreateTournament}><Plus size={16} /> Create Tournament</button>
+                <button className="ludo-btn ludo-btn-secondary" onClick={fetchData} style={{ marginLeft: '8px' }}><RefreshCw size={16} /> Refresh</button>
               </div>
-              <table className="af-table">
+              <table className="ludo-table">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -355,14 +355,14 @@ export const AdminLudo: React.FC = () => {
                       <td>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           {t.status !== 'completed' && (
-                            <button className="af-btn af-btn-sm af-btn-secondary" onClick={() => openEditTournament(t)} title="Edit"><Edit3 size={14} /></button>
+                            <button className="ludo-btn ludo-btn-sm ludo-btn-secondary" onClick={() => openEditTournament(t)} title="Edit"><Edit3 size={14} /></button>
                           )}
-                          <button className="af-btn af-btn-sm af-btn-secondary" onClick={() => viewStandings(t)} title="Standings"><Users size={14} /></button>
+                          <button className="ludo-btn ludo-btn-sm ludo-btn-secondary" onClick={() => viewStandings(t)} title="Standings"><Users size={14} /></button>
                           {t.status === 'active' && (
-                            <button className="af-btn af-btn-sm af-btn-primary" onClick={() => handleProcessTournament(t)} title="Finalize & Payout"><DollarSign size={14} /></button>
+                            <button className="ludo-btn ludo-btn-sm ludo-btn-primary" onClick={() => handleProcessTournament(t)} title="Finalize & Payout"><DollarSign size={14} /></button>
                           )}
                           {t.status !== 'completed' && (
-                            <button className="af-btn af-btn-sm af-btn-danger" onClick={() => handleDeleteTournament(t)} title="Cancel"><Trash2 size={14} /></button>
+                            <button className="ludo-btn ludo-btn-sm ludo-btn-danger" onClick={() => handleDeleteTournament(t)} title="Cancel"><Trash2 size={14} /></button>
                           )}
                         </div>
                       </td>
@@ -377,54 +377,54 @@ export const AdminLudo: React.FC = () => {
 
       {/* Tournament Form Modal */}
       {tournamentForm && (
-        <div className="af-modal-overlay" onClick={() => setTournamentForm(null)}>
-          <div className="af-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-            <div className="af-modal-header">
+        <div className="ludo-modal-overlay" onClick={() => setTournamentForm(null)}>
+          <div className="ludo-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className="ludo-modal-header">
               <h3>{editingTournament ? 'Edit Tournament' : 'Create Tournament'}</h3>
-              <button className="af-btn af-btn-sm af-btn-secondary" onClick={() => setTournamentForm(null)}><X size={16} /></button>
+              <button className="ludo-btn ludo-btn-sm ludo-btn-secondary" onClick={() => setTournamentForm(null)}><X size={16} /></button>
             </div>
-            <div className="af-modal-body">
-              <div className="af-form-grid">
-                <div className="af-form-group" style={{ gridColumn: '1 / -1' }}>
+            <div className="ludo-modal-body">
+              <div className="ludo-form-grid">
+                <div className="ludo-form-group" style={{ gridColumn: '1 / -1' }}>
                   <label>Tournament Name</label>
                   <input type="text" value={tournamentForm.name} onChange={e => setTournamentForm({...tournamentForm, name: e.target.value})} placeholder="e.g. Ludo Grand Slam" />
                 </div>
-                <div className="af-form-group" style={{ gridColumn: '1 / -1' }}>
+                <div className="ludo-form-group" style={{ gridColumn: '1 / -1' }}>
                   <label>Description</label>
                   <textarea value={tournamentForm.description} onChange={e => setTournamentForm({...tournamentForm, description: e.target.value})} rows={3} placeholder="Optional description" />
                 </div>
-                <div className="af-form-group">
+                <div className="ludo-form-group">
                   <label>Entry Fee (₹)</label>
                   <input type="number" min="0" step="1" value={tournamentForm.entry_fee} onChange={e => setTournamentForm({...tournamentForm, entry_fee: e.target.value})} />
                 </div>
-                <div className="af-form-group">
+                <div className="ludo-form-group">
                   <label>Prize Pool (₹)</label>
                   <input type="number" min="0" step="1" value={tournamentForm.prize_pool} onChange={e => setTournamentForm({...tournamentForm, prize_pool: e.target.value})} />
                 </div>
-                <div className="af-form-group">
+                <div className="ludo-form-group">
                   <label>Max Participants</label>
                   <input type="number" min="2" value={tournamentForm.max_participants} onChange={e => setTournamentForm({...tournamentForm, max_participants: e.target.value})} />
                 </div>
-                <div className="af-form-group">
+                <div className="ludo-form-group">
                   <label>Matches Per Player</label>
                   <input type="number" min="1" value={tournamentForm.num_matches} onChange={e => setTournamentForm({...tournamentForm, num_matches: e.target.value})} />
                 </div>
-                <div className="af-form-group">
+                <div className="ludo-form-group">
                   <label>Admin Commission (%)</label>
                   <input type="number" min="0" max="100" step="0.1" value={tournamentForm.admin_commission} onChange={e => setTournamentForm({...tournamentForm, admin_commission: e.target.value})} />
                 </div>
-                <div className="af-form-group">
+                <div className="ludo-form-group">
                   <label>Start Time</label>
                   <input type="datetime-local" value={tournamentForm.start_time} onChange={e => setTournamentForm({...tournamentForm, start_time: e.target.value})} />
                 </div>
-                <div className="af-form-group">
+                <div className="ludo-form-group">
                   <label>End Time</label>
                   <input type="datetime-local" value={tournamentForm.end_time} onChange={e => setTournamentForm({...tournamentForm, end_time: e.target.value})} />
                 </div>
               </div>
               <div style={{ marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                <button className="af-btn af-btn-secondary" onClick={() => setTournamentForm(null)}>Cancel</button>
-                <button className="af-btn af-btn-primary" onClick={handleSaveTournament} disabled={tFormSaving}>
+                <button className="ludo-btn ludo-btn-secondary" onClick={() => setTournamentForm(null)}>Cancel</button>
+                <button className="ludo-btn ludo-btn-primary" onClick={handleSaveTournament} disabled={tFormSaving}>
                   {tFormSaving ? 'Saving...' : (editingTournament ? 'Update Tournament' : 'Create Tournament')}
                 </button>
               </div>
@@ -435,13 +435,13 @@ export const AdminLudo: React.FC = () => {
 
       {/* Standings Modal */}
       {standingsView && (
-        <div className="af-modal-overlay" onClick={() => setStandingsView(null)}>
-          <div className="af-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '700px' }}>
-            <div className="af-modal-header">
+        <div className="ludo-modal-overlay" onClick={() => setStandingsView(null)}>
+          <div className="ludo-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '700px' }}>
+            <div className="ludo-modal-header">
               <h3>{standingsView.tournament.name} — Standings</h3>
-              <button className="af-btn af-btn-sm af-btn-secondary" onClick={() => setStandingsView(null)}><X size={16} /></button>
+              <button className="ludo-btn ludo-btn-sm ludo-btn-secondary" onClick={() => setStandingsView(null)}><X size={16} /></button>
             </div>
-            <div className="af-modal-body">
+            <div className="ludo-modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                 <div><strong>Status:</strong> {getTournamentStatusBadge(standingsView.tournament.status)}</div>
                 <div><strong>Participants:</strong> {standingsView.standings.length}</div>
@@ -451,7 +451,7 @@ export const AdminLudo: React.FC = () => {
               {standingsView.prizes?.length > 0 && (
                 <>
                   <h4 style={{ marginBottom: '8px' }}>Prize Brackets</h4>
-                  <table className="af-table" style={{ fontSize: '0.85rem', marginBottom: '16px' }}>
+                  <table className="ludo-table" style={{ fontSize: '0.85rem', marginBottom: '16px' }}>
                     <thead>
                       <tr>
                         <th>Rank From</th>
@@ -472,7 +472,7 @@ export const AdminLudo: React.FC = () => {
                 </>
               )}
               <h4 style={{ marginBottom: '8px' }}>Player Standings</h4>
-              <table className="af-table" style={{ fontSize: '0.85rem' }}>
+              <table className="ludo-table" style={{ fontSize: '0.85rem' }}>
                 <thead>
                   <tr>
                     <th>#</th>
@@ -505,13 +505,13 @@ export const AdminLudo: React.FC = () => {
 
       {/* Room Detail Modal */}
       {roomDetail && (
-        <div className="af-modal-overlay" onClick={() => setRoomDetail(null)}>
-          <div className="af-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '700px' }}>
-            <div className="af-modal-header">
+        <div className="ludo-modal-overlay" onClick={() => setRoomDetail(null)}>
+          <div className="ludo-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '700px' }}>
+            <div className="ludo-modal-header">
               <h3>Room #{roomDetail.room.id} Details</h3>
-              <button className="af-btn af-btn-sm af-btn-secondary" onClick={() => setRoomDetail(null)}><X size={16} /></button>
+              <button className="ludo-btn ludo-btn-sm ludo-btn-secondary" onClick={() => setRoomDetail(null)}><X size={16} /></button>
             </div>
-            <div className="af-modal-body">
+            <div className="ludo-modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
                 <div><strong>Host:</strong> {roomDetail.room.host_name || `User #${roomDetail.room.host_id}`}</div>
                 <div><strong>Challenger:</strong> {roomDetail.room.challenger_name || (roomDetail.room.challenger_id ? `User #${roomDetail.room.challenger_id}` : '-')}</div>
@@ -522,7 +522,7 @@ export const AdminLudo: React.FC = () => {
               </div>
               <h4 style={{ marginBottom: '8px' }}>Move History ({roomDetail.moves?.length || 0})</h4>
               {roomDetail.moves?.length > 0 ? (
-                <table className="af-table" style={{ fontSize: '0.8rem' }}>
+                <table className="ludo-table" style={{ fontSize: '0.8rem' }}>
                   <thead>
                     <tr>
                       <th>User</th>

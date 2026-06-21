@@ -1,0 +1,354 @@
+.ludo-dashboard {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Inter', system-ui, sans-serif;
+  animation: fade-in 0.4s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ludo-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--text-primary, #1e293b);
+  margin-bottom: 32px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+/* Premium Tabs */
+.ludo-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 32px;
+  border-bottom: 2px solid var(--border-color, #e2e8f0);
+  padding-bottom: 0;
+}
+
+.ludo-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #64748b);
+  font-size: 1.05rem;
+  font-weight: 600;
+  padding: 14px 24px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px 12px 0 0;
+}
+
+.ludo-tab:hover {
+  color: var(--text-primary, #1e293b);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.ludo-tab.active {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.ludo-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #3b82f6;
+  border-radius: 3px 3px 0 0;
+  box-shadow: 0 -2px 10px rgba(59, 130, 246, 0.4);
+}
+
+/* Premium Form Container */
+.ludo-panel {
+  background: var(--bg-card, #ffffff);
+  border-radius: 20px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+  padding: 32px;
+  transition: all 0.3s ease;
+}
+
+.ludo-panel:hover {
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.06);
+}
+
+.ludo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 28px;
+}
+
+.ludo-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ludo-form-group label {
+  font-weight: 700;
+  color: var(--text-primary, #334155);
+  font-size: 0.95rem;
+}
+
+.ludo-form-group input, .ludo-form-group textarea {
+  background: var(--bg-secondary, #f8fafc);
+  border: 1px solid var(--border-color, #cbd5e1);
+  color: var(--text-primary, #0f172a);
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+  font-family: inherit;
+}
+
+.ludo-form-group input:focus, .ludo-form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15), inset 0 2px 4px rgba(0,0,0,0.02);
+  background: var(--bg-card, #ffffff);
+}
+
+.ludo-form-group small {
+  color: var(--text-secondary, #64748b);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Buttons */
+.ludo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 28px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ludo-btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.ludo-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+}
+
+.ludo-btn-secondary {
+  background: var(--bg-secondary, #f1f5f9);
+  color: var(--text-primary, #334155);
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.ludo-btn-secondary:hover:not(:disabled) {
+  background: var(--border-color, #e2e8f0);
+  transform: translateY(-1px);
+}
+
+.ludo-btn-danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.ludo-btn-danger:hover:not(:disabled) {
+  background: #ef4444;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.ludo-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Stats Grid */
+.ludo-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.ludo-stat-card {
+  background: linear-gradient(145deg, var(--bg-card, #ffffff), var(--bg-secondary, #f8fafc));
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 20px;
+  padding: 30px 24px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.ludo-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.ludo-stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+}
+
+.ludo-stat-card:hover::before {
+  opacity: 1;
+}
+
+.ludo-stat-value {
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: var(--text-primary, #0f172a);
+  margin-bottom: 12px;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.ludo-stat-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary, #64748b);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+/* Tables */
+.ludo-table-wrapper {
+  background: var(--bg-card, #ffffff);
+  border-radius: 20px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.04);
+}
+
+.ludo-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ludo-table th {
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-secondary, #475569);
+  font-weight: 700;
+  text-align: left;
+  padding: 18px 24px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 2px solid var(--border-color, #e2e8f0);
+}
+
+.ludo-table td {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-color, #f1f5f9);
+  color: var(--text-primary, #334155);
+  font-size: 0.95rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.ludo-table tr:hover td {
+  background: rgba(59, 130, 246, 0.02);
+}
+
+.ludo-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Badges */
+.ludo-badge {
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ludo-badge-upcoming { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); }
+.ludo-badge-live { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+.ludo-badge-cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+/* Small buttons for table actions */
+.ludo-btn-icon {
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modals */
+.ludo-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fade-in 0.2s ease-out;
+}
+
+.ludo-modal {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 24px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
+}
+
+.ludo-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  position: sticky;
+  top: 0;
+  background: var(--bg-card, #ffffff);
+  z-index: 10;
+}
+
+.ludo-modal-header h3 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--text-primary, #0f172a);
+}
+
+.ludo-modal-body {
+  padding: 32px;
+}
