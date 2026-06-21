@@ -161,7 +161,7 @@ router.post('/withdraw', async (req, res) => {
       withdrawal: {
         transaction_id: transactionId,
         amount: withdrawAmount,
-        charge_applied: chargeRate > 0,
+        charge_applied: chargeAmount > 0,
         charge_amount: chargeAmount,
         net_payout: netPayout,
         payment_method: payment_method || 'direct',

@@ -38,7 +38,45 @@ export const Referrals: React.FC<ReferralsProps> = ({ user }) => {
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '900px' }}>
-      
+      {/* Anti-Fraud Warning */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(185,28,28,0.03))',
+        border: '1px solid rgba(239,68,68,0.2)',
+        borderRadius: '16px',
+        padding: '18px 22px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '14px',
+        animation: 'glowPulse 2s ease-in-out infinite',
+      }}>
+        <div style={{
+          fontSize: '1.6rem', flexShrink: 0, lineHeight: 1,
+          marginTop: '2px',
+        }}>⚠️</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontWeight: 700, fontSize: '0.95rem',
+            color: '#ef4444', marginBottom: '4px',
+          }}>
+            No Fake or Duplicate Accounts
+          </div>
+          <div style={{
+            fontSize: '0.85rem', color: 'var(--text-secondary)',
+            lineHeight: 1.6,
+          }}>
+            Creating multiple or fraudulent accounts is strictly prohibited. 
+            Family member accounts without prior permission are not allowed. 
+            Any such accounts will be <strong style={{ color: '#ef4444' }}>permanently suspended</strong> and 
+            <strong style={{ color: '#ef4444' }}> all funds will be forfeited with no refund</strong>.
+          </div>
+        </div>
+        <div style={{
+          fontSize: '1.2rem', flexShrink: 0, lineHeight: 1,
+          marginTop: '2px', opacity: 0.5, cursor: 'pointer',
+        }}
+          title="View Terms"
+        >⚖️</div>
+      </div>
       {/* Dynamic Banner */}
       <div style={{ background: 'var(--accent-primary-glow)', border: '1px solid var(--accent-primary)', borderRadius: 'var(--radius-md)', padding: '20px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
         <Info size={24} color="var(--accent-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
@@ -112,31 +150,52 @@ export const Referrals: React.FC<ReferralsProps> = ({ user }) => {
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading referrals...</div>
         ) : stats?.referrals?.length > 0 ? (
-          <div className="table-container">
-            <table className="data-table">
+          <div className="table-container" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table className="data-table" style={{ width: '100%', minWidth: '600px', textAlign: 'left', borderCollapse: 'collapse' }}>
               <thead>
-                <tr>
-                  <th>User Name</th>
-                  <th>Joined Date</th>
-                  <th>Deposit Status</th>
-                  <th>Active FDR Volume</th>
+                <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                  <th style={{ padding: '12px 16px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>User Name</th>
+                  <th style={{ padding: '12px 16px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>Joined Date</th>
+                  <th style={{ padding: '12px 16px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>Deposit Status</th>
+                  <th style={{ padding: '12px 16px', whiteSpace: 'nowrap', color: 'var(--text-secondary)', textAlign: 'right' }}>Active FDR Volume</th>
                 </tr>
               </thead>
               <tbody>
                 {stats.referrals.map((r: any) => (
-                  <tr key={r.id}>
-                    <td style={{ fontWeight: 600 }}>{r.name}</td>
-                    <td>{formatGlobalDate(r.joined_at, { year: 'numeric', month: 'short', day: 'numeric' })}</td>
-                    <td>
+                  <tr key={r.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', transition: 'background 0.2s' }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 600, whiteSpace: 'nowrap' }}>{r.name}</td>
+                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                      {formatGlobalDate(r.joined_at, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
                       {r.has_deposited ? (
-                        <span style={{ color: 'var(--accent-success)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
+                        <span style={{ 
+                          color: 'var(--accent-success)', 
+                          background: 'rgba(16, 185, 129, 0.1)',
+                          padding: '4px 10px',
+                          borderRadius: '20px',
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '6px', 
+                          fontSize: '0.8rem',
+                          fontWeight: 600
+                        }}>
                           <CheckCircle2 size={14} /> Deposited
                         </span>
                       ) : (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No Deposit Yet</span>
+                        <span style={{ 
+                          color: 'var(--text-muted)', 
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          padding: '4px 10px',
+                          borderRadius: '20px',
+                          display: 'inline-flex',
+                          fontSize: '0.8rem' 
+                        }}>
+                          No Deposit Yet
+                        </span>
                       )}
                     </td>
-                    <td style={{ color: 'var(--accent-secondary)', fontWeight: 600 }}>
+                    <td style={{ padding: '14px 16px', color: 'var(--accent-secondary)', fontWeight: 600, whiteSpace: 'nowrap', textAlign: 'right' }}>
                       {formatCurrency(r.active_fdr_total)}
                     </td>
                   </tr>
