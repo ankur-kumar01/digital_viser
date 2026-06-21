@@ -232,7 +232,7 @@ class FantasyApiService {
         team_a_logo: 'https://via.placeholder.com/100/004ba0/ffffff?text=MI',
         team_b: 'Chennai Super Kings',
         team_b_logo: 'https://via.placeholder.com/100/ffff00/000000?text=CSK',
-        start_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+        start_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' '),
         status: 'upcoming'
       },
       {
@@ -245,7 +245,7 @@ class FantasyApiService {
         team_a_logo: 'https://via.placeholder.com/100/ec1c24/ffffff?text=RCB',
         team_b: 'Kolkata Knight Riders',
         team_b_logo: 'https://via.placeholder.com/100/3a225d/ffffff?text=KKR',
-        start_time: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+        start_time: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' '),
         status: 'upcoming'
       }
     ];
