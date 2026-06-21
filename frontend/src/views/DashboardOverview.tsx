@@ -3,7 +3,6 @@ import { walletAPI, fdrAPI, gamesAPI, globalConfigAPI } from '../api';
 import { Award, ArrowRight, ArrowUpRight, ArrowDownLeft, Gift, Users, PlusCircle, Gamepad2, Copy, MessageCircle } from 'lucide-react';
 import { PortfolioHero } from '../components/PortfolioHero';
 import { AviatorChatWidget } from '../components/AviatorChatWidget';
-import { SpinWheel } from '../components/SpinWheel';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
 interface DashboardOverviewProps {
@@ -459,8 +458,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
 
 
-      {/* Daily Spin Wheel */}
-      <SpinWheel onBonusAwarded={() => refreshUser()} />
+
 
 
 

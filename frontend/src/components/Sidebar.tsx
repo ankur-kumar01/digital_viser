@@ -20,6 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'profile', name: 'My Profile', icon: <User size={20} /> },
     { id: 'create-fdr', name: 'Create FDR', icon: <PlusCircle size={20} /> },
     { id: 'my-fdrs', name: 'My FDRs', icon: <BarChart3 size={20} /> },
+    { id: 'spin-wheel', name: 'Spin & Win', icon: <Disc size={20} /> },
     { id: 'games', name: 'Gaming Zone', icon: <Gamepad2 size={20} /> },
     { id: 'transactions', name: 'Transactions', icon: <Receipt size={20} /> },
   ];

@@ -14,6 +14,7 @@ import { Transactions } from './views/Transactions';
 import { Profile } from './views/Profile';
 import { Referrals } from './views/Referrals';
 import { GamesCenter } from './views/GamesCenter';
+import { SpinWheelPage } from './views/SpinWheelPage';
 import { AviatorGame } from './views/games/aviator';
 import { ColourTradingGame } from './views/games/colourtrading';
 import { FruitSlasherGame } from './views/games/fruitslasher';
@@ -275,6 +276,9 @@ export const App: React.FC = () => {
             )}
             {currentView === 'transactions' && (
               <Transactions />
+            )}
+            {currentView === 'spin-wheel' && (
+              <SpinWheelPage user={user} refreshUser={refreshUser} />
             )}
             {currentView === 'games' && (
               <GamesCenter onNavigate={setCurrentView} />

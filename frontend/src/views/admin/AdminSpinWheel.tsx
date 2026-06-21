@@ -30,6 +30,7 @@ export const AdminSpinWheel: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>(defaultForm);
+  const [globalSettings, setGlobalSettings] = useState<any>(null);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -37,6 +38,10 @@ export const AdminSpinWheel: React.FC = () => {
       if (activeTab === 'segments') {
         const data = await adminAPI.getSpinSegments();
         setSegments(data);
+        try {
+          const settings = await adminAPI.getSettings();
+          setGlobalSettings(settings);
+        } catch (e) {}
       } else if (activeTab === 'history') {
         const data = await adminAPI.getSpinHistory();
         setHistory(data);
@@ -104,6 +109,17 @@ export const AdminSpinWheel: React.FC = () => {
     }
   };
 
+  const handleToggleSpinWheelSetting = async () => {
+    if (!globalSettings) return;
+    try {
+      const newVal = globalSettings.enable_spin_wheel === 'false' ? 'true' : 'false';
+      await adminAPI.updateSettings({ enable_spin_wheel: newVal });
+      setGlobalSettings({ ...globalSettings, enable_spin_wheel: newVal });
+    } catch (err) {
+      alert('Failed to update spin wheel global setting');
+    }
+  };
+
   const totalProbability = segments.filter(s => s.is_active).reduce((s, seg) => s + seg.probability, 0);
 
   return (
@@ -115,9 +131,22 @@ export const AdminSpinWheel: React.FC = () => {
           <p style={{ color: 'var(--text-secondary)' }}>Configure daily spin wheel prizes, probabilities, and monitor user spin activity.</p>
         </div>
         {activeTab === 'segments' && (
-          <button onClick={() => handleOpenModal()} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Plus size={18} /> Add Segment
-          </button>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {globalSettings && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: 'var(--bg-tertiary)', padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Enable Wheel on User Dashboard</span>
+                <input 
+                  type="checkbox" 
+                  checked={globalSettings.enable_spin_wheel !== 'false'} 
+                  onChange={handleToggleSpinWheelSetting}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--accent-primary)' }}
+                />
+              </label>
+            )}
+            <button onClick={() => handleOpenModal()} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Plus size={18} /> Add Segment
+            </button>
+          </div>
         )}
       </div>
 

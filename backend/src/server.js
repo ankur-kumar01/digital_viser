@@ -186,6 +186,7 @@ app.get('/api/config', async (req, res) => {
       enable_aviator_chat_simulation: settings.enable_aviator_chat_simulation !== 'false',
       enable_aviator_bet_simulation: settings.enable_aviator_bet_simulation !== 'false',
       enable_colour_trading_bet_simulation: settings.enable_colour_trading_bet_simulation !== 'false',
+      enable_spin_wheel: settings.enable_spin_wheel !== 'false',
       referral_percent: referralPercent ? parseFloat(referralPercent.reward_amount) : 10,
       fdr_referral_percent: fdrReferralPercent ? parseFloat(fdrReferralPercent.reward_amount) : 5
     });

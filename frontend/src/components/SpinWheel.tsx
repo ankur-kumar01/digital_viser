@@ -30,7 +30,7 @@ interface Props {
   onBonusAwarded?: (newBalance: number) => void;
 }
 
-const WHEEL_SIZE = 300;
+const WHEEL_SIZE = 260;
 const CENTER = WHEEL_SIZE / 2;
 
 function useCountdown(seconds: number) {
@@ -241,13 +241,13 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
       // Animate
       const startRotation = rotationRef.current;
       const startTime = performance.now();
-      const duration = 3500;
+      const duration = 4000;
 
       const animate = (now: number) => {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        // Ease out cubic
-        const eased = 1 - Math.pow(1 - progress, 3);
+        // Ease out quartic for smoother deceleration
+        const eased = 1 - Math.pow(1 - progress, 4);
         const current = startRotation + (targetRotation - startRotation) * eased;
         rotationRef.current = current;
         setRotation(current);
@@ -339,13 +339,15 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
         }
         
         .sw-card-container {
-          padding: 32px 24px;
+          padding: 24px 20px;
           background: var(--bg-secondary);
           border: 1px solid var(--border-color);
           position: relative;
           overflow: hidden;
-          border-radius: 24px;
+          border-radius: 20px;
           box-shadow: var(--shadow-card);
+          max-width: 380px;
+          margin: 0 auto;
         }
         
         .sw-streak-bar {
