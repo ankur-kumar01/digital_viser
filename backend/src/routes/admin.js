@@ -86,10 +86,10 @@ router.get('/methods', async (req, res) => {
 // POST /methods
 router.post('/methods', async (req, res) => {
   try {
-    const { name, type, is_active, admin_instructions, user_form } = req.body;
+    const { name, type, is_active, admin_instructions, user_form, withdrawal_charges } = req.body;
     const [result] = await pool.query(
-      'INSERT INTO payment_methods (name, type, is_active, admin_instructions, user_form) VALUES (?, ?, ?, ?, ?)',
-      [name, type, is_active !== false, JSON.stringify(admin_instructions || []), JSON.stringify(user_form || [])]
+      'INSERT INTO payment_methods (name, type, is_active, admin_instructions, user_form, withdrawal_charges) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, type, is_active !== false, JSON.stringify(admin_instructions || []), JSON.stringify(user_form || []), JSON.stringify(withdrawal_charges || [])]
     );
     res.json({ id: result.insertId, name, type, is_active });
   } catch (err) {
@@ -101,7 +101,7 @@ router.post('/methods', async (req, res) => {
 // PUT /methods/:id
 router.put('/methods/:id', async (req, res) => {
   try {
-    const { is_active, admin_instructions, user_form } = req.body;
+    const { is_active, admin_instructions, user_form, withdrawal_charges } = req.body;
     const updates = [];
     const values = [];
 
@@ -116,6 +116,10 @@ router.put('/methods/:id', async (req, res) => {
     if (typeof user_form !== 'undefined') {
       updates.push('user_form = ?');
       values.push(JSON.stringify(user_form));
+    }
+    if (typeof withdrawal_charges !== 'undefined') {
+      updates.push('withdrawal_charges = ?');
+      values.push(JSON.stringify(withdrawal_charges));
     }
 
     if (updates.length > 0) {

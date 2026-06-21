@@ -88,23 +88,32 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
     color: status === 'pending' ? '#f59e0b' : status === 'approved' ? '#10b981' : '#ef4444',
   });
 
-  // Account age check for fee
-  const accountAgeDays = useMemo(() => {
-    if (!user) return 999;
-    const createdAt = (user as any).created_at;
-    if (!createdAt) return 999;
-    const diff = Date.now() - new Date(createdAt).getTime();
-    return Math.floor(diff / (1000 * 60 * 60 * 24));
-  }, [user]);
-
-  const earlyFeeRate = accountAgeDays < 10 ? 0.10 : 0;
-  const numericAmount = parseFloat(amount) || 0;
-  const earlyFee = earlyFeeRate > 0 ? Math.round(numericAmount * earlyFeeRate * 100) / 100 : 0;
-  const netPayout = numericAmount - earlyFee;
-
   const selectedMethod = paymentChannels.find(m => m.name === paymentMethod);
   const adminInstructions = selectedMethod?.admin_instructions ? (typeof selectedMethod.admin_instructions === 'string' ? JSON.parse(selectedMethod.admin_instructions) : selectedMethod.admin_instructions) : [];
   const userForm = selectedMethod?.user_form ? (typeof selectedMethod.user_form === 'string' ? JSON.parse(selectedMethod.user_form) : selectedMethod.user_form) : [];
+  const withdrawalCharges = selectedMethod?.withdrawal_charges ? (typeof selectedMethod.withdrawal_charges === 'string' ? JSON.parse(selectedMethod.withdrawal_charges) : selectedMethod.withdrawal_charges) : [];
+
+  const numericAmount = parseFloat(amount) || 0;
+  
+  const chargeDetails: { name: string; amount: number }[] = [];
+  let totalChargeAmount = 0;
+  
+  withdrawalCharges.forEach((charge: any) => {
+    let amt = 0;
+    if (charge.type === 'percent') {
+      amt = (numericAmount * parseFloat(charge.value)) / 100;
+    } else if (charge.type === 'fixed') {
+      amt = parseFloat(charge.value);
+    }
+    if (amt > 0) {
+      const roundedAmt = Math.round(amt * 100) / 100;
+      totalChargeAmount += roundedAmt;
+      chargeDetails.push({ name: charge.name, amount: roundedAmt });
+    }
+  });
+  
+  const earlyFee = Math.round(totalChargeAmount * 100) / 100;
+  const netPayout = numericAmount - earlyFee;
 
   const handleCustomDataChange = (label: string, value: any) => {
     setCustomData(prev => ({ ...prev, [label]: value }));
@@ -203,23 +212,34 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
               </span>
             </div>
 
-            {/* Early Account Withdrawal Fee Warning */}
-            {earlyFeeRate > 0 && (
+            {/* Withdrawal Charges Summary */}
+            {chargeDetails.length > 0 && numericAmount > 0 && (
               <div style={{
-                background: 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(185,28,28,0.03))',
-                border: '1px solid rgba(239,68,68,0.2)',
-                borderRadius: '12px', padding: '14px 18px',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-glass)',
+                borderRadius: '12px', padding: '16px',
                 marginBottom: '20px',
-                display: 'flex', alignItems: 'flex-start', gap: '12px',
+                display: 'flex', flexDirection: 'column', gap: '8px',
               }}>
-                <Info size={20} color="#ef4444" style={{ flexShrink: 0, marginTop: '1px' }} />
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  <strong style={{ color: '#ef4444' }}>10% early withdrawal fee</strong> applies to accounts under 10 days old.
-                  {numericAmount > 0 && (
-                    <span style={{ display: 'block', marginTop: '6px', fontWeight: 500 }}>
-                      Fee: <strong style={{ color: '#ef4444' }}>₹{earlyFee.toFixed(2)}</strong> &nbsp;|&nbsp; You receive: <strong style={{ color: 'var(--accent-secondary)' }}>₹{netPayout.toFixed(2)}</strong>
-                    </span>
-                  )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <Info size={16} color="var(--accent-primary)" />
+                  <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>Withdrawal Charges</span>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  {chargeDetails.map((charge, idx) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span>{charge.name}</span>
+                      <span>-₹{charge.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div style={{ borderTop: '1px solid var(--border-light)', marginTop: '8px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <span>Total Deduction</span>
+                    <span>-₹{earlyFee.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: 'var(--accent-secondary)', marginTop: '4px', fontSize: '1rem' }}>
+                    <span>You Receive</span>
+                    <span>₹{netPayout.toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -325,7 +345,7 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
                   type="submit"
                   className="btn btn-primary"
                   style={{ width: '100%', padding: '16px', fontSize: '1.1rem', marginTop: '10px' }}
-                  disabled={isLoading || !amount || parseFloat(amount) <= 0 || (user && parseFloat(amount) > parseFloat(((user as any)[sourceWallet === 'normal' ? 'balance' : `${sourceWallet}_balance`] || '0')))}
+                  disabled={isLoading || !amount || parseFloat(amount) <= 0 || (user && parseFloat(amount) > parseFloat(((user as any)[sourceWallet === 'normal' ? 'balance' : `${sourceWallet}_balance`] || '0'))) || netPayout <= 0}
                 >
                   {isLoading ? 'Processing Request...' : `Withdraw ${amount ? `₹${parseFloat(amount).toLocaleString()}` : ''}`}
                 </button>

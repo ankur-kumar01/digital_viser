@@ -87,11 +87,36 @@ router.post('/withdraw', async (req, res) => {
       return res.status(400).json({ error: 'Insufficient balance.' });
     }
 
-    // Check if account is less than 10 days old → apply 10% fee
-    const accountAgeDays = Math.floor((Date.now() - new Date(userRows[0].created_at).getTime()) / (1000 * 60 * 60 * 24));
-    const chargeRate = accountAgeDays < 10 ? 0.10 : 0;
-    const chargeAmount = chargeRate > 0 ? Math.round(withdrawAmount * chargeRate * 100) / 100 : 0;
+    // Fetch dynamic charges for this payment method
+    const [pmRows] = await conn.query('SELECT withdrawal_charges FROM payment_methods WHERE name = ? LIMIT 1', [payment_method]);
+    let dynamicCharges = [];
+    if (pmRows.length > 0 && pmRows[0].withdrawal_charges) {
+      dynamicCharges = typeof pmRows[0].withdrawal_charges === 'string' ? JSON.parse(pmRows[0].withdrawal_charges) : pmRows[0].withdrawal_charges;
+    }
+
+    let totalChargeAmount = 0;
+    let chargeDetails = [];
+
+    dynamicCharges.forEach(charge => {
+      let amt = 0;
+      if (charge.type === 'percent') {
+        amt = (withdrawAmount * parseFloat(charge.value)) / 100;
+      } else if (charge.type === 'fixed') {
+        amt = parseFloat(charge.value);
+      }
+      if (amt > 0) {
+        totalChargeAmount += amt;
+        chargeDetails.push(`${charge.name}: ₹${amt.toFixed(2)}`);
+      }
+    });
+
+    const chargeAmount = Math.round(totalChargeAmount * 100) / 100;
     const netPayout = withdrawAmount - chargeAmount;
+
+    if (netPayout <= 0) {
+      await conn.rollback();
+      return res.status(400).json({ error: 'Withdrawal amount must be greater than charges.' });
+    }
 
     const transactionId = uuidv4();
 
@@ -104,24 +129,24 @@ router.post('/withdraw', async (req, res) => {
     // Insert into withdrawals table (store full amount for admin reference)
     await conn.query(
       'INSERT INTO withdrawals (user_id, amount, payment_method, transaction_id, status, custom_data) VALUES (?, ?, ?, ?, "pending", ?)',
-      [userId, withdrawAmount, payment_method || 'direct', transactionId, JSON.stringify({ ...custom_data, source_wallet, charge_applied: chargeRate > 0, charge_amount: chargeAmount, net_payout: netPayout } || {})]
+      [userId, withdrawAmount, payment_method || 'direct', transactionId, JSON.stringify({ ...custom_data, source_wallet, charge_applied: chargeAmount > 0, charge_amount: chargeAmount, net_payout: netPayout, charge_details: chargeDetails } || {})]
     );
 
     // Insert into transactions table
     let withdrawDesc = `Pending Withdrawal via ${payment_method || 'direct'}`;
-    if (chargeRate > 0) {
-      withdrawDesc += ` (10% early withdrawal fee: ₹${chargeAmount.toFixed(2)}, net payout: ₹${netPayout.toFixed(2)})`;
+    if (chargeAmount > 0) {
+      withdrawDesc += ` (Fees: ${chargeDetails.join(', ')}, net payout: ₹${netPayout.toFixed(2)})`;
     }
     await conn.query(
       'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
       [userId, 'withdrawal_pending', withdrawAmount, withdrawDesc]
     );
 
-      // Record the charge as a separate transaction entry
+    // Record the charge as a separate transaction entry
     if (chargeAmount > 0) {
       await conn.query(
         'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
-        [userId, 'withdrawal_charge', chargeAmount, `10% early withdrawal fee (account < 10 days old)`]
+        [userId, 'withdrawal_charge', chargeAmount, `Withdrawal fees (${chargeDetails.join(', ')})`]
       );
     }
 

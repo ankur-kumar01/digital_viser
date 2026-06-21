@@ -9,6 +9,12 @@ interface FieldDef {
   required?: boolean;
 }
 
+interface ChargeDef {
+  name: string;
+  type: 'fixed' | 'percent';
+  value: number;
+}
+
 export const AdminPaymentMethods: React.FC = () => {
   const [methods, setMethods] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,6 +27,7 @@ export const AdminPaymentMethods: React.FC = () => {
   const [configuringMethod, setConfiguringMethod] = useState<any | null>(null);
   const [adminInstructions, setAdminInstructions] = useState<FieldDef[]>([]);
   const [userForm, setUserForm] = useState<FieldDef[]>([]);
+  const [withdrawalCharges, setWithdrawalCharges] = useState<ChargeDef[]>([]);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
 
   const fetchData = async () => {
@@ -42,7 +49,7 @@ export const AdminPaymentMethods: React.FC = () => {
     e.preventDefault();
     if (!newMethodName) return;
     try {
-      await adminAPI.createMethod({ name: newMethodName, type: newMethodType, is_active: true, admin_instructions: [], user_form: [] });
+      await adminAPI.createMethod({ name: newMethodName, type: newMethodType, is_active: true, admin_instructions: [], user_form: [], withdrawal_charges: [] });
       setNewMethodName('');
       fetchData();
     } catch (err) {
@@ -73,6 +80,7 @@ export const AdminPaymentMethods: React.FC = () => {
     setConfiguringMethod(method);
     setAdminInstructions(method.admin_instructions ? (typeof method.admin_instructions === 'string' ? JSON.parse(method.admin_instructions) : method.admin_instructions) : []);
     setUserForm(method.user_form ? (typeof method.user_form === 'string' ? JSON.parse(method.user_form) : method.user_form) : []);
+    setWithdrawalCharges(method.withdrawal_charges ? (typeof method.withdrawal_charges === 'string' ? JSON.parse(method.withdrawal_charges) : method.withdrawal_charges) : []);
   };
 
   const handleSaveConfig = async () => {
@@ -81,7 +89,8 @@ export const AdminPaymentMethods: React.FC = () => {
     try {
       await adminAPI.updateMethod(configuringMethod.id, {
         admin_instructions: adminInstructions,
-        user_form: userForm
+        user_form: userForm,
+        withdrawal_charges: withdrawalCharges
       });
       setConfiguringMethod(null);
       fetchData();
@@ -326,6 +335,70 @@ export const AdminPaymentMethods: React.FC = () => {
                   <Plus size={16} /> Add User Field
                 </button>
               </div>
+
+              {/* Withdrawal Charges Form Builder (Only for Withdraw type) */}
+              {configuringMethod.type === 'withdraw' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: 'var(--bg-tertiary)', padding: '20px', borderRadius: 'var(--radius-md)' }}>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Withdrawal Charges</h4>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', lineHeight: '1.4' }}>
+                    Define dynamic charges that apply to withdrawals via this method.
+                  </p>
+
+                  {withdrawalCharges.map((charge, index) => (
+                    <div key={index} style={{ background: 'var(--bg-primary)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                        <input 
+                          className="input-field" 
+                          placeholder="Charge Name (e.g. TDS)" 
+                          value={charge.name}
+                          onChange={e => {
+                            const n = [...withdrawalCharges];
+                            n[index].name = e.target.value;
+                            setWithdrawalCharges(n);
+                          }}
+                        />
+                        <select 
+                          className="input-field" 
+                          style={{ width: '120px' }}
+                          value={charge.type}
+                          onChange={e => {
+                            const n = [...withdrawalCharges];
+                            n[index].type = e.target.value as any;
+                            setWithdrawalCharges(n);
+                          }}
+                        >
+                          <option value="fixed">Fixed (₹)</option>
+                          <option value="percent">Percentage (%)</option>
+                        </select>
+                        <button 
+                          onClick={() => setWithdrawalCharges(withdrawalCharges.filter((_, i) => i !== index))}
+                          style={{ background: 'none', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                      <input 
+                        type="number"
+                        className="input-field" 
+                        placeholder="Value (e.g. 10)" 
+                        value={charge.value || ''}
+                        onChange={e => {
+                          const n = [...withdrawalCharges];
+                          n[index].value = parseFloat(e.target.value) || 0;
+                          setWithdrawalCharges(n);
+                        }}
+                      />
+                    </div>
+                  ))}
+                  
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => setWithdrawalCharges([...withdrawalCharges, { name: '', type: 'fixed', value: 0 }])}
+                  >
+                    <Plus size={16} /> Add Charge
+                  </button>
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
