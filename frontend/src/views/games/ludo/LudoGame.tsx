@@ -999,6 +999,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
                             style={{ width: '100%' }}
                             onClick={() => {
                               setSelectedTournament(t.tournament_id || t.id);
+                              setGameMode('quick');
                               handleFindMatch(0, t.tournament_id || t.id);
                             }}
                           >
@@ -1074,12 +1075,20 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
               </div>
               <h3 className="panel-subtitle mt-4">Finding Active Opponent...</h3>
               <p className="matching-timer-label">Time Remaining: <span className="timer-seconds">{matchingTimeLeft}s</span></p>
-              <div className="matching-details-card">
-                <span className="text-secondary font-semibold">Wager Pool:</span>
-                <span className="matching-wager-value">₹{matchingWager.toFixed(0)}</span>
-              </div>
+              
+              {selectedTournament ? (
+                <div className="matching-details-card tournament-matching-card" style={{ background: 'var(--bg-accent)', padding: '12px', borderRadius: '8px', margin: '15px 0' }}>
+                  <span className="text-secondary font-semibold"><Trophy size={14} style={{ display: 'inline', marginRight: '4px' }} /> Tournament Match</span>
+                </div>
+              ) : (
+                <div className="matching-details-card">
+                  <span className="text-secondary font-semibold">Wager Pool:</span>
+                  <span className="matching-wager-value">₹{matchingWager.toFixed(0)}</span>
+                </div>
+              )}
+
               <p className="matching-hint text-muted">
-                Looking for players matching your entry fee...
+                {selectedTournament ? 'Looking for other tournament participants...' : 'Looking for players matching your entry fee...'}
               </p>
               <button className="cancel-matchmaker-btn" onClick={handleCancelMatchmaking}>
                 Cancel Matchmaking
