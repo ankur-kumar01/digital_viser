@@ -4,24 +4,41 @@ const fantasyApi = require('../services/fantasyApi');
 
 class FantasyCricketCron {
   
+  constructor() {
+    this._processingMatches = new Set(); // Prevent overlapping cron runs
+    this._prizeRetryQueue = []; // Match IDs that need prize distribution retry
+    this._lastLiveSync = {}; // api_match_id -> timestamp, for API quota protection
+  }
+
   start() {
     console.log('🏏 Fantasy Cricket Cron Engine Started');
 
-    // Sync upcoming matches every hour
-    cron.schedule('0 * * * *', async () => {
+    // Sync upcoming matches every 2 hours (reduced from 1 hour to save API quota)
+    cron.schedule('0 */2 * * *', async () => {
       console.log('🔄 [Fantasy] Syncing Upcoming Matches...');
       await this.syncUpcomingMatches();
     });
 
-    // Every 5 minutes: Sync squads for upcoming matches that are within 24 hours
-    cron.schedule('*/5 * * * *', async () => {
+    // Every 15 minutes: Sync squads for upcoming matches within 24 hours
+    // Reduced from 5 min to 15 min to preserve API quota
+    cron.schedule('*/15 * * * *', async () => {
       console.log('🔄 [Fantasy] Syncing Squads...');
       await this.syncSquads();
     });
 
-    // Every 1 minute: Update live scores & points for LIVE matches
-    cron.schedule('* * * * *', async () => {
+    // Every 2 minutes: Update live scores & points for LIVE matches
+    // Reduced from 1 min to 2 min to preserve API quota
+    cron.schedule('*/2 * * * *', async () => {
       await this.processLiveMatches();
+    });
+
+    // Check prize retry queue every 5 minutes
+    cron.schedule('*/5 * * * *', async () => {
+      if (this._prizeRetryQueue.length > 0) {
+        const matchId = this._prizeRetryQueue[0];
+        console.log(`🔄 [Fantasy] Retrying prize distribution for match ${matchId}...`);
+        await this.distributePrizes(matchId);
+      }
     });
   }
 
@@ -43,7 +60,6 @@ class FantasyCricketCron {
 
   async syncSquads() {
     try {
-      // Get upcoming matches starting within 24 hours
       const [matches] = await pool.query(`
         SELECT id, api_match_id FROM fantasy_matches 
         WHERE status = 'upcoming' AND start_time < DATE_ADD(NOW(), INTERVAL 24 HOUR)
@@ -53,7 +69,6 @@ class FantasyCricketCron {
         const squad = await fantasyApi.fetchMatchSquads(m.api_match_id);
         
         for (const player of squad) {
-          // Insert player if not exists
           await pool.query(`
             INSERT INTO fantasy_players (api_player_id, name, team_name, role, credit_value)
             VALUES (?, ?, ?, ?, ?)
@@ -63,7 +78,6 @@ class FantasyCricketCron {
           const [pRow] = await pool.query('SELECT id FROM fantasy_players WHERE api_player_id = ?', [player.api_player_id]);
           if (pRow.length > 0) {
             const playerId = pRow[0].id;
-            // Map player to match
             await pool.query(`
               INSERT IGNORE INTO fantasy_match_players (match_id, player_id, is_playing)
               VALUES (?, ?, true)
@@ -77,6 +91,12 @@ class FantasyCricketCron {
   }
 
   async processLiveMatches() {
+    // Prevent overlapping runs
+    if (this._processingMatches.size > 0) {
+      console.log('⚠️ [Fantasy] Skipping processLiveMatches — previous run still in progress');
+      return;
+    }
+
     try {
       // 1. Mark matches as LIVE if start_time has passed
       await pool.query(`UPDATE fantasy_matches SET status = 'live' WHERE status = 'upcoming' AND start_time <= NOW()`);
@@ -84,16 +104,29 @@ class FantasyCricketCron {
       const [liveMatches] = await pool.query(`SELECT id, api_match_id FROM fantasy_matches WHERE status = 'live'`);
       if (liveMatches.length === 0) return;
 
-      // 2. Fetch point system configuration
       const [pointRows] = await pool.query('SELECT action_key, points FROM fantasy_point_system');
       const pointsConfig = pointRows.reduce((acc, row) => ({ ...acc, [row.action_key]: parseFloat(row.points) }), {});
 
       for (const m of liveMatches) {
+        this._processingMatches.add(m.id);
+
+        // API quota protection: skip if we synced this match less than 2 minutes ago (real API only)
+        const apiKey = await fantasyApi.getApiKey();
+        if (apiKey && this._lastLiveSync[m.api_match_id]) {
+          const elapsed = Date.now() - this._lastLiveSync[m.api_match_id];
+          if (elapsed < 120000) { // 2 min cooldown
+            // Still recalc points from stored data without hitting API
+            await this._recalculateTeamPoints(m.id, pointsConfig);
+            this._processingMatches.delete(m.id);
+            continue;
+          }
+        }
+
         const scorecard = await fantasyApi.fetchLiveScorecard(m.api_match_id);
+        this._lastLiveSync[m.api_match_id] = Date.now();
         
-        // 3. Update points
+        // 2. Update player points
         for (const p of scorecard.players) {
-          // Calculate points based on mock stats
           const s = p.stats;
           let calculatedPoints = 0;
           calculatedPoints += (s.runs || 0) * (pointsConfig['run'] || 1);
@@ -114,59 +147,124 @@ class FantasyCricketCron {
           }
         }
 
-        // 4. Recalculate User Team Points
-        // We sum the points of all 11 players for each team. Cap = 2x, VC = 1.5x
-        const [teams] = await pool.query('SELECT id, captain_player_id, vice_captain_player_id FROM fantasy_user_teams WHERE match_id = ?', [m.id]);
-        
-        for (const team of teams) {
-          const [players] = await pool.query(`
-            SELECT tp.player_id, mp.points 
-            FROM fantasy_team_players tp
-            JOIN fantasy_match_players mp ON tp.player_id = mp.player_id AND mp.match_id = ?
-            WHERE tp.team_id = ?
-          `, [m.id, team.id]);
+        // 3. Recalculate all team points
+        await this._recalculateTeamPoints(m.id, pointsConfig);
 
-          let total = 0;
-          players.forEach(pl => {
-            let pts = parseFloat(pl.points || 0);
-            if (pl.player_id === team.captain_player_id) pts *= 2;
-            else if (pl.player_id === team.vice_captain_player_id) pts *= 1.5;
-            total += pts;
-          });
-
-          await pool.query('UPDATE fantasy_user_teams SET total_points = ? WHERE id = ?', [total, team.id]);
-        }
-
-        // 5. Update Contest Ranks
-        // Simplified: Rank teams by total_points DESC
-        const [rankedTeams] = await pool.query('SELECT id FROM fantasy_user_teams WHERE match_id = ? ORDER BY total_points DESC', [m.id]);
-        for (let i = 0; i < rankedTeams.length; i++) {
-          await pool.query('UPDATE fantasy_user_teams SET team_rank = ? WHERE id = ?', [i + 1, rankedTeams[i].id]);
-        }
-
-        // 6. Check if match is completed
-        if (scorecard.status === 'completed') {
+        // 4. Check for abandoned/completed
+        if (scorecard.status === 'abandoned') {
+          // Refund all entries for all contests in this match
+          await this._refundMatchEntries(m.id);
+          await pool.query('UPDATE fantasy_matches SET status = "abandoned" WHERE id = ?', [m.id]);
+        } else if (scorecard.status === 'completed') {
           await pool.query('UPDATE fantasy_matches SET status = "completed", winning_team = ? WHERE id = ?', [scorecard.winning_team, m.id]);
           await this.distributePrizes(m.id);
         }
+
+        this._processingMatches.delete(m.id);
       }
     } catch (err) {
       console.error('❌ [Fantasy] Process Live Matches failed:', err.message);
+      this._processingMatches.clear();
     }
   }
 
-  async distributePrizes(matchId) {
-    console.log(`🏆 [Fantasy] Distributing prizes for match \${matchId}`);
+  async _recalculateTeamPoints(matchId, pointsConfig) {
+    // Recalculate points for all teams in this match
+    const [teams] = await pool.query(
+      'SELECT id, captain_player_id, vice_captain_player_id FROM fantasy_user_teams WHERE match_id = ?',
+      [matchId]
+    );
+    
+    for (const team of teams) {
+      const [players] = await pool.query(`
+        SELECT tp.player_id, mp.points 
+        FROM fantasy_team_players tp
+        JOIN fantasy_match_players mp ON tp.player_id = mp.player_id AND mp.match_id = ?
+        WHERE tp.team_id = ?
+      `, [matchId, team.id]);
+
+      let total = 0;
+      players.forEach(pl => {
+        let pts = parseFloat(pl.points || 0);
+        if (pl.player_id === team.captain_player_id) pts *= 2;
+        else if (pl.player_id === team.vice_captain_player_id) pts *= 1.5;
+        total += pts;
+      });
+
+      await pool.query('UPDATE fantasy_user_teams SET total_points = ? WHERE id = ?', [total, team.id]);
+    }
+
+    // Per-contest rank calculation (NOT per-match)
+    const [contests] = await pool.query('SELECT id FROM fantasy_contests WHERE match_id = ?', [matchId]);
+    for (const contest of contests) {
+      const [entries] = await pool.query(`
+        SELECT ce.id, ce.team_id
+        FROM fantasy_contest_entries ce
+        JOIN fantasy_user_teams ut ON ce.team_id = ut.id
+        WHERE ce.contest_id = ?
+        ORDER BY ut.total_points DESC
+      `, [contest.id]);
+
+      for (let i = 0; i < entries.length; i++) {
+        await pool.query('UPDATE fantasy_user_teams SET team_rank = ? WHERE id = ?', [i + 1, entries[i].team_id]);
+      }
+    }
+  }
+
+  async _refundMatchEntries(matchId) {
+    console.log(`💸 [Fantasy] Refunding all entries for abandoned match ${matchId}`);
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
 
-      const [contests] = await conn.query('SELECT id, prize_pool, admin_commission_pct FROM fantasy_contests WHERE match_id = ? AND status != "completed"', [matchId]);
+      const [contests] = await conn.query(
+        'SELECT id FROM fantasy_contests WHERE match_id = ? AND status NOT IN ("completed", "cancelled")',
+        [matchId]
+      );
 
       for (const contest of contests) {
-        // Get all entries for this contest, ordered by team rank
+        const [entries] = await conn.query(
+          'SELECT id, user_id, fee_paid FROM fantasy_contest_entries WHERE contest_id = ? AND prize_won IS NULL',
+          [contest.id]
+        );
+
+        for (const entry of entries) {
+          const fee = parseFloat(entry.fee_paid);
+          await conn.query('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [fee, entry.user_id]);
+          await conn.query(`
+            INSERT INTO transactions (user_id, amount, type, description, status) 
+            VALUES (?, ?, 'refund', ?, 'completed')
+          `, [entry.user_id, fee, `Refund for abandoned match contest #${contest.id}`]);
+        }
+
+        await conn.query('UPDATE fantasy_contests SET status = "cancelled" WHERE id = ?', [contest.id]);
+      }
+
+      await conn.commit();
+      console.log(`✅ [Fantasy] Refunds complete for match ${matchId}`);
+    } catch (err) {
+      await conn.rollback();
+      console.error('❌ [Fantasy] Refund failed:', err.message);
+    } finally {
+      conn.release();
+    }
+  }
+
+  async distributePrizes(matchId) {
+    console.log(`🏆 [Fantasy] Distributing prizes for match ${matchId}`);
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [contests] = await conn.query(
+        'SELECT id, prize_pool, admin_commission_pct, is_guaranteed, total_spots FROM fantasy_contests WHERE match_id = ? AND status NOT IN ("completed", "cancelled")',
+        [matchId]
+      );
+
+      for (const contest of contests) {
+        // Get entries ranked by per-contest rank (use team_rank from recalculate)
         const [entries] = await conn.query(`
-          SELECT ce.id, ce.user_id, ce.team_id, ut.team_rank 
+          SELECT ce.id, ce.user_id, ce.team_id, ut.team_rank, ut.total_points
           FROM fantasy_contest_entries ce
           JOIN fantasy_user_teams ut ON ce.team_id = ut.id
           WHERE ce.contest_id = ?
@@ -178,35 +276,79 @@ class FantasyCricketCron {
           continue;
         }
 
-        // Very simple prize distribution: Winner takes all (Prize Pool minus Commission)
-        // A robust system would have a 'prize_breakdown' table.
         const totalPrize = parseFloat(contest.prize_pool);
         const commission = (totalPrize * parseFloat(contest.admin_commission_pct)) / 100;
         const distributablePrize = totalPrize - commission;
+        const isGuaranteed = contest.is_guaranteed === 1 || contest.is_guaranteed === true;
 
-        const winner = entries[0]; // Rank 1
+        // Multi-tier prize distribution
+        let prizeTiers;
+        const entryCount = entries.length;
 
-        // Update Entry
-        await conn.query('UPDATE fantasy_contest_entries SET prize_won = ? WHERE id = ?', [distributablePrize, winner.id]);
-        
-        // Update User Wallet
-        await conn.query('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [distributablePrize, winner.user_id]);
-        
-        // Log Transaction
-        await conn.query(`
-          INSERT INTO transactions (user_id, amount, type, description, status) 
-          VALUES (?, ?, 'game_win', ?, 'completed')
-        `, [winner.user_id, distributablePrize, `Fantasy Cricket Won - Contest #\${contest.id}`]);
+        if (entryCount === 1) {
+          // Solo entry - refund fee minus commission
+          prizeTiers = [{ rank: 1, pct: 100 }];
+        } else if (entryCount === 2) {
+          prizeTiers = [{ rank: 1, pct: 70 }, { rank: 2, pct: 30 }];
+        } else if (entryCount <= 5) {
+          prizeTiers = [{ rank: 1, pct: 50 }, { rank: 2, pct: 30 }, { rank: 3, pct: 20 }];
+        } else if (entryCount <= 10) {
+          prizeTiers = [{ rank: 1, pct: 40 }, { rank: 2, pct: 25 }, { rank: 3, pct: 15 }, { rank: 4, pct: 10 }, { rank: 5, pct: 10 }];
+        } else {
+          prizeTiers = [
+            { rank: 1, pct: 30 }, { rank: 2, pct: 20 }, { rank: 3, pct: 12 },
+            { rank: 4, pct: 8 }, { rank: 5, pct: 6 },
+            { rank: 6, pct: 5 }, { rank: 7, pct: 4 }, { rank: 8, pct: 3 },
+            { rank: 9, pct: 2 }, { rank: 10, pct: 2 },
+            { rank: 11, pct: 2 }, { rank: 12, pct: 2 },
+            { rank: 13, pct: 1 }, { rank: 14, pct: 1 }, { rank: 15, pct: 1 },
+          ];
+        }
 
-        // Mark Contest Completed
+        // If not guaranteed and not enough entries, scale prizes or refund
+        if (!isGuaranteed && entryCount < Math.min(3, contest.total_spots)) {
+          // Not enough entries for non-guaranteed: refund all
+          for (const entry of entries) {
+            const fee = parseFloat(entry.fee_paid || 0);
+            await conn.query('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [fee, entry.user_id]);
+            await conn.query(`
+              INSERT INTO transactions (user_id, amount, type, description, status) 
+              VALUES (?, ?, 'refund', ?, 'completed')
+            `, [entry.user_id, fee, `Refund - contest #${contest.id} did not fill`]);
+          }
+          await conn.query('UPDATE fantasy_contests SET status = "cancelled", filled_spots = 0 WHERE id = ?', [contest.id]);
+          continue;
+        }
+
+        // Distribute prizes per tier
+        for (const tier of prizeTiers) {
+          if (tier.rank > entries.length) break;
+          const entry = entries[tier.rank - 1];
+          const prizeAmount = (distributablePrize * tier.pct) / 100;
+
+          await conn.query('UPDATE fantasy_contest_entries SET prize_won = ? WHERE id = ?', [prizeAmount, entry.id]);
+          await conn.query('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [prizeAmount, entry.user_id]);
+          await conn.query(`
+            INSERT INTO transactions (user_id, amount, type, description, status) 
+            VALUES (?, ?, 'game_win', ?, 'completed')
+          `, [entry.user_id, prizeAmount, `Fantasy Cricket Won - Contest #${contest.id}`]);
+        }
+
         await conn.query('UPDATE fantasy_contests SET status = "completed" WHERE id = ?', [contest.id]);
       }
 
       await conn.commit();
-      console.log(`✅ [Fantasy] Prizes distributed for match \${matchId}`);
+      console.log(`✅ [Fantasy] Prizes distributed for match ${matchId}`);
+      // Remove from retry queue if present
+      this._prizeRetryQueue = this._prizeRetryQueue.filter(id => id !== matchId);
     } catch (err) {
       await conn.rollback();
       console.error('❌ [Fantasy] Distribute Prizes failed:', err.message);
+      // Add to retry queue (don't set match as completed)
+      if (!this._prizeRetryQueue.includes(matchId)) {
+        this._prizeRetryQueue.push(matchId);
+        console.log(`🔄 [Fantasy] Added match ${matchId} to prize retry queue`);
+      }
     } finally {
       conn.release();
     }

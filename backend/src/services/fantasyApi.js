@@ -2,14 +2,16 @@
  * Fantasy Cricket API Service
  * Handles fetching real-world data (matches, squads, scorecards).
  * Includes a Mock Mode so we can develop the entire app without a real API key.
+ * API quota protection built in — caches responses and reduces redundant calls.
  */
 const { pool } = require('../db');
 
 class FantasyApiService {
   constructor() {
-    this.useMock = true; // Set to true to use mock data instead of real API
-    this.apiKey = process.env.CRICKET_API_KEY || ''; // e.g., CricAPI or Sportmonks
-    this.baseUrl = 'https://api.cricapi.com/v1'; 
+    this.baseUrl = 'https://api.cricapi.com/v1';
+    this._mockGenerated = false; // Ensure mock data generated only once per match
+    this._mockScorecardCache = {}; // api_match_id -> deterministic scorecard
+    this._lastApiCall = {}; // endpoint -> timestamp for rate limiting
   }
 
   async getApiKey() {
@@ -24,6 +26,21 @@ class FantasyApiService {
     return process.env.CRICKET_API_KEY || '';
   }
 
+  async shouldUseMock() {
+    const apiKey = await this.getApiKey();
+    return !apiKey;
+  }
+
+  // Simple rate limiter: don't call same endpoint more than once per N ms
+  _checkRateLimit(endpoint, minIntervalMs = 60000) {
+    const now = Date.now();
+    if (this._lastApiCall[endpoint] && (now - this._lastApiCall[endpoint]) < minIntervalMs) {
+      return false;
+    }
+    this._lastApiCall[endpoint] = now;
+    return true;
+  }
+
   // --- API Abstraction Layer ---
 
   async fetchUpcomingMatches() {
@@ -31,6 +48,12 @@ class FantasyApiService {
     if (!apiKey) {
       console.log('No API key found, using mock matches');
       return this._getMockMatches();
+    }
+
+    // Rate limit: don't call matches API more than once every 30 min
+    if (!this._checkRateLimit('currentMatches', 1800000)) {
+      console.log('⏳ [API Quota] Skipping matches sync — last call was < 30 min ago');
+      return [];
     }
     
     try {
@@ -41,9 +64,8 @@ class FantasyApiService {
         throw new Error(data.reason || 'Failed to fetch matches');
       }
 
-      // Map CricAPI matches to our DB format
       return data.data.map(m => ({
-        api_match_id: m.id,
+        api_match_id: String(m.id),
         title: m.name,
         short_title: m.shortName || m.name,
         subtitle: m.matchType,
@@ -57,13 +79,19 @@ class FantasyApiService {
       }));
     } catch (error) {
       console.error('API Error:', error);
-      return this._getMockMatches(); // Fallback
+      return this._getMockMatches();
     }
   }
 
   async fetchMatchSquads(apiMatchId) {
     const apiKey = await this.getApiKey();
     if (!apiKey) {
+      return this._getMockSquads(apiMatchId);
+    }
+
+    // Rate limit: don't call squad API more than once every 15 min per match
+    if (!this._checkRateLimit(`squad_${apiMatchId}`, 900000)) {
+      console.log(`⏳ [API Quota] Skipping squad sync for ${apiMatchId}`);
       return this._getMockSquads(apiMatchId);
     }
     
@@ -78,25 +106,44 @@ class FantasyApiService {
       const players = [];
       data.data.forEach(team => {
         team.players.forEach(p => {
+          // Assign credit values based on role for sensible team building
+          let credit = 8.0;
+          if (p.role) {
+            const role = p.role.toLowerCase();
+            if (role.includes('captain') || role.includes('wk')) credit = 9.5;
+            else if (role.includes('bat')) credit = 8.5;
+            else if (role.includes('all')) credit = 9.0;
+            else if (role.includes('bowl')) credit = 8.0;
+          }
           players.push({
-            api_player_id: p.id,
+            api_player_id: String(p.id),
             name: p.name,
             team_name: team.teamName,
-            role: p.role ? p.role.toLowerCase() : 'batsman',
-            credit_value: 8.5 // CricAPI doesn't provide credits, mock default
+            role: p.role ? p.role.toLowerCase().replace(/^wk$/i, 'wicket-keeper').replace(/^bowler$/i, 'bowler').replace(/^batsman$/i, 'batsman').replace(/^all-rounder$/i, 'all-rounder') : 'batsman',
+            credit_value: Math.round(credit * 10) / 10
           });
         });
       });
       return players;
     } catch (error) {
       console.error('API Error:', error);
-      return this._getMockSquads(apiMatchId); // Fallback
+      return this._getMockSquads(apiMatchId);
     }
   }
 
   async fetchLiveScorecard(apiMatchId) {
     const apiKey = await this.getApiKey();
     if (!apiKey) {
+      return this._getMockScorecard(apiMatchId);
+    }
+
+    // Rate limit: don't call scorecard API more than once every 2 min per match
+    if (!this._checkRateLimit(`scorecard_${apiMatchId}`, 120000)) {
+      console.log(`⏳ [API Quota] Skipping live scorecard for ${apiMatchId}`);
+      // Return cached scorecard if available
+      if (this._mockScorecardCache[apiMatchId]) {
+        return this._mockScorecardCache[apiMatchId];
+      }
       return this._getMockScorecard(apiMatchId);
     }
     
@@ -108,36 +155,43 @@ class FantasyApiService {
         throw new Error(data.reason || 'Failed to fetch scorecard');
       }
 
-      // Very simplified extraction of player stats from CricAPI scorecard
       const players = [];
-      const matchStatus = data.data.matchEnded ? 'completed' : 'live';
+      const matchStatus = data.data.matchEnded ? 'completed' : (data.data.matchAbandoned ? 'abandoned' : 'live');
       
       if (data.data.scorecard) {
         data.data.scorecard.forEach(innings => {
           if (innings.batting) {
             innings.batting.forEach(b => {
-              players.push({
-                api_player_id: b.batsman.id,
-                stats: {
-                  runs: parseInt(b.r) || 0,
-                  boundaries: parseInt(b['4s']) || 0,
-                  sixes: parseInt(b['6s']) || 0,
-                  is_out: b.dismissal !== 'not out',
-                  is_duck: parseInt(b.r) === 0 && b.dismissal !== 'not out',
-                  wickets: 0, catches: 0 // Will override below if they bowled
-                }
-              });
+              const existingIdx = players.findIndex(p => p.api_player_id === String(b.batsman.id));
+              if (existingIdx === -1) {
+                players.push({
+                  api_player_id: String(b.batsman.id),
+                  stats: {
+                    runs: parseInt(b.r) || 0,
+                    boundaries: parseInt(b['4s']) || 0,
+                    sixes: parseInt(b['6s']) || 0,
+                    is_out: b.dismissal !== 'not out' && b.dismissal !== 'batting',
+                    is_duck: parseInt(b.r) === 0 && b.dismissal !== 'not out' && b.dismissal !== 'batting',
+                    wickets: 0,
+                    catches: 0,
+                    dotBalls: 0,
+                    maidenOvers: 0,
+                    runOuts: 0,
+                    stumpings: 0
+                  }
+                });
+              }
             });
           }
           if (innings.bowling) {
             innings.bowling.forEach(b => {
-              const existing = players.find(p => p.api_player_id === b.bowler.id);
+              const existing = players.find(p => p.api_player_id === String(b.bowler.id));
               if (existing) {
                 existing.stats.wickets = parseInt(b.w) || 0;
               } else {
                 players.push({
-                  api_player_id: b.bowler.id,
-                  stats: { runs: 0, boundaries: 0, sixes: 0, is_out: false, is_duck: false, wickets: parseInt(b.w) || 0, catches: 0 }
+                  api_player_id: String(b.bowler.id),
+                  stats: { runs: 0, boundaries: 0, sixes: 0, is_out: false, is_duck: false, wickets: parseInt(b.w) || 0, catches: 0, dotBalls: 0, maidenOvers: 0, runOuts: 0, stumpings: 0 }
                 });
               }
             });
@@ -145,21 +199,27 @@ class FantasyApiService {
         });
       }
 
-      return {
+      const result = {
         status: matchStatus,
         winning_team: data.data.matchWinner || null,
         players
       };
+
+      // Cache for fallback
+      this._mockScorecardCache[apiMatchId] = result;
+      return result;
     } catch (error) {
       console.error('API Error:', error);
-      return this._getMockScorecard(apiMatchId); // Fallback
+      if (this._mockScorecardCache[apiMatchId]) {
+        return this._mockScorecardCache[apiMatchId];
+      }
+      return this._getMockScorecard(apiMatchId);
     }
   }
 
-  // --- Mock Data Generators (For Development) ---
+  // --- Mock Data Generators (Deterministic) ---
 
   _getMockMatches() {
-    // Return 3 mock IPL matches
     const now = new Date();
     return [
       {
@@ -172,7 +232,7 @@ class FantasyApiService {
         team_a_logo: 'https://via.placeholder.com/100/004ba0/ffffff?text=MI',
         team_b: 'Chennai Super Kings',
         team_b_logo: 'https://via.placeholder.com/100/ffff00/000000?text=CSK',
-        start_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(), // Starts in 2 hours
+        start_time: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
         status: 'upcoming'
       },
       {
@@ -185,7 +245,7 @@ class FantasyApiService {
         team_a_logo: 'https://via.placeholder.com/100/ec1c24/ffffff?text=RCB',
         team_b: 'Kolkata Knight Riders',
         team_b_logo: 'https://via.placeholder.com/100/3a225d/ffffff?text=KKR',
-        start_time: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(), // Starts tomorrow
+        start_time: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
         status: 'upcoming'
       }
     ];
@@ -194,7 +254,6 @@ class FantasyApiService {
   _getMockSquads(apiMatchId) {
     if (apiMatchId === 'mock_match_1') {
       return [
-        // MI Players
         { api_player_id: 'mi_1', name: 'Rohit Sharma', team_name: 'MI', role: 'batsman', credit_value: 10.0 },
         { api_player_id: 'mi_2', name: 'Suryakumar Yadav', team_name: 'MI', role: 'batsman', credit_value: 9.5 },
         { api_player_id: 'mi_3', name: 'Ishan Kishan', team_name: 'MI', role: 'wicket-keeper', credit_value: 8.5 },
@@ -206,8 +265,6 @@ class FantasyApiService {
         { api_player_id: 'mi_9', name: 'Nuwan Thushara', team_name: 'MI', role: 'bowler', credit_value: 8.0 },
         { api_player_id: 'mi_10', name: 'Romario Shepherd', team_name: 'MI', role: 'all-rounder', credit_value: 8.0 },
         { api_player_id: 'mi_11', name: 'Akash Madhwal', team_name: 'MI', role: 'bowler', credit_value: 7.5 },
-        
-        // CSK Players
         { api_player_id: 'csk_1', name: 'MS Dhoni', team_name: 'CSK', role: 'wicket-keeper', credit_value: 9.0 },
         { api_player_id: 'csk_2', name: 'Ruturaj Gaikwad', team_name: 'CSK', role: 'batsman', credit_value: 9.5 },
         { api_player_id: 'csk_3', name: 'Ravindra Jadeja', team_name: 'CSK', role: 'all-rounder', credit_value: 9.5 },
@@ -222,35 +279,64 @@ class FantasyApiService {
       ];
     }
     
-    // Fallback generic squad for other matches
     const squad = [];
-    for (let i=1; i<=11; i++) squad.push({ api_player_id: `teamA_\${i}`, name: `Team A Player \${i}`, team_name: 'Team A', role: i === 1 ? 'wicket-keeper' : i < 6 ? 'batsman' : i < 8 ? 'all-rounder' : 'bowler', credit_value: 8.0 });
-    for (let i=1; i<=11; i++) squad.push({ api_player_id: `teamB_\${i}`, name: `Team B Player \${i}`, team_name: 'Team B', role: i === 1 ? 'wicket-keeper' : i < 6 ? 'batsman' : i < 8 ? 'all-rounder' : 'bowler', credit_value: 8.0 });
+    for (let i = 1; i <= 11; i++) {
+      squad.push({ api_player_id: `teamA_${i}`, name: `Team A Player ${i}`, team_name: 'Team A', role: i === 1 ? 'wicket-keeper' : i < 6 ? 'batsman' : i < 8 ? 'all-rounder' : 'bowler', credit_value: 8.0 });
+    }
+    for (let i = 1; i <= 11; i++) {
+      squad.push({ api_player_id: `teamB_${i}`, name: `Team B Player ${i}`, team_name: 'Team B', role: i === 1 ? 'wicket-keeper' : i < 6 ? 'batsman' : i < 8 ? 'all-rounder' : 'bowler', credit_value: 8.0 });
+    }
     return squad;
   }
 
   _getMockScorecard(apiMatchId) {
-    // Generate random stats for live points
-    const players = this._getMockSquads(apiMatchId).map(p => {
+    // Return deterministic mock scorecard that doesn't change every tick
+    if (this._mockScorecardCache[apiMatchId]) {
+      // Check if we should mark as completed (after ~10 min of being "live")
+      const cached = this._mockScorecardCache[apiMatchId];
+      if (cached.status === 'live') {
+        const elapsed = Date.now() - (cached._generatedAt || Date.now());
+        if (elapsed > 600000) { // 10 minutes
+          cached.status = 'completed';
+          cached.winning_team = cached._squads[0]?.team_name || 'MI';
+        }
+      }
+      return cached;
+    }
+
+    // Generate fresh deterministic scorecard (stable for the match duration)
+    const squads = this._getMockSquads(apiMatchId);
+    const players = squads.map((p, idx) => {
+      // Use index to generate deterministic-ish stats
+      const seed = (idx * 7 + 13) % 50;
       return {
         api_player_id: p.api_player_id,
         stats: {
-          runs: Math.floor(Math.random() * 50),
-          boundaries: Math.floor(Math.random() * 5),
-          sixes: Math.floor(Math.random() * 3),
-          wickets: Math.floor(Math.random() * 3),
-          catches: Math.floor(Math.random() * 2),
-          is_out: Math.random() > 0.5,
-          is_duck: false // Simplified for mock
+          runs: Math.floor(seed * 1.3),
+          boundaries: Math.floor(seed / 10),
+          sixes: Math.floor(seed / 20),
+          wickets: idx % 5 === 0 ? Math.floor(seed / 8) : 0,
+          catches: idx % 3 === 0 ? Math.floor(seed / 15) : 0,
+          is_out: seed > 25,
+          is_duck: seed < 5,
+          dotBalls: 0,
+          maidenOvers: 0,
+          runOuts: 0,
+          stumpings: 0
         }
       };
     });
 
-    return {
-      status: Math.random() > 0.9 ? 'completed' : 'live', // 10% chance to finish in a tick
-      winning_team: Math.random() > 0.5 ? 'MI' : 'CSK',
-      players
+    const scorecard = {
+      status: 'live',
+      winning_team: null,
+      players,
+      _squads: squads,
+      _generatedAt: Date.now()
     };
+
+    this._mockScorecardCache[apiMatchId] = scorecard;
+    return scorecard;
   }
 
 }

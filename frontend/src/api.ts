@@ -199,13 +199,16 @@ export const gamesAPI = {
 };
 
 export const fantasyAPI = {
-  getMatches: (status: 'upcoming' | 'live' | 'completed' = 'upcoming') => request('GET', `/fantasy/matches?status=${status}`),
+  getMatches: (status: 'upcoming' | 'live' | 'completed' | string = 'upcoming') => request('GET', `/fantasy/matches?status=${status}`),
   getMatchSquad: (id: number) => request('GET', `/fantasy/match/${id}/squad`),
   getMatchContests: (id: number) => request('GET', `/fantasy/match/${id}/contests`),
   createTeam: (data: { matchId: number; playerIds: number[]; captainId: number; viceCaptainId: number }) => request('POST', '/fantasy/team', data),
   getMyTeams: (matchId: number) => request('GET', `/fantasy/match/${matchId}/my-teams`),
+  updateTeam: (teamId: number, data: { captainId: number; viceCaptainId: number }) => request('PUT', `/fantasy/team/${teamId}`, data),
+  deleteTeam: (teamId: number) => request('DELETE', `/fantasy/team/${teamId}`),
   joinContest: (data: { contestId: number; teamId: number }) => request('POST', '/fantasy/contest/join', data),
-  getLeaderboard: (contestId: number) => request('GET', `/fantasy/contest/${contestId}/leaderboard`)
+  getLeaderboard: (contestId: number) => request('GET', `/fantasy/contest/${contestId}/leaderboard`),
+  getMyEntries: () => request('GET', '/fantasy/my-entries')
 };
 
 export const adminAPI = {
