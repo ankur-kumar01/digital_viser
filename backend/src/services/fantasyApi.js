@@ -112,7 +112,8 @@ class FantasyApiService {
       const players = [];
       data.data.forEach(team => {
         const teamName = team.teamName || team.name || 'Team';
-        (team.players || []).forEach(p => {
+        const teamPlayers = team.players || team.player || team.squad || [];
+        teamPlayers.forEach(p => {
           let credit = 8.0;
           if (p.role) {
             const role = p.role.toLowerCase();
