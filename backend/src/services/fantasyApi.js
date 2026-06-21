@@ -78,24 +78,25 @@ class FantasyApiService {
         status: m.matchStarted ? 'live' : 'upcoming'
       }));
     } catch (error) {
-      console.error('API Error:', error);
-      return this._getMockMatches();
+      console.error('❌ [Fantasy] CricAPI matches error:', error.message);
+      return []; // Never use mock matches when a real API key is configured
     }
   }
 
-  async fetchMatchSquads(apiMatchId) {
+  async fetchMatchSquads(apiMatchId, force = false) {
     const apiKey = await this.getApiKey();
     if (!apiKey) {
-      return this._getMockSquads(apiMatchId);
+      console.log('⏹️ [Fantasy] No API key configured — cannot fetch real squad data');
+      return [];
     }
 
-    // Rate limit: don't call squad API more than once every 15 min per match
-    if (!this._checkRateLimit(`squad_${apiMatchId}`, 900000)) {
-      console.log(`⏳ [API Quota] Skipping squad sync for ${apiMatchId}`);
-      return []; // Return empty array instead of mock data so we don't pollute the database with fakes for real matches
+    if (!force && !this._checkRateLimit(`squad_${apiMatchId}`, 900000)) {
+      console.log(`⏳ [API Quota] Skipping squad sync for ${apiMatchId} (auto mode)`);
+      return []; // Return empty — existing data is already in DB or will be fetched on next cycle
     }
     
     try {
+      console.log(`🌐 [Fantasy] Fetching squad from CricAPI for match ${apiMatchId}...`);
       const response = await fetch(`${this.baseUrl}/match_squad?apikey=${apiKey}&id=${apiMatchId}`);
       const data = await response.json();
       
@@ -103,32 +104,58 @@ class FantasyApiService {
         throw new Error(data.reason || 'Failed to fetch squads');
       }
 
+      if (!data.data || data.data.length === 0) {
+        console.warn(`⚠️ [Fantasy] CricAPI returned empty squad data for ${apiMatchId}`);
+        return [];
+      }
+
       const players = [];
       data.data.forEach(team => {
-        team.players.forEach(p => {
-          // Assign credit values based on role for sensible team building
+        const teamName = team.teamName || team.name || 'Team';
+        (team.players || []).forEach(p => {
           let credit = 8.0;
           if (p.role) {
             const role = p.role.toLowerCase();
-            if (role.includes('captain') || role.includes('wk')) credit = 9.5;
+            if (role.includes('captain') || role.includes('wk') || role.includes('keeper')) credit = 9.5;
             else if (role.includes('bat')) credit = 8.5;
             else if (role.includes('all')) credit = 9.0;
             else if (role.includes('bowl')) credit = 8.0;
           }
           players.push({
             api_player_id: String(p.id),
-            name: p.name,
-            team_name: team.teamName,
-            role: p.role ? p.role.toLowerCase().replace(/^wk$/i, 'wicket-keeper').replace(/^bowler$/i, 'bowler').replace(/^batsman$/i, 'batsman').replace(/^all-rounder$/i, 'all-rounder') : 'batsman',
+            name: p.name || 'Unknown Player',
+            team_name: teamName,
+            role: this._normalizeRole(p.role),
             credit_value: Math.round(credit * 10) / 10
           });
         });
       });
+
+      if (players.length === 0) {
+        console.warn(`⚠️ [Fantasy] Zero players parsed from CricAPI for ${apiMatchId}`);
+        return [];
+      }
+
       return players;
     } catch (error) {
-      console.error('API Error:', error);
-      return []; // Return empty array on error instead of mock data
+      console.error('❌ [Fantasy] CricAPI squad fetch error:', error.message);
+      return [];
     }
+  }
+
+  _normalizeRole(role) {
+    if (!role) return 'batsman';
+    const r = role.toLowerCase().trim();
+    if (r === 'wk' || r === 'wicketkeeper' || r === 'wicket-keeper') return 'wicket-keeper';
+    if (r === 'bat' || r === 'batsman' || r === 'batter') return 'batsman';
+    if (r === 'ar' || r === 'all' || r === 'all-rounder' || r === 'allrounder') return 'all-rounder';
+    if (r === 'bowl' || r === 'bowler') return 'bowler';
+    // Detect role from keywords
+    if (r.includes('keep') || r.includes('wk')) return 'wicket-keeper';
+    if (r.includes('bat')) return 'batsman';
+    if (r.includes('all')) return 'all-rounder';
+    if (r.includes('bowl')) return 'bowler';
+    return 'batsman';
   }
 
   async fetchLiveScorecard(apiMatchId) {

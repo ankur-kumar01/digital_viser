@@ -37,24 +37,18 @@ router.get('/matches', async (req, res) => {
   }
 });
 
-// 2. Get Match Details & Squad (only playing players)
+// 2. Get Match Details & Squad (real players only)
 router.get('/match/:id/squad', async (req, res) => {
   try {
     const [matches] = await pool.query('SELECT * FROM fantasy_matches WHERE id = ?', [req.params.id]);
     if (matches.length === 0) return res.status(404).json({ error: 'Match not found' });
 
-    let [players] = await pool.query(`
+    const [players] = await pool.query(`
       SELECT p.*, mp.points, mp.stats_json, mp.is_playing 
       FROM fantasy_players p
       JOIN fantasy_match_players mp ON p.id = mp.player_id
-      WHERE mp.match_id = ? AND mp.is_playing = true
+      WHERE mp.match_id = ?
     `, [req.params.id]);
-
-    // If we have real players from the API, hide the mock fallback players
-    const realPlayers = players.filter(p => !p.api_player_id.startsWith('teamA_') && !p.api_player_id.startsWith('teamB_') && !p.api_player_id.includes('_mock_match_'));
-    if (realPlayers.length > 0) {
-      players = realPlayers;
-    }
 
     res.json({ match: matches[0], players });
   } catch (err) {

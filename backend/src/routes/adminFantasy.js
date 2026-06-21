@@ -108,10 +108,10 @@ router.post('/sync-matches', async (req, res) => {
   }
 });
 
-// 7. Trigger Sync Squads
+// 7. Trigger Sync Squads (force = true bypasses rate limiting for manual action)
 router.post('/sync-squads', async (req, res) => {
   try {
-    await fantasyCricketCron.syncSquads();
+    await fantasyCricketCron.syncSquads(true);
     res.json({ success: true, message: 'Squads synced successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });

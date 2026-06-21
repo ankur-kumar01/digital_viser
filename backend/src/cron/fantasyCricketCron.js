@@ -53,40 +53,66 @@ class FantasyCricketCron {
             title=VALUES(title), start_time=VALUES(start_time), status=IF(status='upcoming', VALUES(status), status)
         `, [m.api_match_id, m.title, m.short_title, m.subtitle, m.format, m.team_a, m.team_a_logo, m.team_b, m.team_b_logo, m.start_time, m.status]);
       }
+
+      // Auto-sync squads for any newly synced matches that don't have players yet
+      const [matchesWithoutSquads] = await pool.query(`
+        SELECT fm.id, fm.api_match_id FROM fantasy_matches fm
+        LEFT JOIN fantasy_match_players fmp ON fm.id = fmp.match_id
+        WHERE fm.status = 'upcoming' AND fmp.match_id IS NULL
+      `);
+
+      if (matchesWithoutSquads.length > 0) {
+        console.log(`🔄 [Fantasy] Auto-syncing squads for ${matchesWithoutSquads.length} matches without players...`);
+        await this._syncSquadsForMatches(matchesWithoutSquads);
+      }
     } catch (err) {
       console.error('❌ [Fantasy] Sync matches failed:', err.message);
     }
   }
 
-  async syncSquads() {
+  async syncSquads(force = true) {
     try {
       const [matches] = await pool.query(`
         SELECT id, api_match_id FROM fantasy_matches 
-        WHERE status = 'upcoming' AND start_time < DATE_ADD(NOW(), INTERVAL 24 HOUR)
+        WHERE status = 'upcoming' AND start_time < DATE_ADD(NOW(), INTERVAL 72 HOUR)
       `);
 
-      for (const m of matches) {
-        const squad = await fantasyApi.fetchMatchSquads(m.api_match_id);
-        
-        for (const player of squad) {
-          await pool.query(`
-            INSERT INTO fantasy_players (api_player_id, name, team_name, role, credit_value)
-            VALUES (?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE credit_value=VALUES(credit_value)
-          `, [player.api_player_id, player.name, player.team_name, player.role, player.credit_value]);
-
-          const [pRow] = await pool.query('SELECT id FROM fantasy_players WHERE api_player_id = ?', [player.api_player_id]);
-          if (pRow.length > 0) {
-            const playerId = pRow[0].id;
-            await pool.query(`
-              INSERT IGNORE INTO fantasy_match_players (match_id, player_id, is_playing)
-              VALUES (?, ?, true)
-            `, [m.id, playerId]);
-          }
-        }
-      }
+      await this._syncSquadsForMatches(matches, force);
     } catch (err) {
       console.error('❌ [Fantasy] Sync squads failed:', err.message);
+    }
+  }
+
+  async _syncSquadsForMatches(matches, force = false) {
+    if (matches.length === 0) return;
+
+    for (const m of matches) {
+      const squad = await fantasyApi.fetchMatchSquads(m.api_match_id, force);
+
+      if (!squad || squad.length === 0) {
+        console.log(`⚠️ [Fantasy] No squad data returned for match ${m.id} (${m.api_match_id})`);
+        continue;
+      }
+
+      for (const player of squad) {
+        await pool.query(`
+          INSERT INTO fantasy_players (api_player_id, name, team_name, role, credit_value)
+          VALUES (?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE 
+            name=VALUES(name), team_name=VALUES(team_name), role=VALUES(role), credit_value=VALUES(credit_value)
+        `, [player.api_player_id, player.name, player.team_name, player.role, player.credit_value]);
+
+        const [pRow] = await pool.query('SELECT id FROM fantasy_players WHERE api_player_id = ?', [player.api_player_id]);
+        if (pRow.length > 0) {
+          const playerId = pRow[0].id;
+          await pool.query(`
+            INSERT IGNORE INTO fantasy_match_players (match_id, player_id, is_playing)
+            VALUES (?, ?, true)
+          `, [m.id, playerId]);
+        }
+      }
+
+      console.log(`✅ [Fantasy] Synced ${squad.length} players for match ${m.id}`);
     }
   }
 

@@ -511,7 +511,13 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
                     </div>
                   );
                 })}
-                {getFilteredSquad().length === 0 && <p style={{color: 'var(--text-secondary)'}}>No players match filters</p>}
+                {getFilteredSquad().length === 0 && (
+                  squad.length === 0
+                    ? <p style={{color: 'var(--text-secondary)', textAlign: 'center', padding: '30px'}}>
+                        Squad data not yet available. Please check back later or ask admin to sync squads.
+                      </p>
+                    : <p style={{color: 'var(--text-secondary)'}}>No players match current filters</p>
+                )}
               </div>
               <button 
                 className="cric-btn-primary cric-full-btn" 
