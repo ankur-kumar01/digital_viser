@@ -188,7 +188,7 @@ export const AdminLudo: React.FC = () => {
 
   return (
     <div className="ludo-dashboard">
-      <h2 className="ludo-header"><Gamepad2 size={28} style={{ color: '#3b82f6' }} /> Ludo Management</h2>
+      <h2 className="admin-ludo-header"><Gamepad2 size={28} style={{ color: '#3b82f6' }} /> Ludo Management</h2>
 
       {/* Tabs */}
       <div className="ludo-tabs">
