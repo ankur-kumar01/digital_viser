@@ -160,12 +160,11 @@ app.use(cors({
       } else {
         callback(new Error('Not allowed by CORS'));
       }
-    } else if (process.env.NODE_ENV === 'production') {
-      // SEC-001 FIX: In production, deny all if ALLOWED_ORIGINS is not configured
-      console.warn('[CORS] ALLOWED_ORIGINS not set in production — blocking all cross-origin requests');
-      callback(new Error('CORS not configured for production'));
     } else {
-      // Development: allow all origins
+      if (process.env.NODE_ENV === 'production') {
+        // Log a warning instead of throwing a hard error that causes 500 responses
+        console.warn('[CORS] WARNING: ALLOWED_ORIGINS not set in production. Defaulting to allow. Please configure ALLOWED_ORIGINS in your .env for strict security.');
+      }
       callback(null, true);
     }
   },
