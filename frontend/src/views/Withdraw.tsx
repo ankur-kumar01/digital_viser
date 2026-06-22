@@ -15,7 +15,7 @@ interface WithdrawProps {
 export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
-  const [sourceWallet, setSourceWallet] = useState('normal');
+  const [sourceWallet, setSourceWallet] = useState('main');
   const [paymentChannels, setPaymentChannels] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
@@ -131,7 +131,7 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
     }
 
     const walletBalances: Record<string, number> = {
-      normal: user ? parseFloat((user as any).balance || '0') : 0,
+      main: user ? parseFloat((user as any).balance || '0') : 0,
       bonus: user ? parseFloat((user as any).bonus_balance || '0') : 0,
       referral: user ? parseFloat((user as any).referral_balance || '0') : 0
     };
@@ -208,7 +208,7 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Available Balance ({sourceWallet})</span>
               </div>
               <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                ₹{user ? parseFloat(((user as any)[sourceWallet === 'normal' ? 'balance' : `${sourceWallet}_balance`] || '0')).toLocaleString() : '0.00'}
+                ₹{user ? parseFloat(((user as any)[sourceWallet === 'main' ? 'balance' : `${sourceWallet}_balance`] || '0')).toLocaleString() : '0.00'}
               </span>
             </div>
 
@@ -269,7 +269,7 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
                     onChange={(e) => setAmount(e.target.value)}
                     required
                     min="1"
-                    max={user ? parseFloat(((user as any)[sourceWallet === 'normal' ? 'balance' : `${sourceWallet}_balance`] || '0')) : undefined}
+                    max={user ? parseFloat(((user as any)[sourceWallet === 'main' ? 'balance' : `${sourceWallet}_balance`] || '0')) : undefined}
                   />
                 </div>
 
@@ -281,7 +281,7 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
                     onChange={(e) => setSourceWallet(e.target.value)}
                     required
                   >
-                    <option value="normal">Main Wallet</option>
+                    <option value="main">Main Wallet</option>
                     <option value="bonus">Bonus Wallet</option>
                     <option value="referral">Referral Wallet</option>
                   </select>
