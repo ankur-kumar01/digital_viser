@@ -38,6 +38,13 @@ function asyncHandler(fn) {
   };
 }
 
+// Add days to a date string (YYYY-MM-DD) and return YYYY-MM-DD
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
 // Request ID middleware
 function requestIdMiddleware(req, res, next) {
   req.requestId = req.headers['x-request-id'] || crypto.randomUUID();
@@ -45,4 +52,4 @@ function requestIdMiddleware(req, res, next) {
   next();
 }
 
-module.exports = { resolveWalletColumn, ALLOWED_WALLET_COLUMNS, logger, asyncHandler, requestIdMiddleware };
+module.exports = { resolveWalletColumn, ALLOWED_WALLET_COLUMNS, logger, asyncHandler, addDays, requestIdMiddleware };

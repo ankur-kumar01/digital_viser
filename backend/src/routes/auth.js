@@ -39,8 +39,16 @@ router.post('/register', [
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    // Generate unique referral code for new user
-    const newReferralCode = 'REF' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 1000);
+    // ISSUE-015 FIX: Generate unique referral code with retry on collision
+    let newReferralCode;
+    let codeIsUnique = false;
+    let codeAttempts = 0;
+    while (!codeIsUnique && codeAttempts < 5) {
+      newReferralCode = 'REF' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 9000 + 1000);
+      const [codeCheck] = await pool.query('SELECT id FROM users WHERE referral_code = ? LIMIT 1', [newReferralCode]);
+      codeIsUnique = codeCheck.length === 0;
+      codeAttempts++;
+    }
 
     let invitedBy = null;
     if (referral_code) {
@@ -159,12 +167,18 @@ router.post('/verify-otp', async (req, res) => {
     if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required.' });
 
     const [rows] = await pool.query(
-      'SELECT id FROM password_resets WHERE email = ? AND otp_code = ? AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1',
+      'SELECT id FROM password_resets WHERE email = ? AND otp_code = ? AND expires_at > NOW() AND (is_used IS NULL OR is_used = 0) ORDER BY created_at DESC LIMIT 1',
       [email, otp]
     );
     if (rows.length === 0) {
       return res.status(400).json({ error: 'Invalid or expired OTP.' });
     }
+
+    // SEC-003 FIX: Mark OTP as used immediately after verification to prevent reuse
+    await pool.query(
+      'UPDATE password_resets SET is_used = 1 WHERE id = ?',
+      [rows[0].id]
+    );
 
     res.json({ success: true });
   } catch (err) {
@@ -265,11 +279,25 @@ router.put('/profile', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Name is required' });
     }
 
+    // SEC-004 FIX: Validate profile_photo URL - must be from our server or empty
+    let safeProfilePhoto = null;
+    if (profile_photo) {
+      const apiBase = process.env.API_BASE_URL || '';
+      const isRelative = profile_photo.startsWith('/uploads/') || profile_photo.startsWith('uploads/');
+      const isAbsoluteOwn = apiBase && profile_photo.startsWith(apiBase);
+      if (isRelative || isAbsoluteOwn) {
+        safeProfilePhoto = sanitize(profile_photo);
+      } else {
+        // Log suspicious external URL attempt, store null
+        console.warn(`[SEC] Suspicious profile_photo URL rejected for user ${req.user.userId}: ${profile_photo}`);
+      }
+    }
+
     await pool.query(
       `UPDATE users 
        SET name = ?, phone_number = ?, address = ?, city = ?, state = ?, pin_code = ?, profile_photo = ?
        WHERE id = ?`,
-      [sanitize(name), sanitize(phone_number) || null, sanitize(address) || null, sanitize(city) || null, sanitize(state) || null, sanitize(pin_code) || null, sanitize(profile_photo) || null, req.user.userId]
+      [sanitize(name), sanitize(phone_number) || null, sanitize(address) || null, sanitize(city) || null, sanitize(state) || null, sanitize(pin_code) || null, safeProfilePhoto, req.user.userId]
     );
 
     res.json({ success: true });

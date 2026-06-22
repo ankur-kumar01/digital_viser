@@ -1,6 +1,7 @@
 const path = require('path');
 // Fix for Hostinger: Ensure dotenv always looks in the backend folder, regardless of CWD
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+require('express-async-errors'); // Catch async errors globally (BUG-004)
 
 const express = require('express');
 const http = require('http');
@@ -31,10 +32,11 @@ const fantasyRoutes = require('./routes/fantasy');
 const supportRoutes = require('./routes/support');
 const adminSupportRoutes = require('./routes/adminSupport');
 
-// Fail fast if JWT_SECRET is missing
+// ISSUE-014 FIX: Hard fail if JWT_SECRET is missing — don't allow server to start broken
 if (!process.env.JWT_SECRET) {
-  console.error('FATAL: JWT_SECRET environment variable is not set. Server starting but all JWT operations will fail.');
+  console.error('FATAL: JWT_SECRET environment variable is not set. All JWT operations will fail.');
   console.error('Set a strong random secret in your .env file: JWT_SECRET=<your-secret>');
+  process.exit(1);
 }
 
 const app = express();
@@ -149,17 +151,21 @@ io.on('connection', (socket) => {
 // Dynamic CORS to allow any subdomain or specified origins, supporting credentials
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // Allow non-browser requests
+    if (!origin) return callback(null, true); // Allow non-browser requests (server-to-server)
     
     if (process.env.ALLOWED_ORIGINS) {
-      const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',');
+      const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
       if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
       }
+    } else if (process.env.NODE_ENV === 'production') {
+      // SEC-001 FIX: In production, deny all if ALLOWED_ORIGINS is not configured
+      console.warn('[CORS] ALLOWED_ORIGINS not set in production — blocking all cross-origin requests');
+      callback(new Error('CORS not configured for production'));
     } else {
-      // If no ALLOWED_ORIGINS is set, allow all dynamically (perfect for dynamic subdomains)
+      // Development: allow all origins
       callback(null, true);
     }
   },
@@ -178,12 +184,28 @@ if (process.env.NODE_ENV === 'production') {
 app.use(requestIdMiddleware);
 app.use(express.json());
 
+// Redis store for rate limiters (SEC-005)
+let rateLimitStore;
+if (process.env.REDIS_URL) {
+  try {
+    const Redis = require('ioredis');
+    const RedisStore = require('rate-limit-redis').default;
+    const redisClient = new Redis(process.env.REDIS_URL);
+    rateLimitStore = new RedisStore({
+      sendCommand: (...args) => redisClient.call(...args),
+    });
+    console.log('📶 Redis rate-limiting store initialized.');
+  } catch (redisErr) {
+    console.error('⚠️ Failed to initialize Redis rate-limiting store, falling back to memory:', redisErr.message);
+  }
+}
+
 // Rate limiters
-const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many login attempts. Try again in 15 minutes.' } });
-const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 3, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many registration attempts. Try again later.' } });
-const otpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many OTP requests. Try again in 15 minutes.' } });
-const spinLimiter = rateLimit({ windowMs: 60 * 1000, max: 1, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many spin requests.' } });
-const adminLoginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many admin login attempts. Try again in 15 minutes.' } });
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many login attempts. Try again in 15 minutes.' } });
+const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 3, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many registration attempts. Try again later.' } });
+const otpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many OTP requests. Try again in 15 minutes.' } });
+const spinLimiter = rateLimit({ windowMs: 60 * 1000, max: 1, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many spin requests.' } });
+const adminLoginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many admin login attempts. Try again in 15 minutes.' } });
 
 // Mount routes
 app.use('/api/auth/login', loginLimiter);
@@ -207,12 +229,6 @@ app.use('/api/admin/bots', require('./routes/adminBots'));
 app.use('/api/ludo/tournaments', require('./routes/ludoTournaments'));
 app.use('/api/support', supportRoutes);
 app.use('/api/admin/support', adminSupportRoutes);
-
-// Global error handler (catches async handler rejections)
-app.use((err, req, res, next) => {
-  console.error(JSON.stringify({ level: 'error', requestId: req.requestId, message: err.message, stack: err.stack }));
-  res.status(500).json({ error: 'Internal server error', requestId: req.requestId });
-});
 
 // Public Config Endpoint
 app.get('/api/config', async (req, res) => {
@@ -305,6 +321,12 @@ if (fs.existsSync(frontendDistPath)) {
     });
   });
 }
+
+// Global error handler registered at the end of the routing stack (ISSUE-032)
+app.use((err, req, res, next) => {
+  console.error(JSON.stringify({ level: 'error', requestId: req.requestId, message: err.message, stack: err.stack }));
+  res.status(500).json({ error: 'Internal server error', requestId: req.requestId });
+});
 
 // Graceful error handling to prevent silent 503 crashes on Hostinger
 process.on('uncaughtException', (err) => {

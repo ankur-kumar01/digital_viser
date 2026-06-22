@@ -161,7 +161,8 @@ export const authAPI = {
 export const walletAPI = {
   deposit: (amount: number, paymentMethod: string, customData?: any) => 
     request('POST', '/wallet/deposit', { amount, payment_method: paymentMethod, custom_data: customData }),
-  withdraw: (amount: number, paymentMethod: string, sourceWallet: string = 'normal', customData?: any) => 
+  // ISSUE-020/030 FIX: Default to 'main' (consistent with backend validator) not 'normal'
+  withdraw: (amount: number, paymentMethod: string, sourceWallet: string = 'main', customData?: any) => 
     request('POST', '/wallet/withdraw', { amount, payment_method: paymentMethod, source_wallet: sourceWallet, custom_data: customData }),
   getTransactions: (page: number = 1) => request('GET', `/wallet/transactions?page=${page}`),
   getActiveMethods: () => request('GET', '/wallet/active-methods'),
@@ -203,11 +204,12 @@ export const gamesAPI = {
   fruitSlasherCrash: (betId: number, multiplier: number) => request('POST', '/games/fruitslasher/crash', { betId, multiplier })
 };
 
+// ISSUE-019 FIX: Use adminRequest() (admin token) and correct path prefix /admin/fantasy/
 export const adminFantasyAPI = {
-  getMatches: () => request('GET', '/admin-fantasy/matches'),
-  updateMatchStatus: (matchId: string, status: string) => request('PUT', `/admin-fantasy/matches/${matchId}/status`, { status }),
-  settleMatch: (matchId: string) => request('POST', `/admin-fantasy/matches/${matchId}/settle`),
-  cancelMatch: (matchId: string) => request('POST', `/admin-fantasy/matches/${matchId}/cancel`),
+  getMatches: () => adminRequest('GET', '/admin/fantasy/matches'),
+  updateMatchStatus: (matchId: string, status: string) => adminRequest('PUT', `/admin/fantasy/matches/${matchId}/status`, { status }),
+  settleMatch: (matchId: string) => adminRequest('POST', `/admin/fantasy/matches/${matchId}/settle`),
+  cancelMatch: (matchId: string) => adminRequest('POST', `/admin/fantasy/matches/${matchId}/cancel`),
 };
 
 // --- Support Tickets API ---

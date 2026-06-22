@@ -341,6 +341,10 @@ class LudoLogic {
         [entryFee, hostId, JSON.stringify(initialBoard), tournamentId]
       );
 
+      // FIX BUG-003: Store walletUsed in room so refunds go to the right wallet
+      await conn.query('UPDATE ludo_rooms SET host_wallet_used = ? WHERE id = ?', [walletField, result.insertId]);
+
+
       await conn.commit();
       return { id: result.insertId, entryFee, hostId, boardState: initialBoard };
     } catch (err) {
@@ -363,8 +367,12 @@ class LudoLogic {
       if (room.host_id !== hostId) throw new Error('You cannot cancel this room');
       if (room.status !== 'waiting') throw new Error('Room is already active or finished');
 
-      // Refund host
-      await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [room.entry_fee, hostId]);
+      // FIX BUG-003: Refund to the wallet that was originally used (tracked in host_wallet_used)
+      const hostWallet = room.host_wallet_used || 'balance';
+      // Safely validate column name to prevent SQL injection
+      const safeHostWallet = ['balance', 'gaming_bonus_balance'].includes(hostWallet) ? hostWallet : 'balance';
+      await conn.query(`UPDATE users SET ${safeHostWallet} = ${safeHostWallet} + ? WHERE id = ?`, [room.entry_fee, hostId]);
+
       await conn.query(
         'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
         [hostId, 'refund', room.entry_fee, `Ludo Refund (Room #${roomId})`]
@@ -426,8 +434,8 @@ class LudoLogic {
       boardState.turnStartTime = Date.now();
 
       await conn.query(
-        'UPDATE ludo_rooms SET challenger_id = ?, status = "playing", board_state = ? WHERE id = ?',
-        [challengerId, JSON.stringify(boardState), roomId]
+        'UPDATE ludo_rooms SET challenger_id = ?, status = "playing", board_state = ?, challenger_wallet_used = ? WHERE id = ?',
+        [challengerId, JSON.stringify(boardState), walletField, roomId]
       );
 
       await conn.commit();
@@ -682,18 +690,16 @@ class LudoLogic {
     const isSafe = safeZones.includes(nextPos);
 
     if (!isSafe && nextPos < 53) {
-      // Map positions relative to check captures
-      // Host track runs 1 to 52. Challenger track starts at offset 26.
-      // So host pos nextPos is challenger pos (nextPos + 26) % 52
+      // ISSUE-018 FIX: In this 2-player Ludo, both players are offset by exactly 26 cells
+      // on a 52-cell track, so the coordinate mapping is symmetric: f(pos) = (pos + 26) % 52 || 52
+      // Both functions were identical; consolidate to one helper.
       const oppPieces = isHost ? boardState.challengerPieces : boardState.hostPieces;
-      
-      const hostToChallengerPos = (pos) => (pos + 26) % 52 || 52;
-      const challengerToHostPos = (pos) => (pos + 26) % 52 || 52;
+      const mapOpponentPos = (pos) => (pos + 26) % 52 || 52;
 
       for (let idx = 0; idx < 4; idx++) {
         const oppPos = oppPieces[idx];
         if (oppPos > 0 && oppPos < 53) {
-          const mappedOppPos = isHost ? challengerToHostPos(oppPos) : hostToChallengerPos(oppPos);
+          const mappedOppPos = mapOpponentPos(oppPos);
           if (mappedOppPos === nextPos) {
             // Captured! Send piece back to base (0)
             oppPieces[idx] = 0;
@@ -741,11 +747,15 @@ class LudoLogic {
   }
 
   async resolveWin(roomId, winnerId, entryFee) {
+    if (!winnerId) {
+      throw new Error('winnerId is required to resolve win');
+    }
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
 
       const [rooms] = await conn.query('SELECT * FROM ludo_rooms WHERE id = ? FOR UPDATE', [roomId]);
+      if (rooms.length === 0) throw new Error('Room not found');
       if (rooms[0].status !== 'playing') throw new Error('Match already resolved');
 
       const room = rooms[0];
@@ -986,12 +996,12 @@ class LudoLogic {
           const newPos = pos === 0 && roll === 6 ? 1 : pos + roll;
 
           // Capturing opponent piece = HIGH priority
-          const hostToChallengerPos = (p) => (p + 26) % 52 || 52;
-          const challengerToHostPos = (p) => (p + 26) % 52 || 52;
+          // ISSUE-031 FIX: Use single position mapper (both functions were identical)
+          const mapOppPos = (p) => (p + 26) % 52 || 52;
           for (let hIdx = 0; hIdx < 4; hIdx++) {
             const hPos = hostPieces[hIdx];
             if (hPos > 0 && hPos < 53) {
-              const mappedHostPos = challengerToHostPos(hPos);
+              const mappedHostPos = mapOppPos(hPos);
               if (mappedHostPos === newPos) {
                 score += 20; // Capture!
               }
@@ -1004,7 +1014,7 @@ class LudoLogic {
             for (let hIdx = 0; hIdx < 4; hIdx++) {
               const hPos = hostPieces[hIdx];
               if (hPos > 0 && hPos < 53) {
-                const mappedHostPos = challengerToHostPos(hPos);
+                const mappedHostPos = mapOppPos(hPos); // ISSUE-031 FIX: use consolidated mapper
                 // If opponent is within 6 squares behind, this is dangerous
                 const diff = (mappedHostPos - newPos + 52) % 52;
                 if (diff > 0 && diff <= 6) {

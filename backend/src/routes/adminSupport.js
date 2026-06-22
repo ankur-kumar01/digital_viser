@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_ADMIN_SECRET || process.env.JWT_SECRET;
 
 const adminAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;

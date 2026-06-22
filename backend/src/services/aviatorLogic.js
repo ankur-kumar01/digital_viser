@@ -65,13 +65,20 @@ class AviatorGameLogic {
     }
   }
 
-  async startWaitPhase() {
+  async startWaitPhase(retryCount = 0) {
     this.state = 'WAITING';
     this.activeBets.clear();
     await this.generateRound();
     if (!this.roundId) {
-      console.error('Failed to generate round, retrying in 5s...');
-      setTimeout(() => this.startWaitPhase(), 5000);
+      const maxRetries = 10;
+      if (retryCount >= maxRetries) {
+        console.error(`[Aviator] Failed to generate round after ${maxRetries} attempts. Halting.`);
+        return;
+      }
+      // ISSUE-016 FIX: Exponential backoff instead of flat 5s infinite retry
+      const delay = Math.min(5000 * Math.pow(2, retryCount), 60000);
+      console.error(`[Aviator] Failed to generate round, retry ${retryCount + 1}/${maxRetries} in ${delay}ms...`);
+      setTimeout(() => this.startWaitPhase(retryCount + 1), delay);
       return;
     }
 
@@ -226,7 +233,12 @@ class AviatorGameLogic {
 
       await conn.commit();
 
-      const newMain = mainBalance - deductFromMain;
+      // FIX BUG-006: Query actual DB balance so the response is always accurate
+      // regardless of which wallet (main or bonus) was deducted from
+      const [freshUser] = await pool.query('SELECT balance, gaming_bonus_balance FROM users WHERE id = ?', [userId]);
+      const freshBalance = freshUser.length > 0 ? parseFloat(freshUser[0].balance) : 0;
+      const freshBonus = freshUser.length > 0 ? parseFloat(freshUser[0].gaming_bonus_balance || 0) : 0;
+
       this.activeBets.set(userId, { 
         id: betRes.insertId, 
         userId,
@@ -250,7 +262,7 @@ class AviatorGameLogic {
         winAmount: b.winAmount
       })));
 
-      return { success: true, newBalance: newMain, walletUsed };
+      return { success: true, newBalance: freshBalance, gamingBonusBalance: freshBonus, walletUsed };
     } catch (err) {
       await conn.rollback();
       throw err;

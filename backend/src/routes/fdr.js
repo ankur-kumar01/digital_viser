@@ -1,20 +1,12 @@
 const express = require('express');
 const { pool } = require('../db');
 const authMiddleware = require('../middleware/auth');
+const { addDays } = require('../utils');
 
 const router = express.Router();
 
 // Apply auth middleware to all routes
 router.use(authMiddleware);
-
-/**
- * Add days to a date string (YYYY-MM-DD) and return a new date string.
- */
-function addDays(dateStr, days) {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
-}
 
 // POST /create
 router.post('/create', async (req, res) => {
@@ -43,24 +35,30 @@ router.post('/create', async (req, res) => {
 
     // Validate amount bounds
     if (fdrAmount < parseFloat(plan.min_amount) || fdrAmount > parseFloat(plan.max_amount)) {
+      conn.release();
       return res.status(400).json({ error: `Amount must be between ₹${plan.min_amount} and ₹${plan.max_amount}.` });
     }
 
-    // Check user balance
-    const [userRows] = await conn.query('SELECT balance FROM users WHERE id = ?', [userId]);
+    // NOTE: User balance check moved inside transaction (see below) — ISSUE-013 fix
+
+    const end_date = addDays(start_date, parseInt(plan.duration_days, 10));
+    const nextInstallmentDate = addDays(start_date, parseInt(plan.period_days, 10));
+
+    // ISSUE-013 FIX: Begin transaction BEFORE balance check to prevent TOCTOU race condition
+    await conn.beginTransaction();
+
+    // Check user balance WITH row lock inside transaction
+    const [userRows] = await conn.query('SELECT balance FROM users WHERE id = ? FOR UPDATE', [userId]);
     if (userRows.length === 0) {
+      await conn.rollback();
       return res.status(404).json({ error: 'User not found.' });
     }
 
     const currentBalance = parseFloat(userRows[0].balance);
     if (currentBalance < fdrAmount) {
+      await conn.rollback();
       return res.status(400).json({ error: 'Insufficient balance.' });
     }
-
-    const end_date = addDays(start_date, parseInt(plan.duration_days, 10));
-    const nextInstallmentDate = addDays(start_date, parseInt(plan.period_days, 10));
-
-    await conn.beginTransaction();
 
     // Deduct amount from user balance
     await conn.query(

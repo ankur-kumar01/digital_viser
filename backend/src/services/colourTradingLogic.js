@@ -12,6 +12,7 @@ class ColourTradingLogic {
     
     this.timer = null;
     this.history = []; // Keep track of last 10-15 results for new connections
+    this.roundBets = new Map(); // ISSUE-010 FIX: track bets per userId per round { userId -> Set of colors }
 
     this.initLoop();
   }
@@ -40,6 +41,7 @@ class ColourTradingLogic {
   async startBettingPhase() {
     this.state = 'BETTING';
     this.timeLeft = this.BETTING_TIME;
+    this.roundBets.clear(); // ISSUE-010 FIX: reset per-round bet tracking
     
     // Generate new period number (e.g. YYYYMMDD0001)
     const now = new Date();
@@ -72,6 +74,8 @@ class ColourTradingLogic {
     this.timer = setInterval(() => {
       this.timeLeft--;
       if (this.timeLeft <= 0) {
+        // ISSUE-017 FIX: Set state synchronously at tick to prevent bets in window
+        this.state = 'PROCESSING';
         clearInterval(this.timer);
         this.startProcessingPhase();
       } else {
@@ -273,6 +277,18 @@ class ColourTradingLogic {
       throw new Error('Round not initialized');
     }
 
+    // ISSUE-010 FIX: Limit one bet per color per user per round
+    if (!this.roundBets.has(userId)) {
+      this.roundBets.set(userId, new Set());
+    }
+    const userColors = this.roundBets.get(userId);
+    if (userColors.has(color)) {
+      throw new Error(`You have already placed a bet on "${color}" this round`);
+    }
+    if (userColors.size >= 2) {
+      throw new Error('Maximum 2 different color/number bets per round allowed');
+    }
+
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -330,8 +346,15 @@ class ColourTradingLogic {
 
       await conn.commit();
 
-      const newMain = mainBalance - deductFromMain;
-      return { success: true, newBalance: newMain, walletUsed, betId: betRes.insertId };
+      // Track this bet in memory (ISSUE-010)
+      this.roundBets.get(userId).add(color);
+
+      // FIX CT balance: return actual fresh balance from DB
+      const [freshUser] = await pool.query('SELECT balance, gaming_bonus_balance FROM users WHERE id = ?', [userId]);
+      const freshBalance = freshUser.length > 0 ? parseFloat(freshUser[0].balance) : 0;
+      const freshBonus = freshUser.length > 0 ? parseFloat(freshUser[0].gaming_bonus_balance || 0) : 0;
+
+      return { success: true, newBalance: freshBalance, gamingBonusBalance: freshBonus, walletUsed, betId: betRes.insertId };
     } catch (err) {
       await conn.rollback();
       throw err;

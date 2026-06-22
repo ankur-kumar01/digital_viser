@@ -10,7 +10,9 @@ router.get('/matches', async (req, res) => {
     if (statusParam.includes(',')) {
       const statuses = statusParam.split(',').map(s => s.trim());
       const placeholders = statuses.map(() => '?').join(',');
-      matches = await pool.query(`SELECT * FROM fantasy_matches WHERE status IN (${placeholders}) ORDER BY start_time ASC`, statuses);
+      // FIX BUG-002: pool.query returns [rows, fields] — must destructure
+      const [multiRows] = await pool.query(`SELECT * FROM fantasy_matches WHERE status IN (${placeholders}) ORDER BY start_time ASC`, statuses);
+      matches = multiRows;
     } else {
       const [rows] = await pool.query('SELECT * FROM fantasy_matches WHERE status = ? ORDER BY start_time ASC', [statusParam]);
       matches = rows;
@@ -53,7 +55,9 @@ router.get('/match/:id/contests', async (req, res) => {
 // 4. Create Team
 router.post('/team', async (req, res) => {
   const { matchId, playerIds, captainId, viceCaptainId } = req.body;
-  const userId = req.user.userId;
+  // FIX: require auth middleware (fantasy router must have authMiddleware applied in server.js)
+  const userId = req.user ? req.user.userId : null;
+  if (!userId) return res.status(401).json({ error: 'Authentication required.' });
 
   if (!matchId || !playerIds || playerIds.length !== 11 || !captainId || !viceCaptainId) {
     return res.status(400).json({ error: 'Invalid team data. Must select 11 players, captain, and vice-captain.' });
@@ -316,7 +320,9 @@ router.post('/contest/join', async (req, res) => {
     }
 
     await conn.commit();
-    res.json({ success: true, message: 'Joined contest successfully!', newBalance: balance - fee });
+    // FIX BUG-001: 'balance' was undefined. Compute correct new balance from tracked variables.
+    const newBalance = walletField === 'gaming_bonus_balance' ? (gamingBonus - fee) : (mainBalance - fee);
+    res.json({ success: true, message: 'Joined contest successfully!', newBalance });
   } catch (err) {
     await conn.rollback();
     res.status(400).json({ error: err.message });

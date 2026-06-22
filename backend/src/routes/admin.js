@@ -8,7 +8,7 @@ const cache = require('../cache');
 
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_ADMIN_SECRET || process.env.JWT_SECRET;
 
 // Admin Auth Middleware
 const adminAuth = (req, res, next) => {
@@ -265,6 +265,30 @@ router.delete('/fdr-offers/:id', async (req, res) => {
 // GET /requests
 router.get('/requests', async (req, res) => {
   try {
+    const page = req.query.page ? parseInt(req.query.page, 10) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : null;
+
+    if (page && limit) {
+      const offset = (page - 1) * limit;
+      const [deposits] = await pool.query(`
+        SELECT d.*, u.name as user_name, u.email as user_email 
+        FROM deposits d 
+        JOIN users u ON d.user_id = u.id 
+        ORDER BY d.created_at DESC 
+        LIMIT ? OFFSET ?
+      `, [limit, offset]);
+      
+      const [withdrawals] = await pool.query(`
+        SELECT w.*, u.name as user_name, u.email as user_email 
+        FROM withdrawals w 
+        JOIN users u ON w.user_id = u.id 
+        ORDER BY w.created_at DESC 
+        LIMIT ? OFFSET ?
+      `, [limit, offset]);
+      
+      return res.json({ deposits, withdrawals });
+    }
+
     const [deposits] = await pool.query(`
       SELECT d.*, u.name as user_name, u.email as user_email 
       FROM deposits d 
@@ -471,6 +495,22 @@ router.post('/withdrawals/:id/reject', async (req, res) => {
 // GET /users
 router.get('/users', async (req, res) => {
   try {
+    const page = req.query.page ? parseInt(req.query.page, 10) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : null;
+
+    if (page && limit) {
+      const offset = (page - 1) * limit;
+      const [users] = await pool.query(
+        `SELECT u.id, u.name, u.email, u.phone_number, u.address, u.city, u.state, u.pin_code, u.balance, u.created_at, u.invited_by, i.name as invited_by_name 
+         FROM users u 
+         LEFT JOIN users i ON u.invited_by = i.id 
+         ORDER BY u.created_at DESC 
+         LIMIT ? OFFSET ?`,
+        [limit, offset]
+      );
+      return res.json(users);
+    }
+
     const [users] = await pool.query('SELECT u.id, u.name, u.email, u.phone_number, u.address, u.city, u.state, u.pin_code, u.balance, u.created_at, u.invited_by, i.name as invited_by_name FROM users u LEFT JOIN users i ON u.invited_by = i.id ORDER BY u.created_at DESC');
     res.json(users);
   } catch (err) {

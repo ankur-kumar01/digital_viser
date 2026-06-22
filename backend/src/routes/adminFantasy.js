@@ -4,7 +4,7 @@ const router = express.Router();
 const fantasyCricketCron = require('../cron/fantasyCricketCron');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_ADMIN_SECRET || process.env.JWT_SECRET;
 
 const adminAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -203,7 +203,7 @@ router.delete('/contests/:id', async (req, res) => {
     for (const entry of entries) {
       const fee = parseFloat(entry.fee_paid || 0);
       if (fee > 0) {
-        await conn.query('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [fee, entry.user_id]);
+        await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [fee, entry.user_id]);
       }
     }
     await conn.query('DELETE FROM fantasy_contest_entries WHERE contest_id = ?', [req.params.id]);
@@ -230,7 +230,7 @@ router.post('/contests/:id/cancel', async (req, res) => {
     for (const entry of entries) {
       const fee = parseFloat(entry.fee_paid || 0);
       if (fee > 0) {
-        await conn.query('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [fee, entry.user_id]);
+        await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [fee, entry.user_id]);
         await conn.query(`
           INSERT INTO transactions (user_id, amount, type, description, status) 
           VALUES (?, ?, 'refund', ?, 'completed')

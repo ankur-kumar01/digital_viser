@@ -155,6 +155,21 @@ router.post('/claim', async (req, res) => {
 
     // 4. Update streak
     const today = new Date().toISOString().split('T')[0];
+    
+    // Cooldown check inside transaction: lock the last spin history
+    const [dbLastSpin] = await conn.query(
+      'SELECT spun_at FROM user_spin_history WHERE user_id = ? ORDER BY spun_at DESC LIMIT 1 FOR UPDATE',
+      [userId]
+    );
+    if (dbLastSpin.length > 0) {
+      const lastSpunAt = new Date(dbLastSpin[0].spun_at);
+      const cooldownMs = SPIN.COOLDOWN_MS;
+      const nextAllowed = new Date(lastSpunAt.getTime() + cooldownMs);
+      if (new Date() < nextAllowed) {
+        throw new Error('Already spun today! Cooldown active.');
+      }
+    }
+
     const [streakRows] = await conn.query(
       'SELECT * FROM user_spin_streaks WHERE user_id = ? FOR UPDATE',
       [userId]
@@ -166,12 +181,11 @@ router.post('/claim', async (req, res) => {
       const lastDate = last.last_spin_date ? new Date(last.last_spin_date).toISOString().split('T')[0] : null;
       const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
-      if (lastDate === yesterday) {
+      if (lastDate === today) {
+        throw new Error('Already spun today!');
+      } else if (lastDate === yesterday) {
         // Consecutive day
         newStreak = last.current_streak + 1;
-      } else if (lastDate === today) {
-        // Already spun today (race condition guard)
-        newStreak = last.current_streak;
       } else {
         // Streak broken
         newStreak = 1;
@@ -188,10 +202,11 @@ router.post('/claim', async (req, res) => {
       );
     }
 
-    // 5. Streak day 7 bonus: double the prize
+    // 5. Streak day 7 bonus: double the prize (regardless of segment type)
     let finalAmount = parseFloat(chosen.prize_amount);
     let isStreakBonus = false;
-    if (newStreak > 0 && newStreak % 7 === 0 && chosen.prize_type === 'gaming_bonus') {
+    // ISSUE-025 FIX: Streak bonus should fire for ANY segment type on day 7
+    if (newStreak > 0 && newStreak % 7 === 0 && finalAmount > 0) {
       finalAmount = finalAmount * 2;
       isStreakBonus = true;
     }
@@ -241,7 +256,7 @@ router.post('/claim', async (req, res) => {
   } catch (err) {
     await conn.rollback();
     console.error('Spin claim error:', err);
-    res.status(500).json({ error: 'Failed to process spin' });
+    res.status(400).json({ error: err.message || 'Failed to process spin' });
   } finally {
     conn.release();
   }

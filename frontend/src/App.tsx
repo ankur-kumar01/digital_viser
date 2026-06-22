@@ -25,6 +25,7 @@ import { SupportTicketDetail } from './views/SupportTicketDetail';
 import { authAPI, clearToken, getToken, adminAPI, getAdminToken, clearAdminToken, globalConfigAPI } from './api';
 import { setGlobalTimeZone } from './utils/dateFormatter';
 import { LoadingSpinner } from './components/LoadingSpinner';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Admin Views
 import { AdminAuth } from './views/admin/AdminAuth';
@@ -57,12 +58,26 @@ import { AdminSupportTickets } from './views/admin/AdminSupportTickets';
 import { AdminSupportTicketDetail } from './views/admin/AdminSupportTicketDetail';
 import { trackActivity } from './api';
 
+interface User {
+  id?: number;
+  name: string;
+  email: string;
+  phone_number?: string;
+  balance?: number;
+  gaming_bonus_balance?: number;
+  referral_balance?: number;
+  locked_referral_balance?: number;
+  locked_bonus_balance?: number;
+  profile_photo?: string;
+  role?: string;
+}
+
 export const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminAuth, setShowAdminAuth] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -248,6 +263,7 @@ export const App: React.FC = () => {
 
       {/* Main Viewport Container */}
       <main className={`main-content-layout ${isGameView ? 'fullscreen-game' : ''}`}>
+        <ErrorBoundary fallbackMessage="This section encountered an error. Please try again.">
         {!isAdmin ? (
           <>
             {currentView === 'dashboard' && (
@@ -362,6 +378,7 @@ export const App: React.FC = () => {
             )}
           </>
         )}
+        </ErrorBoundary>
       </main>
 
       {/* Mobile Bottom Navigation */}

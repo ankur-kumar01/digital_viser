@@ -8,7 +8,7 @@ const pool = mysql.createPool({
   port: parseInt(process.env.DB_PORT, 10) || 3306,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0,
+  queueLimit: 100, // ISSUE-021 FIX: Limit queue size so excess requests fail fast (was 0 = unlimited)
   timezone: '+00:00',
   dateStrings: true,
 });

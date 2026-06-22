@@ -151,25 +151,31 @@ class FantasyCricketCron {
         const scorecard = await fantasyApi.fetchLiveScorecard(m.api_match_id);
         this._lastLiveSync[m.api_match_id] = Date.now();
         
-        // 2. Update player points
-        for (const p of scorecard.players) {
-          const s = p.stats;
-          let calculatedPoints = 0;
-          calculatedPoints += (s.runs || 0) * (pointsConfig['run'] || 1);
-          calculatedPoints += (s.boundaries || 0) * (pointsConfig['boundary'] || 1);
-          calculatedPoints += (s.sixes || 0) * (pointsConfig['six'] || 2);
-          calculatedPoints += (s.wickets || 0) * (pointsConfig['wicket'] || 25);
-          calculatedPoints += (s.catches || 0) * (pointsConfig['catch'] || 8);
-          if (s.runs >= 100) calculatedPoints += (pointsConfig['century'] || 16);
-          else if (s.runs >= 50) calculatedPoints += (pointsConfig['half_century'] || 8);
-          if (s.is_duck) calculatedPoints += (pointsConfig['duck'] || -2);
+        // 2. Update player points (PERF-001)
+        if (scorecard.players && scorecard.players.length > 0) {
+          const apiPlayerIds = scorecard.players.map(p => p.api_player_id);
+          const [dbPlayers] = await pool.query('SELECT id, api_player_id FROM fantasy_players WHERE api_player_id IN (?)', [apiPlayerIds]);
+          const playerMap = new Map(dbPlayers.map(r => [r.api_player_id, r.id]));
 
-          const [dbPlayer] = await pool.query('SELECT id FROM fantasy_players WHERE api_player_id = ?', [p.api_player_id]);
-          if (dbPlayer.length > 0) {
-            await pool.query(`
-              UPDATE fantasy_match_players SET points = ?, stats_json = ? 
-              WHERE match_id = ? AND player_id = ?
-            `, [calculatedPoints, JSON.stringify(s), m.id, dbPlayer[0].id]);
+          for (const p of scorecard.players) {
+            const s = p.stats;
+            let calculatedPoints = 0;
+            calculatedPoints += (s.runs || 0) * (pointsConfig['run'] || 1);
+            calculatedPoints += (s.boundaries || 0) * (pointsConfig['boundary'] || 1);
+            calculatedPoints += (s.sixes || 0) * (pointsConfig['six'] || 2);
+            calculatedPoints += (s.wickets || 0) * (pointsConfig['wicket'] || 25);
+            calculatedPoints += (s.catches || 0) * (pointsConfig['catch'] || 8);
+            if (s.runs >= 100) calculatedPoints += (pointsConfig['century'] || 16);
+            else if (s.runs >= 50) calculatedPoints += (pointsConfig['half_century'] || 8);
+            if (s.is_duck) calculatedPoints += (pointsConfig['duck'] || -2);
+
+            const dbPlayerId = playerMap.get(p.api_player_id);
+            if (dbPlayerId) {
+              await pool.query(`
+                UPDATE fantasy_match_players SET points = ?, stats_json = ? 
+                WHERE match_id = ? AND player_id = ?
+              `, [calculatedPoints, JSON.stringify(s), m.id, dbPlayerId]);
+            }
           }
         }
 
@@ -195,46 +201,41 @@ class FantasyCricketCron {
   }
 
   async _recalculateTeamPoints(matchId, pointsConfig) {
-    // Recalculate points for all teams in this match
-    const [teams] = await pool.query(
-      'SELECT id, captain_player_id, vice_captain_player_id FROM fantasy_user_teams WHERE match_id = ?',
-      [matchId]
-    );
-    
-    for (const team of teams) {
-      const [players] = await pool.query(`
-        SELECT tp.player_id, mp.points 
-        FROM fantasy_team_players tp
-        JOIN fantasy_match_players mp ON tp.player_id = mp.player_id AND mp.match_id = ?
-        WHERE tp.team_id = ?
-      `, [matchId, team.id]);
+    // PERF-002: Batch update total points for all teams in this match
+    await pool.query(`
+      UPDATE fantasy_user_teams ut
+      JOIN (
+        SELECT 
+          ut.id as team_id,
+          SUM(
+            CASE 
+              WHEN tp.player_id = ut.captain_player_id THEN COALESCE(mp.points, 0) * 2
+              WHEN tp.player_id = ut.vice_captain_player_id THEN COALESCE(mp.points, 0) * 1.5
+              ELSE COALESCE(mp.points, 0)
+            END
+          ) as calculated_points
+        FROM fantasy_user_teams ut
+        JOIN fantasy_team_players tp ON ut.id = tp.team_id
+        LEFT JOIN fantasy_match_players mp ON tp.player_id = mp.player_id AND mp.match_id = ut.match_id
+        WHERE ut.match_id = ?
+        GROUP BY ut.id
+      ) as calc ON ut.id = calc.team_id
+      SET ut.total_points = calc.calculated_points
+    `, [matchId]);
 
-      let total = 0;
-      players.forEach(pl => {
-        let pts = parseFloat(pl.points || 0);
-        if (pl.player_id === team.captain_player_id) pts *= 2;
-        else if (pl.player_id === team.vice_captain_player_id) pts *= 1.5;
-        total += pts;
-      });
-
-      await pool.query('UPDATE fantasy_user_teams SET total_points = ? WHERE id = ?', [total, team.id]);
-    }
-
-    // Per-contest rank calculation (NOT per-match)
-    const [contests] = await pool.query('SELECT id FROM fantasy_contests WHERE match_id = ?', [matchId]);
-    for (const contest of contests) {
-      const [entries] = await pool.query(`
-        SELECT ce.id, ce.team_id
+    // PERF-002: Batch update ranks for all contest entries in this match using ROW_NUMBER()
+    await pool.query(`
+      UPDATE fantasy_user_teams ut
+      JOIN (
+        SELECT 
+          ce.team_id,
+          ROW_NUMBER() OVER (PARTITION BY ce.contest_id ORDER BY ut.total_points DESC) as rnk
         FROM fantasy_contest_entries ce
         JOIN fantasy_user_teams ut ON ce.team_id = ut.id
-        WHERE ce.contest_id = ?
-        ORDER BY ut.total_points DESC
-      `, [contest.id]);
-
-      for (let i = 0; i < entries.length; i++) {
-        await pool.query('UPDATE fantasy_user_teams SET team_rank = ? WHERE id = ?', [i + 1, entries[i].team_id]);
-      }
-    }
+        WHERE ut.match_id = ?
+      ) as ranked ON ut.id = ranked.team_id
+      SET ut.team_rank = ranked.rnk
+    `, [matchId]);
   }
 
   async _refundMatchEntries(matchId) {
@@ -256,7 +257,8 @@ class FantasyCricketCron {
 
         for (const entry of entries) {
           const fee = parseFloat(entry.fee_paid);
-          await conn.query('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [fee, entry.user_id]);
+          // FIX ISSUE-009: Application uses 'users' table for balance, not a separate 'wallets' table
+          await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [fee, entry.user_id]);
           await conn.query(`
             INSERT INTO transactions (user_id, amount, type, description, status) 
             VALUES (?, ?, 'refund', ?, 'completed')
@@ -336,7 +338,8 @@ class FantasyCricketCron {
           // Not enough entries for non-guaranteed: refund all
           for (const entry of entries) {
             const fee = parseFloat(entry.fee_paid || 0);
-            await conn.query('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [fee, entry.user_id]);
+            // FIX ISSUE-009: Use users table (no separate 'wallets' table exists)
+            await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [fee, entry.user_id]);
             await conn.query(`
               INSERT INTO transactions (user_id, amount, type, description, status) 
               VALUES (?, ?, 'refund', ?, 'completed')
@@ -353,7 +356,8 @@ class FantasyCricketCron {
           const prizeAmount = (distributablePrize * tier.pct) / 100;
 
           await conn.query('UPDATE fantasy_contest_entries SET prize_won = ? WHERE id = ?', [prizeAmount, entry.id]);
-          await conn.query('UPDATE wallets SET balance = balance + ? WHERE user_id = ?', [prizeAmount, entry.user_id]);
+          // FIX ISSUE-009: Use users table for prize payout
+          await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [prizeAmount, entry.user_id]);
           await conn.query(`
             INSERT INTO transactions (user_id, amount, type, description, status) 
             VALUES (?, ?, 'game_win', ?, 'completed')
