@@ -203,6 +203,38 @@ export const gamesAPI = {
   fruitSlasherCrash: (betId: number, multiplier: number) => request('POST', '/games/fruitslasher/crash', { betId, multiplier })
 };
 
+export const adminFantasyAPI = {
+  getMatches: () => request('GET', '/admin-fantasy/matches'),
+  updateMatchStatus: (matchId: string, status: string) => request('PUT', `/admin-fantasy/matches/${matchId}/status`, { status }),
+  settleMatch: (matchId: string) => request('POST', `/admin-fantasy/matches/${matchId}/settle`),
+  cancelMatch: (matchId: string) => request('POST', `/admin-fantasy/matches/${matchId}/cancel`),
+};
+
+// --- Support Tickets API ---
+export const supportAPI = {
+  getTickets: () => request('GET', '/support'),
+  getTicket: (id: string | number) => request('GET', `/support/${id}`),
+  createTicket: (subject: string, message: string, category?: string, priority?: string) => request('POST', '/support', { subject, message, category, priority }),
+  replyTicket: (id: string | number, message: string) => request('POST', `/support/${id}/reply`, { message }),
+  closeTicket: (id: string | number) => request('PUT', `/support/${id}/close`),
+};
+
+export const adminSupportAPI = {
+  getTickets: (params?: any) => {
+    let query = '';
+    if (params) {
+      const searchParams = new URLSearchParams();
+      if (params.status) searchParams.append('status', params.status);
+      if (params.search) searchParams.append('search', params.search);
+      query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+    }
+    return adminRequest('GET', `/admin/support${query}`);
+  },
+  getTicket: (id: string | number) => adminRequest('GET', `/admin/support/${id}`),
+  replyTicket: (id: string | number, message: string) => adminRequest('POST', `/admin/support/${id}/reply`, { message }),
+  updateStatus: (id: string | number, status?: string, priority?: string) => adminRequest('PUT', `/admin/support/${id}/status`, { status, priority }),
+};
+
 export const fantasyAPI = {
   getMatches: (status: 'upcoming' | 'live' | 'completed' | string = 'upcoming') => request('GET', `/fantasy/matches?status=${status}`),
   getMatchSquad: (id: number) => request('GET', `/fantasy/match/${id}/squad`),

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Wallet, PlusCircle, BarChart3, Receipt, X, Users, User, ArrowUpRight, Gift, Gamepad2, Cpu, Disc, FileText, List, History, Activity, Bot } from 'lucide-react';
+import { LayoutDashboard, Wallet, PlusCircle, BarChart3, Receipt, X, Users, User, ArrowUpRight, Gift, Gamepad2, Cpu, Disc, FileText, List, History, Activity, Bot, MessageSquare } from 'lucide-react';
 
 interface SidebarProps {
   currentView: string;
@@ -23,6 +23,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'spin-wheel', name: 'Spin & Win', icon: <Disc size={20} /> },
     { id: 'games', name: 'Gaming Zone', icon: <Gamepad2 size={20} /> },
     { id: 'transactions', name: 'Transactions', icon: <Receipt size={20} /> },
+    { id: 'support', name: 'Support', icon: <MessageSquare size={20} /> },
   ];
 
   const adminMenuItems = [
@@ -49,6 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'admin-game-simulations', name: 'Game Simulations', icon: <Cpu size={20} /> },
     { id: 'admin-player-analytics', name: 'Player Analytics', icon: <BarChart3 size={20} /> },
     { id: 'admin-settings', name: 'System Settings', icon: <Wallet size={20} /> },
+    { id: 'admin-support', name: 'Support Tickets', icon: <MessageSquare size={20} /> },
     { id: 'admin-profile', name: 'Admin Profile', icon: <User size={20} /> },
   ];
 

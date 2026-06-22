@@ -20,6 +20,8 @@ import { ColourTradingGame } from './views/games/colourtrading';
 import { FruitSlasherGame } from './views/games/fruitslasher';
 import { LudoGame } from './views/games/ludo';
 import { CricketGame } from './views/games/cricket';
+import { SupportTickets } from './views/SupportTickets';
+import { SupportTicketDetail } from './views/SupportTicketDetail';
 import { authAPI, clearToken, getToken, adminAPI, getAdminToken, clearAdminToken, globalConfigAPI } from './api';
 import { setGlobalTimeZone } from './utils/dateFormatter';
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -51,6 +53,8 @@ import { AdminBets } from './views/admin/AdminBets';
 import { AdminLoginHistory } from './views/admin/AdminLoginHistory';
 import { AdminActivityLog } from './views/admin/AdminActivityLog';
 import { AdminActiveUsers } from './views/admin/AdminActiveUsers';
+import { AdminSupportTickets } from './views/admin/AdminSupportTickets';
+import { AdminSupportTicketDetail } from './views/admin/AdminSupportTicketDetail';
 import { trackActivity } from './api';
 
 export const App: React.FC = () => {
@@ -298,6 +302,16 @@ export const App: React.FC = () => {
             {currentView === 'game-cricket-fantasy' && (
               <CricketGame user={user} refreshUser={refreshUser} onNavigate={setCurrentView} />
             )}
+            {currentView === 'support' && (
+              <SupportTickets />
+            )}
+            {currentView.startsWith('support/') && (
+              <SupportTicketDetail 
+                ticketId={currentView.split('/')[1]} 
+                onBack={() => setCurrentView('support')} 
+                user={user} 
+              />
+            )}
           </>
         ) : (
           <>
@@ -339,6 +353,13 @@ export const App: React.FC = () => {
             {currentView === 'admin-activity-log' && <AdminActivityLog />}
             {currentView === 'admin-active-users' && <AdminActiveUsers />}
             {currentView === 'admin-referrals' && <AdminReferrals />}
+            {currentView === 'admin-support' && <AdminSupportTickets />}
+            {currentView.startsWith('admin/support/') && (
+              <AdminSupportTicketDetail 
+                ticketId={currentView.split('/')[2]} 
+                onBack={() => setCurrentView('admin-support')} 
+              />
+            )}
           </>
         )}
       </main>

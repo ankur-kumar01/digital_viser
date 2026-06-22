@@ -25,6 +25,8 @@ const gamesRoutes = require('./routes/games');
 const spinRoutes = require('./routes/spin');
 const activityRoutes = require('./routes/activity');
 const fantasyRoutes = require('./routes/fantasy');
+const supportRoutes = require('./routes/support');
+const adminSupportRoutes = require('./routes/adminSupport');
 
 const app = express();
 const server = http.createServer(app);
@@ -170,6 +172,8 @@ app.use('/api/fantasy', require('./middleware/auth'), fantasyRoutes);
 app.use('/api/admin/ludo', require('./routes/adminLudo'));
 app.use('/api/admin/bots', require('./routes/adminBots'));
 app.use('/api/ludo/tournaments', require('./routes/ludoTournaments'));
+app.use('/api/support', supportRoutes);
+app.use('/api/admin/support', adminSupportRoutes);
 
 // Public Config Endpoint
 app.get('/api/config', async (req, res) => {
