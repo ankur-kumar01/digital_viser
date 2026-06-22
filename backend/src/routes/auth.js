@@ -139,6 +139,27 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
+// POST /verify-otp
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required.' });
+
+    const [rows] = await pool.query(
+      'SELECT id FROM password_resets WHERE email = ? AND otp_code = ? AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1',
+      [email, otp]
+    );
+    if (rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired OTP.' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Verify OTP error:', err);
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
 // POST /reset-password
 router.post('/reset-password', async (req, res) => {
   try {

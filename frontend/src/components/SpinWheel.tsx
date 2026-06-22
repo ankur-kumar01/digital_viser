@@ -28,6 +28,7 @@ interface SpinStatus {
 
 interface Props {
   onBonusAwarded?: (newBalance: number) => void;
+  isFullPage?: boolean;
 }
 
 const WHEEL_SIZE = 260;
@@ -58,7 +59,7 @@ function useCountdown(seconds: number) {
   };
 }
 
-export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
+export const SpinWheel: React.FC<Props> = ({ onBonusAwarded, isFullPage = false }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [segments, setSegments] = useState<SpinSegment[]>([]);
   const [status, setStatus] = useState<SpinStatus | null>(null);
@@ -350,6 +351,11 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
           margin: 0 auto;
         }
         
+        .sw-card-container.full-page {
+          max-width: 100%;
+          padding: 40px 24px;
+        }
+        
         .sw-streak-bar {
           display: flex;
           align-items: center;
@@ -386,6 +392,10 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
           width: 100%;
           max-width: 300px;
           aspect-ratio: 1 / 1;
+        }
+        
+        .full-page .sw-wheel-wrapper {
+          max-width: 380px;
         }
         .sw-canvas-el {
           width: 100%;
@@ -519,7 +529,7 @@ export const SpinWheel: React.FC<Props> = ({ onBonusAwarded }) => {
       `}</style>
 
 
-      <div className="sw-card-container">
+      <div className={`sw-card-container ${isFullPage ? 'full-page' : ''}`}>
         {/* Decorative background sparkles */}
         <div style={{ position: 'absolute', top: '10%', left: '10%', width: '4px', height: '4px', background: '#fff', borderRadius: '50%', animation: 'sparkle 3s infinite', boxShadow: '0 0 8px #fff' }} />
         <div style={{ position: 'absolute', top: '20%', right: '15%', width: '6px', height: '6px', background: '#f59e0b', borderRadius: '50%', animation: 'sparkle 4s infinite 1s', boxShadow: '0 0 8px #f59e0b' }} />

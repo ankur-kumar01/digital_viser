@@ -44,7 +44,7 @@ export const SpinWheelPage: React.FC<Props> = ({ user, refreshUser }) => {
   }
 
   return (
-    <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+    <div className="animate-fade-in" style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '20px', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', marginBottom: '16px' }}>
           <Disc size={32} />
@@ -53,8 +53,8 @@ export const SpinWheelPage: React.FC<Props> = ({ user, refreshUser }) => {
         <p style={{ color: 'var(--text-secondary)' }}>Spin the wheel every day to win free gaming bonuses and build your streak!</p>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <SpinWheel onBonusAwarded={() => refreshUser()} />
+      <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+        <SpinWheel onBonusAwarded={() => refreshUser()} isFullPage={true} />
       </div>
     </div>
   );

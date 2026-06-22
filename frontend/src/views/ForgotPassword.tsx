@@ -36,7 +36,7 @@ export const ForgotPassword: React.FC<Props> = ({ onBackToLogin }) => {
     if (!otp || otp.length < 4) { setError('Please enter the OTP sent to your email.'); return; }
     setLoading(true);
     try {
-      await authAPI.resetPassword(email, otp, '0');
+      await authAPI.verifyOtp(email, otp);
       setStep('password');
     } catch (err: any) {
       setError(err.message || 'Invalid OTP.');

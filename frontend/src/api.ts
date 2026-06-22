@@ -154,6 +154,7 @@ export const authAPI = {
   updateProfile: (data: any) => request('PUT', '/auth/profile', data),
   getReferralStats: () => request('GET', '/auth/referral-stats'),
   forgotPassword: (email: string) => request('POST', '/auth/forgot-password', { email }),
+  verifyOtp: (email: string, otp: string) => request('POST', '/auth/verify-otp', { email, otp }),
   resetPassword: (email: string, otp: string, new_password: string) => request('POST', '/auth/reset-password', { email, otp, new_password }),
 };
 
