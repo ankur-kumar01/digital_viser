@@ -65,7 +65,7 @@ router.post('/deposit', [
   } catch (err) {
     await conn.rollback();
     console.error('Deposit error:', err);
-    res.status(500).json({ error: 'Server error during deposit.' });
+    res.status(500).json({ error: 'Server error during deposit: ' + err.message });
   } finally {
     conn.release();
   }
@@ -181,7 +181,7 @@ router.post('/withdraw', [
   } catch (err) {
     await conn.rollback();
     console.error('Withdrawal error:', err);
-    res.status(500).json({ error: 'Server error during withdrawal.' });
+    res.status(500).json({ error: 'Server error during withdrawal: ' + err.message });
   } finally {
     conn.release();
   }
