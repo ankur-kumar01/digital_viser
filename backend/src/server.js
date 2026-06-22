@@ -40,6 +40,7 @@ if (!process.env.JWT_SECRET) {
 }
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy (needed for accurate IP rate limiting behind Hostinger/Passenger/Cloudflare)
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
@@ -201,7 +202,7 @@ if (process.env.REDIS_URL) {
 
 // Rate limiters
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many login attempts. Try again in 15 minutes.' } });
-const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 3, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many registration attempts. Try again later.' } });
+const registerLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many registration attempts. Try again in 15 minutes.' } });
 const otpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many OTP requests. Try again in 15 minutes.' } });
 const spinLimiter = rateLimit({ windowMs: 60 * 1000, max: 1, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many spin requests.' } });
 const adminLoginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many admin login attempts. Try again in 15 minutes.' } });
