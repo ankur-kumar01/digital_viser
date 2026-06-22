@@ -32,20 +32,39 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage });
+const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Invalid file type: ${file.mimetype}. Allowed: ${allowedMimes.join(', ')}`));
+    }
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
 
-router.post('/', upload.single('file'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
+router.post('/', (req, res) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({ error: err.message });
+      }
+      return res.status(400).json({ error: err.message });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
 
-  const folder = req.query.folder || 'admin';
-  const fileUrl = `/uploads/${folder}/${req.file.filename}`;
+    const folder = req.query.folder || 'admin';
+    const fileUrl = `/uploads/${folder}/${req.file.filename}`;
 
-  res.json({
-    success: true,
-    url: fileUrl,
-    filename: req.file.originalname
+    res.json({
+      success: true,
+      url: fileUrl,
+      filename: req.file.originalname
+    });
   });
 });
 

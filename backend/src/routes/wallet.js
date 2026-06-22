@@ -1,25 +1,35 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
+const { body, validationResult } = require('express-validator');
 const { pool } = require('../db');
 const authMiddleware = require('../middleware/auth');
+const { resolveWalletColumn } = require('../utils');
+const cache = require('../cache');
 
 const router = express.Router();
 
 // Apply auth middleware to all routes
 router.use(authMiddleware);
 
+const validateWallet = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: errors.array().map(e => e.msg).join('. ') });
+  }
+  next();
+};
+
 // POST /deposit
-router.post('/deposit', async (req, res) => {
+router.post('/deposit', [
+  body('amount').isFloat({ gt: 0 }).withMessage('Amount must be greater than 0'),
+  body('payment_method').optional().trim(),
+  validateWallet
+], async (req, res) => {
   const conn = await pool.getConnection();
   try {
     const { amount, payment_method, custom_data } = req.body;
     const userId = req.user.userId;
-
-    // Validate amount
     const depositAmount = parseFloat(amount);
-    if (!depositAmount || depositAmount <= 0) {
-      return res.status(400).json({ error: 'Amount must be greater than 0.' });
-    }
 
     const transactionId = uuidv4();
 
@@ -62,19 +72,19 @@ router.post('/deposit', async (req, res) => {
 });
 
 // POST /withdraw
-router.post('/withdraw', async (req, res) => {
+router.post('/withdraw', [
+  body('amount').isFloat({ gt: 0 }).withMessage('Amount must be greater than 0'),
+  body('payment_method').optional().trim(),
+  body('source_wallet').optional().isIn(['main', 'bonus', 'referral', 'gaming_bonus']).withMessage('Invalid wallet type'),
+  validateWallet
+], async (req, res) => {
   const conn = await pool.getConnection();
   try {
     const { amount, payment_method, custom_data, source_wallet } = req.body;
     const userId = req.user.userId;
-
-    // Validate amount
     const withdrawAmount = parseFloat(amount);
-    if (!withdrawAmount || withdrawAmount <= 0) {
-      return res.status(400).json({ error: 'Amount must be greater than 0.' });
-    }
 
-    const walletColumn = source_wallet === 'bonus' ? 'bonus_balance' : source_wallet === 'referral' ? 'referral_balance' : 'balance';
+    const walletColumn = resolveWalletColumn(source_wallet);
 
     await conn.beginTransaction();
 
@@ -176,19 +186,28 @@ router.post('/withdraw', async (req, res) => {
     conn.release();
   }
 });
-// GET /transactions
+// GET /transactions (with pagination)
 router.get('/transactions', async (req, res) => {
   try {
     const userId = req.user.userId;
-    const [rows] = await pool.query(
-      'SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC',
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    const offset = (page - 1) * limit;
+
+    const [[{ total }]] = await pool.query(
+      'SELECT COUNT(*) AS total FROM transactions WHERE user_id = ?',
       [userId]
     );
 
-    res.json(rows.map((row) => ({
-      ...row,
-      amount: parseFloat(row.amount),
-    })));
+    const [rows] = await pool.query(
+      'SELECT id, user_id, type, amount, description, created_at FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+      [userId, limit, offset]
+    );
+
+    res.json({
+      data: rows.map((row) => ({ ...row, amount: parseFloat(row.amount) })),
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+    });
   } catch (err) {
     console.error('Transactions error:', err);
     res.status(500).json({ error: 'Server error fetching transactions.' });
@@ -198,7 +217,12 @@ router.get('/transactions', async (req, res) => {
 // GET /active-methods
 router.get('/active-methods', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM payment_methods WHERE is_active = 1 ORDER BY created_at ASC');
+    const cacheKey = 'payment:active-methods';
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
+    const [rows] = await pool.query('SELECT id, name, type, is_active, admin_instructions, user_form, withdrawal_charges, created_at FROM payment_methods WHERE is_active = 1 ORDER BY created_at ASC');
+    cache.set(cacheKey, rows, 30000);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Server error fetching payment methods.' });
@@ -221,7 +245,7 @@ router.get('/deposits', async (req, res) => {
   try {
     const userId = req.user.userId;
     const [rows] = await pool.query(
-      'SELECT * FROM deposits WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
+      'SELECT id, user_id, amount, payment_method, transaction_id, status, custom_data, created_at FROM deposits WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
       [userId]
     );
     res.json(rows.map(r => ({ ...r, amount: parseFloat(r.amount) })));
@@ -236,7 +260,7 @@ router.get('/withdrawals', async (req, res) => {
   try {
     const userId = req.user.userId;
     const [rows] = await pool.query(
-      'SELECT * FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
+      'SELECT id, user_id, amount, payment_method, transaction_id, status, custom_data, created_at FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
       [userId]
     );
     res.json(rows.map(r => ({ ...r, amount: parseFloat(r.amount) })));
@@ -254,7 +278,7 @@ router.post('/deposits/:id/cancel', async (req, res) => {
     const depositId = parseInt(req.params.id);
 
     const [deposits] = await conn.query(
-      'SELECT * FROM deposits WHERE id = ? AND user_id = ? FOR UPDATE',
+      'SELECT id, user_id, amount, payment_method, transaction_id, status, custom_data, created_at FROM deposits WHERE id = ? AND user_id = ? FOR UPDATE',
       [depositId, userId]
     );
     if (deposits.length === 0) return res.status(404).json({ error: 'Deposit not found' });
@@ -286,7 +310,7 @@ router.post('/withdrawals/:id/cancel', async (req, res) => {
     const withdrawalId = parseInt(req.params.id);
 
     const [withdrawals] = await conn.query(
-      'SELECT * FROM withdrawals WHERE id = ? AND user_id = ? FOR UPDATE',
+      'SELECT id, user_id, amount, payment_method, transaction_id, status, custom_data, created_at FROM withdrawals WHERE id = ? AND user_id = ? FOR UPDATE',
       [withdrawalId, userId]
     );
     if (withdrawals.length === 0) return res.status(404).json({ error: 'Withdrawal not found' });
@@ -295,7 +319,7 @@ router.post('/withdrawals/:id/cancel', async (req, res) => {
     const w = withdrawals[0];
     const customData = typeof w.custom_data === 'string' ? JSON.parse(w.custom_data) : (w.custom_data || {});
     const sourceWallet = customData.source_wallet || 'normal';
-    const walletColumn = sourceWallet === 'bonus' ? 'bonus_balance' : sourceWallet === 'referral' ? 'referral_balance' : 'balance';
+    const walletColumn = resolveWalletColumn(sourceWallet);
 
     await conn.beginTransaction();
     await conn.query('UPDATE withdrawals SET status = "rejected" WHERE id = ?', [withdrawalId]);

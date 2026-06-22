@@ -179,7 +179,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const loadData = async () => {
     try {
       // Load transactions to calculate total deposits and withdrawals
-      const txs = await walletAPI.getTransactions();
+      const txsRes = await walletAPI.getTransactions();
+      const txs = txsRes.data || txsRes;
       const withdrawalsTotal = txs
         .filter((tx: any) => tx.type === 'withdrawal' || tx.type === 'withdrawal_approved')
         .reduce((sum: number, tx: any) => sum + parseFloat(tx.amount), 0);

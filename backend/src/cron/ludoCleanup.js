@@ -30,13 +30,6 @@ class LudoCleanup {
     }
   }
 
-  stop() {
-    if (this.interval) {
-      clearInterval(this.interval);
-      this.interval = null;
-    }
-  }
-
   async cleanup() {
     try {
       // 1. Cancel waiting rooms older than 24 hours

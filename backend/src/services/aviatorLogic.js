@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { pool } = require('../db');
+const { AVIATOR } = require('../constants');
 
 class AviatorGameLogic {
   constructor(io) {
@@ -12,7 +13,7 @@ class AviatorGameLogic {
     this.clientSeed = null;
     this.hash = null;
     
-    this.WAIT_TIME = 8000; // 8 seconds wait time
+    this.WAIT_TIME = AVIATOR.WAIT_DURATION_MS;
     this.timer = null;
     
     this.activeBets = new Map(); // userId -> { betAmount, id }
@@ -68,6 +69,11 @@ class AviatorGameLogic {
     this.state = 'WAITING';
     this.activeBets.clear();
     await this.generateRound();
+    if (!this.roundId) {
+      console.error('Failed to generate round, retrying in 5s...');
+      setTimeout(() => this.startWaitPhase(), 5000);
+      return;
+    }
 
     // Broadcast waiting state
     this.io.emit('aviator_state', {

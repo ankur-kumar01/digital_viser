@@ -1,5 +1,6 @@
 const express = require('express');
 const { pool } = require('../../db');
+const cache = require('../../cache');
 
 const colourTradingRoutes = require('./colourtrading');
 const fruitSlasherRoutes = require('./fruitslasher');
@@ -10,7 +11,12 @@ const router = express.Router();
 // GET /api/games (Returns only active games)
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM games WHERE is_active = true ORDER BY created_at DESC');
+    const cacheKey = 'games:active';
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
+    const [rows] = await pool.query('SELECT id, name, slug, description, image_url, is_active, min_bet, max_bet, created_at FROM games WHERE is_active = true ORDER BY created_at DESC');
+    cache.set(cacheKey, rows, 30000);
     res.json(rows);
   } catch (err) {
     console.error('Failed to fetch games:', err);
@@ -21,7 +27,7 @@ router.get('/', async (req, res) => {
 // GET /api/games/big-wins (Returns big wins for ticker)
 router.get('/big-wins', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM big_wins ORDER BY created_at DESC LIMIT 50');
+    const [rows] = await pool.query('SELECT id, user_name, amount, game_name, game_color, created_at FROM big_wins ORDER BY created_at DESC LIMIT 50');
     res.json(rows);
   } catch (err) {
     console.error('Failed to fetch big wins:', err);

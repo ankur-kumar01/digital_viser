@@ -2,21 +2,32 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { body, validationResult } = require('express-validator');
 const { pool } = require('../db');
 const authMiddleware = require('../middleware/auth');
 const { sendOtpEmail } = require('../services/emailService');
 
 const router = express.Router();
 
+const validate = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: errors.array().map(e => e.msg).join('. ') });
+  }
+  next();
+};
+
 // POST /register
-router.post('/register', async (req, res) => {
+router.post('/register', [
+  body('name').trim().notEmpty().withMessage('Name is required'),
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('phone_number').optional({ values: 'null' }).trim(),
+  body('referral_code').optional({ values: 'null' }).trim(),
+  validate
+], async (req, res) => {
   try {
     const { name, email, password, phone_number, referral_code } = req.body;
-
-    // Validate all fields
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required.' });
-    }
 
     // Check if email already exists
     const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
@@ -61,16 +72,16 @@ router.post('/register', async (req, res) => {
 });
 
 // POST /login
-router.post('/login', async (req, res) => {
+router.post('/login', [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('password').notEmpty().withMessage('Password is required'),
+  validate
+], async (req, res) => {
   try {
     const { email, password, device_info } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
-    }
-
     // Find user by email
-    const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+    const [rows] = await pool.query('SELECT id, name, email, password_hash, balance, referral_code FROM users WHERE email = ?', [email]);
     if (rows.length === 0) {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
@@ -114,10 +125,12 @@ router.post('/login', async (req, res) => {
 });
 
 // POST /forgot-password
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  validate
+], async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required.' });
 
     // Always return success to prevent email enumeration
     const otp = crypto.randomInt(100000, 999999).toString();
@@ -238,6 +251,11 @@ router.get('/profile', authMiddleware, async (req, res) => {
   }
 });
 
+function sanitize(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+}
+
 // PUT /profile (protected)
 router.put('/profile', authMiddleware, async (req, res) => {
   try {
@@ -251,7 +269,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
       `UPDATE users 
        SET name = ?, phone_number = ?, address = ?, city = ?, state = ?, pin_code = ?, profile_photo = ?
        WHERE id = ?`,
-      [name, phone_number || null, address || null, city || null, state || null, pin_code || null, profile_photo || null, req.user.userId]
+      [sanitize(name), sanitize(phone_number) || null, sanitize(address) || null, sanitize(city) || null, sanitize(state) || null, sanitize(pin_code) || null, sanitize(profile_photo) || null, req.user.userId]
     );
 
     res.json({ success: true });
@@ -275,40 +293,34 @@ router.get('/referral-stats', authMiddleware, async (req, res) => {
     );
     const lifetimeEarnings = earningsRows[0].lifetime_earnings;
 
-    // 2. Get referred users
-    const [referredUsers] = await pool.query(
-      `SELECT id, name, created_at FROM users WHERE invited_by = ? ORDER BY created_at DESC`,
+    // 2. Get referred users with deposit and FDR stats in a single query
+    const [detailedReferrals] = await pool.query(
+      `SELECT
+         u.id, u.name, u.created_at AS joined_at,
+         IFNULL(d.deposit_count, 0) > 0 AS has_deposited,
+         IFNULL(f.active_fdr_total, 0) AS active_fdr_total
+       FROM users u
+       LEFT JOIN (
+         SELECT user_id, COUNT(*) AS deposit_count
+         FROM deposits WHERE status = 'approved'
+         GROUP BY user_id
+       ) d ON d.user_id = u.id
+       LEFT JOIN (
+         SELECT user_id, IFNULL(SUM(amount), 0) AS active_fdr_total
+         FROM fdrs WHERE status = 'active'
+         GROUP BY user_id
+       ) f ON f.user_id = u.id
+       WHERE u.invited_by = ?
+       ORDER BY u.created_at DESC`,
       [userId]
     );
 
-    const detailedReferrals = [];
-    for (const u of referredUsers) {
-      // Check if they deposited
-      const [depRows] = await pool.query(
-        `SELECT COUNT(*) as count FROM deposits WHERE user_id = ? AND status = 'approved'`,
-        [u.id]
-      );
-      const hasDeposited = depRows[0].count > 0;
-
-      // Get their total active FDR principal
-      const [fdrRows] = await pool.query(
-        `SELECT IFNULL(SUM(amount), 0) as total_fdr FROM fdrs WHERE user_id = ? AND status = 'active'`,
-        [u.id]
-      );
-      const activeFdrTotal = parseFloat(fdrRows[0].total_fdr);
-
-      detailedReferrals.push({
-        id: u.id,
-        name: u.name,
-        joined_at: u.created_at,
-        has_deposited: hasDeposited,
-        active_fdr_total: activeFdrTotal
-      });
-    }
-
     res.json({
       lifetime_earnings: parseFloat(lifetimeEarnings),
-      referrals: detailedReferrals
+      referrals: detailedReferrals.map(r => ({
+        ...r,
+        active_fdr_total: parseFloat(r.active_fdr_total)
+      }))
     });
   } catch (err) {
     console.error('Referral stats error:', err);

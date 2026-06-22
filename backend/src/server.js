@@ -6,9 +6,12 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const { pool } = require('./db');
 const { runMigrations } = require('./migrate');
+const { requestIdMiddleware } = require('./utils');
+const cache = require('./cache');
 const AviatorGameLogic = require('./services/aviatorLogic');
 const ColourTradingLogic = require('./services/colourTradingLogic');
 const LudoLogic = require('./services/ludoLogic');
@@ -27,6 +30,12 @@ const activityRoutes = require('./routes/activity');
 const fantasyRoutes = require('./routes/fantasy');
 const supportRoutes = require('./routes/support');
 const adminSupportRoutes = require('./routes/adminSupport');
+
+// Fail fast if JWT_SECRET is missing
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set. Server starting but all JWT operations will fail.');
+  console.error('Set a strong random secret in your .env file: JWT_SECRET=<your-secret>');
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -62,7 +71,7 @@ io.use((socket, next) => {
   const token = socket.handshake.auth.token;
   if (!token) return next(new Error('Authentication error'));
   
-  jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key', (err, decoded) => {
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) return next(new Error('Authentication error'));
     socket.user = decoded;
     next();
@@ -156,16 +165,40 @@ app.use(cors({
   },
   credentials: true
 }));
+// HTTPS redirect in production
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    if (req.headers['x-forwarded-proto'] !== 'https' && req.headers['x-forwarded-proto'] !== 'https, http/1.1') {
+      return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+    next();
+  });
+}
+
+app.use(requestIdMiddleware);
 app.use(express.json());
 
+// Rate limiters
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many login attempts. Try again in 15 minutes.' } });
+const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 3, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many registration attempts. Try again later.' } });
+const otpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many OTP requests. Try again in 15 minutes.' } });
+const spinLimiter = rateLimit({ windowMs: 60 * 1000, max: 1, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many spin requests.' } });
+const adminLoginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many admin login attempts. Try again in 15 minutes.' } });
+
 // Mount routes
+app.use('/api/auth/login', loginLimiter);
+app.use('/api/auth/register', registerLimiter);
+app.use('/api/auth/forgot-password', otpLimiter);
+app.use('/api/auth/verify-otp', otpLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/fdr', fdrRoutes);
+app.use('/api/admin/auth/login', adminLoginLimiter);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/games', gamesRoutes);
 app.use('/api/admin/fantasy', adminFantasyRoutes);
+app.use('/api/spin/claim', spinLimiter);
 app.use('/api/spin', spinRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/fantasy', require('./middleware/auth'), fantasyRoutes);
@@ -175,9 +208,19 @@ app.use('/api/ludo/tournaments', require('./routes/ludoTournaments'));
 app.use('/api/support', supportRoutes);
 app.use('/api/admin/support', adminSupportRoutes);
 
+// Global error handler (catches async handler rejections)
+app.use((err, req, res, next) => {
+  console.error(JSON.stringify({ level: 'error', requestId: req.requestId, message: err.message, stack: err.stack }));
+  res.status(500).json({ error: 'Internal server error', requestId: req.requestId });
+});
+
 // Public Config Endpoint
 app.get('/api/config', async (req, res) => {
   try {
+    const cacheKey = 'config:public';
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
     const [rows] = await pool.query('SELECT setting_key, setting_value FROM system_settings');
     const settings = rows.reduce((acc, row) => ({ ...acc, [row.setting_key]: row.setting_value }), {});
     
@@ -185,7 +228,7 @@ app.get('/api/config', async (req, res) => {
     const referralPercent = schemeRows.find((s) => s.type === 'referral_percent');
     const fdrReferralPercent = schemeRows.find((s) => s.type === 'fdr_referral_percent');
     
-    res.json({
+    const configData = {
       global_timezone: settings.global_timezone || 'UTC',
       enable_aviator_chat_simulation: settings.enable_aviator_chat_simulation !== 'false',
       enable_aviator_bet_simulation: settings.enable_aviator_bet_simulation !== 'false',
@@ -193,7 +236,9 @@ app.get('/api/config', async (req, res) => {
       enable_spin_wheel: settings.enable_spin_wheel !== 'false',
       referral_percent: referralPercent ? parseFloat(referralPercent.reward_amount) : 10,
       fdr_referral_percent: fdrReferralPercent ? parseFloat(fdrReferralPercent.reward_amount) : 5
-    });
+    };
+    cache.set(cacheKey, configData, 30000);
+    res.json(configData);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch config' });
   }

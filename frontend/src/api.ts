@@ -163,7 +163,7 @@ export const walletAPI = {
     request('POST', '/wallet/deposit', { amount, payment_method: paymentMethod, custom_data: customData }),
   withdraw: (amount: number, paymentMethod: string, sourceWallet: string = 'normal', customData?: any) => 
     request('POST', '/wallet/withdraw', { amount, payment_method: paymentMethod, source_wallet: sourceWallet, custom_data: customData }),
-  getTransactions: () => request('GET', '/wallet/transactions'),
+  getTransactions: (page: number = 1) => request('GET', `/wallet/transactions?page=${page}`),
   getActiveMethods: () => request('GET', '/wallet/active-methods'),
   getConfig: () => request('GET', '/wallet/config'),
   getMyDeposits: () => request('GET', '/wallet/deposits'),

@@ -118,7 +118,7 @@ router.post('/create', async (req, res) => {
     await conn.commit();
 
     // Fetch created FDR
-    const [fdrRows] = await conn.query('SELECT * FROM fdrs WHERE id = ?', [fdrResult.insertId]);
+    const [fdrRows] = await conn.query('SELECT id, user_id, amount, start_date, end_date, interest_percent, period_days, status, accrued_interest, last_installment_date, next_installment_date, created_at, last_referral_commission_date FROM fdrs WHERE id = ?', [fdrResult.insertId]);
     const fdr = fdrRows[0];
 
     res.status(201).json({
@@ -149,7 +149,7 @@ router.get('/my-fdrs', async (req, res) => {
 
     // Get all FDRs for user
     const [fdrs] = await pool.query(
-      'SELECT * FROM fdrs WHERE user_id = ? ORDER BY created_at DESC',
+      'SELECT id, user_id, amount, start_date, end_date, interest_percent, period_days, status, accrued_interest, last_installment_date, next_installment_date, created_at, last_referral_commission_date FROM fdrs WHERE user_id = ? ORDER BY created_at DESC',
       [userId]
     );
 
@@ -228,7 +228,7 @@ router.get('/pnl', async (req, res) => {
     
     // Get active FDRs
     const [fdrs] = await pool.query(
-      "SELECT * FROM fdrs WHERE user_id = ? AND status = 'active'",
+      "SELECT id, user_id, amount, start_date, end_date, interest_percent, period_days, status, accrued_interest, last_installment_date, next_installment_date, created_at, last_referral_commission_date FROM fdrs WHERE user_id = ? AND status = 'active'",
       [userId]
     );
 
@@ -279,7 +279,7 @@ router.post('/force-close', async (req, res) => {
 
     // Verify FDR exists and belongs to user
     const [fdrRows] = await conn.query(
-      "SELECT * FROM fdrs WHERE id = ? AND user_id = ? AND status = 'active' FOR UPDATE",
+      "SELECT id, user_id, amount, start_date, end_date, interest_percent, period_days, status, accrued_interest, last_installment_date, next_installment_date, created_at, last_referral_commission_date FROM fdrs WHERE id = ? AND user_id = ? AND status = 'active' FOR UPDATE",
       [id, userId]
     );
 

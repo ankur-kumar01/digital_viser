@@ -16,7 +16,7 @@ async function processDailyFinancials() {
 
     // === GLOBAL INTEREST ENGINE ===
     // Get all active FDRs globally
-    const [activeFdrs] = await conn.query("SELECT * FROM fdrs WHERE status = 'active' FOR UPDATE");
+    const [activeFdrs] = await conn.query("SELECT * FROM fdrs WHERE status = 'active' FOR UPDATE SKIP LOCKED");
 
     // Fetch dynamic FDR referral percent
     const [schemes] = await conn.query("SELECT reward_amount FROM reward_schemes WHERE type = 'fdr_referral_percent' AND is_active = true");

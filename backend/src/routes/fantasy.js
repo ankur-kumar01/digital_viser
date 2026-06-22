@@ -1,22 +1,6 @@
 const express = require('express');
 const { pool } = require('../db');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
-
-// Auth middleware (defence in depth)
-router.use((req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: 'No token provided' });
-  const token = authHeader.split(' ')[1];
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-});
 
 // 1. Get Matches (supports multiple statuses comma-separated: 'upcoming, live')
 router.get('/matches', async (req, res) => {
@@ -295,14 +279,21 @@ router.post('/contest/join', async (req, res) => {
     }
 
     // Check balance
-    const [wallets] = await conn.query('SELECT balance FROM wallets WHERE user_id = ? FOR UPDATE', [userId]);
-    const balance = parseFloat(wallets[0].balance);
+    const [userRows] = await conn.query('SELECT balance, gaming_bonus_balance FROM users WHERE id = ? FOR UPDATE', [userId]);
+    if (userRows.length === 0) throw new Error('User not found');
+    const mainBalance = parseFloat(userRows[0].balance);
+    const gamingBonus = parseFloat(userRows[0].gaming_bonus_balance || 0);
     const fee = parseFloat(contest.entry_fee);
 
-    if (balance < fee) throw new Error('Insufficient wallet balance');
+    let walletField = 'balance';
+    if (gamingBonus >= fee) {
+      walletField = 'gaming_bonus_balance';
+    } else if (mainBalance < fee) {
+      throw new Error('Insufficient balance');
+    }
 
     // Deduct fee
-    await conn.query('UPDATE wallets SET balance = balance - ? WHERE user_id = ?', [fee, userId]);
+    await conn.query(`UPDATE users SET ${walletField} = ${walletField} - ? WHERE id = ?`, [fee, userId]);
     
     // Log transaction
     await conn.query(`

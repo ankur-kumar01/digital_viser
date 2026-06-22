@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../db');
 const authMiddleware = require('../middleware/auth');
+const { SPIN } = require('../constants');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -64,7 +65,7 @@ router.get('/status', async (req, res) => {
 
     if (lastSpin.length > 0) {
       const lastSpunAt = new Date(lastSpin[0].spun_at);
-      const cooldownMs = 24 * 60 * 60 * 1000; // 24 hours
+      const cooldownMs = SPIN.COOLDOWN_MS;
       const nextAllowed = new Date(lastSpunAt.getTime() + cooldownMs);
       const now = new Date();
 
@@ -103,43 +104,42 @@ router.get('/status', async (req, res) => {
 
 // POST /api/spin/claim — Perform the spin
 router.post('/claim', async (req, res) => {
+  const userId = req.user.userId;
+
+  // 1. Check 24h cooldown (outside transaction to avoid holding connections)
+  const [lastSpin] = await pool.query(
+    'SELECT spun_at FROM user_spin_history WHERE user_id = ? ORDER BY spun_at DESC LIMIT 1',
+    [userId]
+  );
+
+  if (lastSpin.length > 0) {
+    const lastSpunAt = new Date(lastSpin[0].spun_at);
+    const cooldownMs = SPIN.COOLDOWN_MS;
+    const nextAllowed = new Date(lastSpunAt.getTime() + cooldownMs);
+    if (new Date() < nextAllowed) {
+      const secondsLeft = Math.ceil((nextAllowed - new Date()) / 1000);
+      const hoursLeft = Math.floor(secondsLeft / 3600);
+      const minsLeft = Math.floor((secondsLeft % 3600) / 60);
+      return res.status(429).json({
+        error: `Already spun today! Next spin in ${hoursLeft}h ${minsLeft}m`,
+        next_spin_at: nextAllowed.toISOString(),
+        seconds_remaining: secondsLeft
+      });
+    }
+  }
+
+  // 1.5 Check minimum deposit requirement
+  const [depositCheck] = await pool.query(
+    "SELECT COALESCE(SUM(amount), 0) as total FROM deposits WHERE user_id = ? AND status = 'approved'",
+    [userId]
+  );
+  if (parseFloat(depositCheck[0].total) < 100) {
+    return res.status(403).json({ error: 'Minimum ₹100 deposit required to spin' });
+  }
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const userId = req.user.userId;
-
-    // 1. Check 24h cooldown
-    const [lastSpin] = await conn.query(
-      'SELECT spun_at FROM user_spin_history WHERE user_id = ? ORDER BY spun_at DESC LIMIT 1',
-      [userId]
-    );
-
-    if (lastSpin.length > 0) {
-      const lastSpunAt = new Date(lastSpin[0].spun_at);
-      const cooldownMs = 24 * 60 * 60 * 1000;
-      const nextAllowed = new Date(lastSpunAt.getTime() + cooldownMs);
-      if (new Date() < nextAllowed) {
-        await conn.rollback();
-        const secondsLeft = Math.ceil((nextAllowed - new Date()) / 1000);
-        const hoursLeft = Math.floor(secondsLeft / 3600);
-        const minsLeft = Math.floor((secondsLeft % 3600) / 60);
-        return res.status(429).json({
-          error: `Already spun today! Next spin in ${hoursLeft}h ${minsLeft}m`,
-          next_spin_at: nextAllowed.toISOString(),
-          seconds_remaining: secondsLeft
-        });
-      }
-    }
-
-    // 1.5 Check minimum deposit requirement
-    const [depositCheck] = await conn.query(
-      "SELECT COALESCE(SUM(amount), 0) as total FROM deposits WHERE user_id = ? AND status = 'approved'",
-      [userId]
-    );
-    if (parseFloat(depositCheck[0].total) < 100) {
-      await conn.rollback();
-      return res.status(403).json({ error: 'Minimum ₹100 deposit required to spin' });
-    }
 
     // 2. Get active segments
     const [segments] = await conn.query(

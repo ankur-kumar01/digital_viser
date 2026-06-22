@@ -3,10 +3,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../db');
 const { v4: uuidv4 } = require('uuid');
+const { resolveWalletColumn } = require('../utils');
+const cache = require('../cache');
 
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Admin Auth Middleware
 const adminAuth = (req, res, next) => {
@@ -87,6 +89,7 @@ router.get('/methods', async (req, res) => {
 router.post('/methods', async (req, res) => {
   try {
     const { name, type, is_active, admin_instructions, user_form, withdrawal_charges } = req.body;
+    cache.del('payment:active-methods');
     const [result] = await pool.query(
       'INSERT INTO payment_methods (name, type, is_active, admin_instructions, user_form, withdrawal_charges) VALUES (?, ?, ?, ?, ?, ?)',
       [name, type, is_active !== false, JSON.stringify(admin_instructions || []), JSON.stringify(user_form || []), JSON.stringify(withdrawal_charges || [])]
@@ -127,6 +130,7 @@ router.put('/methods/:id', async (req, res) => {
       await pool.query(`UPDATE payment_methods SET ${updates.join(', ')} WHERE id = ?`, values);
     }
     
+    cache.del('payment:active-methods');
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -137,6 +141,7 @@ router.put('/methods/:id', async (req, res) => {
 router.delete('/methods/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM payment_methods WHERE id = ?', [req.params.id]);
+    cache.del('payment:active-methods');
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -286,7 +291,7 @@ router.post('/deposits/:id/approve', async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const [rows] = await conn.query('SELECT * FROM deposits WHERE id = ? AND status = "pending" FOR UPDATE', [req.params.id]);
+    const [rows] = await conn.query('SELECT id, user_id, amount, payment_method, transaction_id, status, custom_data, created_at FROM deposits WHERE id = ? AND status = "pending" FOR UPDATE', [req.params.id]);
     const deposit = rows[0];
     if (!deposit) throw new Error('Deposit not found or already processed');
 
@@ -333,7 +338,7 @@ router.post('/deposits/:id/reject', async (req, res) => {
     const [result] = await pool.query('UPDATE deposits SET status = "rejected" WHERE id = ? AND status = "pending"', [req.params.id]);
     if (result.affectedRows === 0) return res.status(400).json({ error: 'Request not pending' });
     
-    const [rows] = await pool.query('SELECT * FROM deposits WHERE id = ?', [req.params.id]);
+    const [rows] = await pool.query('SELECT id, user_id, amount, payment_method, transaction_id, status, custom_data, created_at FROM deposits WHERE id = ?', [req.params.id]);
     const deposit = rows[0];
     if (deposit) {
       await pool.query('INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)', [deposit.user_id, 'deposit_rejected', deposit.amount, `Deposit Rejected via ${deposit.payment_method}`]);
@@ -356,7 +361,7 @@ router.post('/users/:id/withdraw', async (req, res) => {
       return res.status(400).json({ error: 'Amount must be greater than 0.' });
     }
 
-    const walletColumn = source_wallet === 'bonus' ? 'bonus_balance' : source_wallet === 'referral' ? 'referral_balance' : source_wallet === 'gaming_bonus' ? 'gaming_bonus_balance' : 'balance';
+    const walletColumn = resolveWalletColumn(source_wallet);
     const walletLabel = source_wallet === 'main' ? 'Main' : source_wallet.charAt(0).toUpperCase() + source_wallet.slice(1).replace('_', ' ');
 
     await conn.beginTransaction();
@@ -414,7 +419,7 @@ router.post('/withdrawals/:id/approve', async (req, res) => {
     const [result] = await pool.query('UPDATE withdrawals SET status = "approved" WHERE id = ? AND status = "pending"', [req.params.id]);
     if (result.affectedRows === 0) return res.status(400).json({ error: 'Request not pending' });
     
-    const [rows] = await pool.query('SELECT * FROM withdrawals WHERE id = ?', [req.params.id]);
+    const [rows] = await pool.query('SELECT id, user_id, amount, payment_method, transaction_id, status, custom_data, created_at FROM withdrawals WHERE id = ?', [req.params.id]);
     const withdrawal = rows[0];
     if (withdrawal) {
       await pool.query('INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)', [withdrawal.user_id, 'withdrawal_approved', withdrawal.amount, `Withdrawal Approved via ${withdrawal.payment_method}`]);
@@ -431,7 +436,7 @@ router.post('/withdrawals/:id/reject', async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const [rows] = await conn.query('SELECT * FROM withdrawals WHERE id = ? AND status = "pending" FOR UPDATE', [req.params.id]);
+    const [rows] = await conn.query('SELECT id, user_id, amount, payment_method, transaction_id, status, custom_data, created_at FROM withdrawals WHERE id = ? AND status = "pending" FOR UPDATE', [req.params.id]);
     const withdrawal = rows[0];
     if (!withdrawal) throw new Error('Withdrawal not found or already processed');
 
@@ -643,8 +648,8 @@ router.get('/users/:id/details', async (req, res) => {
     );
     if (userRows.length === 0) return res.status(404).json({ error: 'User not found' });
     
-    const [transactions] = await pool.query('SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC', [req.params.id]);
-    const [fdrs] = await pool.query('SELECT * FROM fdrs WHERE user_id = ? ORDER BY created_at DESC', [req.params.id]);
+    const [transactions] = await pool.query('SELECT id, user_id, type, amount, description, created_at FROM transactions WHERE user_id = ? ORDER BY created_at DESC', [req.params.id]);
+    const [fdrs] = await pool.query('SELECT id, user_id, amount, start_date, end_date, interest_percent, period_days, status, accrued_interest, last_installment_date, next_installment_date, created_at, last_referral_commission_date FROM fdrs WHERE user_id = ? ORDER BY created_at DESC', [req.params.id]);
     const [locked_funds] = await pool.query('SELECT * FROM locked_funds WHERE user_id = ? ORDER BY created_at DESC', [req.params.id]);
     
     res.json({
@@ -750,7 +755,7 @@ router.post('/users/:id/fdr/:fdrId/close', async (req, res) => {
     const fdrId = req.params.fdrId;
     
     await conn.beginTransaction();
-    const [fdrRows] = await conn.query('SELECT * FROM fdrs WHERE id = ? AND user_id = ? AND status = "active" FOR UPDATE', [fdrId, userId]);
+    const [fdrRows] = await conn.query('SELECT id, user_id, amount, start_date, end_date, interest_percent, period_days, status, accrued_interest, last_installment_date, next_installment_date, created_at, last_referral_commission_date FROM fdrs WHERE id = ? AND user_id = ? AND status = "active" FOR UPDATE', [fdrId, userId]);
     if (fdrRows.length === 0) throw new Error('FDR not active or not found');
     
     const fdr = fdrRows[0];
@@ -839,7 +844,7 @@ router.post('/fdrs/:id/close', async (req, res) => {
     const fdrId = req.params.id;
     await conn.beginTransaction();
 
-    const [fdrRows] = await conn.query('SELECT * FROM fdrs WHERE id = ? AND status = "active" FOR UPDATE', [fdrId]);
+    const [fdrRows] = await conn.query('SELECT id, user_id, amount, start_date, end_date, interest_percent, period_days, status, accrued_interest, last_installment_date, next_installment_date, created_at, last_referral_commission_date FROM fdrs WHERE id = ? AND status = "active" FOR UPDATE', [fdrId]);
     if (fdrRows.length === 0) {
       await conn.rollback();
       return res.status(404).json({ error: 'Active FDR not found' });
@@ -1118,55 +1123,54 @@ router.get('/simulations/aviator-chats', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM simulated_aviator_chats ORDER BY created_at DESC');
     res.json(rows);
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { console.error('GET simulation error:', err); res.status(500).json({ error: 'Failed' }); }
 });
 router.post('/simulations/aviator-chats', async (req, res) => {
   const { user_name, message_type, message_text } = req.body;
   try {
     const [result] = await pool.query('INSERT INTO simulated_aviator_chats (user_name, message_type, message_text) VALUES (?, ?, ?)', [user_name, message_type, message_text]);
     res.json({ success: true, id: result.insertId });
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { console.error('Simulation route error:', err.message); res.status(500).json({ error: 'Failed' }); }
 });
 router.put('/simulations/aviator-chats/:id', async (req, res) => {
   const { user_name, message_type, message_text } = req.body;
   try {
     await pool.query('UPDATE simulated_aviator_chats SET user_name=?, message_type=?, message_text=? WHERE id=?', [user_name, message_type, message_text, req.params.id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { console.error('Simulation route error:', err.message); res.status(500).json({ error: 'Failed' }); }
 });
 router.delete('/simulations/aviator-chats/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM simulated_aviator_chats WHERE id=?', [req.params.id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { console.error('Aviator chats simulation error:', err); res.status(500).json({ error: 'Failed' }); }
 });
-
 // Aviator Bets
 router.get('/simulations/aviator-bets', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM simulated_aviator_bets ORDER BY created_at DESC');
     res.json(rows);
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { console.error('Simulation route error:', err.message); res.status(500).json({ error: 'Failed' }); }
 });
 router.post('/simulations/aviator-bets', async (req, res) => {
   const { user_name, bet_amount, target_multiplier } = req.body;
   try {
     const [result] = await pool.query('INSERT INTO simulated_aviator_bets (user_name, bet_amount, target_multiplier) VALUES (?, ?, ?)', [user_name, bet_amount, target_multiplier]);
     res.json({ success: true, id: result.insertId });
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { console.error('Simulation route error:', err.message); res.status(500).json({ error: 'Failed' }); }
 });
 router.put('/simulations/aviator-bets/:id', async (req, res) => {
   const { user_name, bet_amount, target_multiplier } = req.body;
   try {
     await pool.query('UPDATE simulated_aviator_bets SET user_name=?, bet_amount=?, target_multiplier=? WHERE id=?', [user_name, bet_amount, target_multiplier, req.params.id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { console.error('Simulation route error:', err.message); res.status(500).json({ error: 'Failed' }); }
 });
 router.delete('/simulations/aviator-bets/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM simulated_aviator_bets WHERE id=?', [req.params.id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { console.error('Simulation route error:', err.message); res.status(500).json({ error: 'Failed' }); }
 });
 
 // Colour Trading Bets
@@ -1174,27 +1178,27 @@ router.get('/simulations/colour-trading-bets', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM simulated_colour_trading_bets ORDER BY created_at DESC');
     res.json(rows);
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { console.error('Simulation route error:', err.message); res.status(500).json({ error: 'Failed' }); }
 });
 router.post('/simulations/colour-trading-bets', async (req, res) => {
   const { user_name, bet_amount, color_choice } = req.body;
   try {
     const [result] = await pool.query('INSERT INTO simulated_colour_trading_bets (user_name, bet_amount, color_choice) VALUES (?, ?, ?)', [user_name, bet_amount, color_choice]);
     res.json({ success: true, id: result.insertId });
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { console.error('Simulation route error:', err.message); res.status(500).json({ error: 'Failed' }); }
 });
 router.put('/simulations/colour-trading-bets/:id', async (req, res) => {
   const { user_name, bet_amount, color_choice } = req.body;
   try {
     await pool.query('UPDATE simulated_colour_trading_bets SET user_name=?, bet_amount=?, color_choice=? WHERE id=?', [user_name, bet_amount, color_choice, req.params.id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { console.error('Simulation route error:', err.message); res.status(500).json({ error: 'Failed' }); }
 });
 router.delete('/simulations/colour-trading-bets/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM simulated_colour_trading_bets WHERE id=?', [req.params.id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { console.error('Simulation route error:', err.message); res.status(500).json({ error: 'Failed' }); }
 });
 
 // GET /games
@@ -1335,47 +1339,6 @@ router.put('/games/:id/limits', async (req, res) => {
   }
 });
 
-// GET /settings
-router.get('/settings', async (req, res) => {
-  try {
-    const [rows] = await pool.query('SELECT setting_key, setting_value, description FROM system_settings');
-    const settings = {};
-    rows.forEach(r => settings[r.setting_key] = r.setting_value);
-    
-    const [upiRows] = await pool.query("SELECT value_data FROM system_state WHERE key_name = 'admin_upi_id'");
-    settings.admin_upi_id = upiRows.length > 0 ? upiRows[0].value_data : 'admin@upi';
-    
-    res.json(settings);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch settings' });
-  }
-});
-
-// PUT /settings
-router.put('/settings', async (req, res) => {
-  const conn = await pool.getConnection();
-  try {
-    const { settings } = req.body;
-    await conn.beginTransaction();
-
-    for (const [key, value] of Object.entries(settings)) {
-      await conn.query(
-        'INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?',
-        [key, String(value), String(value)]
-      );
-    }
-
-    await conn.commit();
-    res.json({ success: true });
-  } catch (err) {
-    await conn.rollback();
-    console.error('Failed to update settings:', err);
-    res.status(500).json({ error: 'Failed to update settings' });
-  } finally {
-    conn.release();
-  }
-});
-
 // ============================================================
 // SPIN WHEEL ADMIN ROUTES
 // ============================================================
@@ -1504,7 +1467,7 @@ router.get('/referrals/stats', async (req, res) => {
     const [lockedFdrRows] = await pool.query("SELECT COALESCE(SUM(locked_referral_balance), 0) as total FROM users");
     
     // Total FDR recurring commissions released historically
-    const [releasedFdrRows] = await pool.query("SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'funds_unlocked_manual' AND description LIKE '%referral%'");
+    const [releasedFdrRows] = await pool.query("SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'fdr_referral_released'");
 
     // Top Referrers
     const [topReferrers] = await pool.query(`
@@ -1556,7 +1519,7 @@ router.post('/referrals/release-locked', async (req, res) => {
 
       await conn.query(
         "INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)",
-        [u.id, 'funds_unlocked_manual', amount, `Admin released monthly recurring FDR referral commission`]
+        [u.id, 'fdr_referral_released', amount, `Admin released monthly recurring FDR referral commission`]
       );
 
       totalReleased += amount;
@@ -1654,23 +1617,8 @@ router.get('/bets', async (req, res) => {
   }
 });
 
-// Update game limits (min_bet, max_bet)
-router.put('/games/:id/limits', adminAuth, async (req, res) => {
-  try {
-    const { min_bet, max_bet } = req.body;
-    await pool.query(
-      'UPDATE games SET min_bet = ?, max_bet = ? WHERE id = ?',
-      [min_bet, max_bet, req.params.id]
-    );
-    res.json({ success: true, message: 'Game limits updated' });
-  } catch (err) {
-    console.error('Failed to update game limits:', err);
-    res.status(500).json({ error: 'Failed to update game limits' });
-  }
-});
-
 // GET /settings
-router.get('/settings', async (req, res) => {
+router.get('/settings', adminAuth, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT setting_key, setting_value FROM system_settings');
     const settings = {};
@@ -1696,6 +1644,7 @@ router.put('/settings', adminAuth, async (req, res) => {
         [key, value, value]
       );
     }
+    cache.del('config:public');
     res.json({ success: true, message: 'Settings updated' });
   } catch (err) {
     console.error('Failed to update settings:', err);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { walletAPI } from '../api';
-import { Receipt, Search, Filter, RefreshCw } from 'lucide-react';
+import { Receipt, Search, Filter, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatGlobalDate } from '../utils/dateFormatter';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
@@ -9,17 +9,25 @@ export const Transactions: React.FC = () => {
   const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (p: number = 1) => {
     setIsLoading(true);
     setError('');
     try {
-      const data = await walletAPI.getTransactions();
-      setTransactions(data);
-      setFilteredTransactions(data);
+      const res = await walletAPI.getTransactions(p);
+      setTransactions(res.data || res);
+      setFilteredTransactions(res.data || res);
+      if (res.pagination) {
+        setTotalPages(res.pagination.totalPages);
+        setTotalCount(res.pagination.total);
+        setPage(res.pagination.page);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch transaction logs.');
     } finally {
@@ -28,7 +36,7 @@ export const Transactions: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchTransactions();
+    fetchTransactions(1);
   }, []);
 
   // Filter transactions when filters change
@@ -261,6 +269,31 @@ export const Transactions: React.FC = () => {
             </div>
           ))}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', padding: '16px 0' }}>
+            <button
+              className="btn btn-secondary"
+              disabled={page <= 1}
+              onClick={() => fetchTransactions(page - 1)}
+              style={{ display: 'flex', gap: '6px', padding: '8px 16px', fontSize: '0.85rem' }}
+            >
+              <ChevronLeft size={16} /> Previous
+            </button>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+              Page {page} of {totalPages} ({totalCount} total)
+            </span>
+            <button
+              className="btn btn-secondary"
+              disabled={page >= totalPages}
+              onClick={() => fetchTransactions(page + 1)}
+              style={{ display: 'flex', gap: '6px', padding: '8px 16px', fontSize: '0.85rem' }}
+            >
+              Next <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
         </>
       )}
 
