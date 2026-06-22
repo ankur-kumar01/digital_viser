@@ -388,3 +388,12 @@ export const spinAPI = {
   getHistory: () => request('GET', '/spin/history'),
 };
 
+export const yieldBoosterAPI = {
+  getUserBoosters: () => request('GET', '/yield-boosters'),
+  claimBooster: (id: number) => request('POST', `/yield-boosters/${id}/claim`),
+  getAdminBoosters: () => adminRequest('GET', '/admin/yield-boosters'),
+  createAdminBooster: (data: any) => adminRequest('POST', '/admin/yield-boosters', data),
+  updateAdminBooster: (id: number, data: any) => adminRequest('PUT', `/admin/yield-boosters/${id}`, data),
+  deleteAdminBooster: (id: number) => adminRequest('DELETE', `/admin/yield-boosters/${id}`),
+};
+

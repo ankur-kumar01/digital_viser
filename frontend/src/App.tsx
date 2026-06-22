@@ -57,6 +57,8 @@ import { AdminActiveUsers } from './views/admin/AdminActiveUsers';
 import { AdminSupportTickets } from './views/admin/AdminSupportTickets';
 import { AdminSupportTicketDetail } from './views/admin/AdminSupportTicketDetail';
 import { trackActivity } from './api';
+import { Offers } from './views/Offers';
+import { AdminYieldBoosters } from './views/admin/AdminYieldBoosters';
 
 interface User {
   id?: number;
@@ -294,6 +296,9 @@ export const App: React.FC = () => {
             {currentView === 'my-fdrs' && (
               <MyFDRs onNavigate={setCurrentView} />
             )}
+            {currentView === 'offers' && (
+              <Offers />
+            )}
             {currentView === 'transactions' && (
               <Transactions />
             )}
@@ -343,6 +348,7 @@ export const App: React.FC = () => {
             {currentView === 'admin-methods' && <AdminPaymentMethods />}
             {currentView === 'admin-fdr-plans' && <AdminFdrPlans />}
             {currentView === 'admin-fdrs' && <AdminFdrs />}
+            {currentView === 'admin-yield-boosters' && <AdminYieldBoosters />}
             {currentView === 'admin-schemes' && <AdminSchemes />}
             {currentView === 'admin-settings' && <AdminSettings />}
             {currentView === 'admin-profile' && <AdminProfile />}

@@ -4,7 +4,20 @@ const { addDays, logger } = require('../utils');
 async function processDailyFinancials() {
   const mainConn = await pool.getConnection();
   try {
-    const currentDate = new Date().toISOString().split('T')[0];
+    // Retrieve simulated date
+    const [stateRows] = await mainConn.query(
+      "SELECT value_data FROM system_state WHERE key_name = 'simulated_date'"
+    );
+    const currentDate = stateRows.length > 0 ? stateRows[0].value_data : new Date().toISOString().split('T')[0];
+
+    // Auto-expire yield boosters that have expired relative to currentDate
+    await mainConn.query(
+      `UPDATE user_yield_boosters 
+       SET status = 'completed' 
+       WHERE status = 'active' AND DATE(expires_at) < DATE(?)`,
+      [currentDate]
+    );
+
     let processedFdrs = 0;
     let unlockedFunds = 0;
 
@@ -54,16 +67,29 @@ async function processDailyFinancials() {
 
         // Process all pending installments up to the current date
         while (nextInstDate && nextInstDate <= currentDate && nextInstDate <= endDate) {
-          const interest = fdrAmount * interestPercent / 100;
+          // Query active yield boosters for user on this specific installment date
+          const [boosterRows] = await conn.query(
+            `SELECT SUM(b.yield_boost_percent) as total_boost
+             FROM user_yield_boosters uyb
+             JOIN fdr_yield_boosters b ON uyb.booster_id = b.id
+             WHERE uyb.user_id = ?
+               AND DATE(uyb.activated_at) <= DATE(?)
+               AND DATE(uyb.expires_at) >= DATE(?)`,
+            [userId, nextInstDate, nextInstDate]
+          );
+          const totalBoost = boosterRows[0]?.total_boost ? parseFloat(boosterRows[0].total_boost) : 0.0;
+          const boostedRate = interestPercent + totalBoost;
+          const interest = fdrAmount * boostedRate / 100;
 
           await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [interest, userId]);
           accruedInterest += interest;
           lastInstDate = nextInstDate;
           nextInstDate = addDays(nextInstDate, fdr.period_days);
 
+          const boostDesc = totalBoost > 0 ? ` (+${totalBoost.toFixed(2)}% Boost applied)` : '';
           await conn.query(
             'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
-            [userId, 'interest', interest, `Interest from FDR #${fdr.id}`]
+            [userId, 'interest', interest, `Interest from FDR #${fdr.id}${boostDesc}`]
           );
 
           installmentProcessed = true;

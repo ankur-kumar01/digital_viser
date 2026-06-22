@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Wallet, PlusCircle, BarChart3, Receipt, X, Users, User, ArrowUpRight, Gift, Gamepad2, Cpu, Disc, FileText, List, History, Activity, Bot, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Wallet, PlusCircle, BarChart3, Receipt, X, Users, User, ArrowUpRight, Gift, Gamepad2, Cpu, Disc, FileText, List, History, Activity, Bot, MessageSquare, Percent } from 'lucide-react';
 
 interface SidebarProps {
   currentView: string;
@@ -20,6 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'profile', name: 'My Profile', icon: <User size={20} /> },
     { id: 'create-fdr', name: 'Create FDR', icon: <PlusCircle size={20} /> },
     { id: 'my-fdrs', name: 'My FDRs', icon: <BarChart3 size={20} /> },
+    { id: 'offers', name: 'Offers & Boosts', icon: <Gift size={20} /> },
     { id: 'spin-wheel', name: 'Spin & Win', icon: <Disc size={20} /> },
     { id: 'games', name: 'Gaming Zone', icon: <Gamepad2 size={20} /> },
     { id: 'transactions', name: 'Transactions', icon: <Receipt size={20} /> },
@@ -40,6 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'admin-referrals', name: 'Referral Program', icon: <Users size={20} /> },
     { id: 'admin-fdr-plans', name: 'FDR Plans', icon: <PlusCircle size={20} /> },
     { id: 'admin-fdrs', name: 'Manage FDRs', icon: <BarChart3 size={20} /> },
+    { id: 'admin-yield-boosters', name: 'FDR Yield Boosters', icon: <Percent size={20} /> },
     { id: 'admin-schemes', name: 'Reward Schemes', icon: <Gift size={20} /> },
     { id: 'admin-games', name: 'Manage Games', icon: <Gamepad2 size={20} /> },
     { id: 'admin-fantasy-cricket', name: 'Fantasy Cricket', icon: <Gamepad2 size={20} /> },

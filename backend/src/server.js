@@ -229,6 +229,8 @@ app.use('/api/admin/bots', require('./routes/adminBots'));
 app.use('/api/ludo/tournaments', require('./routes/ludoTournaments'));
 app.use('/api/support', supportRoutes);
 app.use('/api/admin/support', adminSupportRoutes);
+app.use('/api/yield-boosters', require('./routes/yieldBoosters'));
+app.use('/api/admin/yield-boosters', require('./routes/adminYieldBoosters'));
 
 // Public Config Endpoint
 app.get('/api/config', async (req, res) => {
