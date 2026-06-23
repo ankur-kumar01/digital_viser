@@ -233,6 +233,7 @@ app.use('/api/yield-boosters', require('./routes/yieldBoosters'));
 app.use('/api/admin/yield-boosters', require('./routes/adminYieldBoosters'));
 app.use('/api/daily-tasks', require('./routes/dailyTasks'));
 app.use('/api/admin/daily-tasks', require('./routes/adminDailyTasks'));
+app.use('/api/admin/cron', require('./routes/adminCron'));
 
 // Public Config Endpoint
 app.get('/api/config', async (req, res) => {

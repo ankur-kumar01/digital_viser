@@ -10,14 +10,34 @@ class LudoCleanup {
 
   start() {
     // Run every 15 minutes
-    this.interval = setInterval(() => this.cleanup(), 15 * 60 * 1000);
+    this.interval = setInterval(() => {
+      const cronManager = require('../services/cronManager');
+      cronManager.runJob('ludo_cleanup', 'system').catch(err => {
+        console.error('Ludo cleanup scheduled job failed:', err.message);
+      });
+    }, 15 * 60 * 1000);
     console.log('🕹️ Ludo cleanup cron started (every 15min)');
     // Run immediately on start
-    setTimeout(() => this.cleanup(), 10000);
+    setTimeout(() => {
+      const cronManager = require('../services/cronManager');
+      cronManager.runJob('ludo_cleanup', 'system').catch(err => {
+        console.error('Ludo cleanup startup job failed:', err.message);
+      });
+    }, 10000);
 
     // Tournament check every 5 minutes
-    this.tournamentInterval = setInterval(() => this.processTournaments(), 5 * 60 * 1000);
-    setTimeout(() => this.processTournaments(), 5000);
+    this.tournamentInterval = setInterval(() => {
+      const cronManager = require('../services/cronManager');
+      cronManager.runJob('ludo_tournaments', 'system').catch(err => {
+        console.error('Ludo tournaments scheduled job failed:', err.message);
+      });
+    }, 5 * 60 * 1000);
+    setTimeout(() => {
+      const cronManager = require('../services/cronManager');
+      cronManager.runJob('ludo_tournaments', 'system').catch(err => {
+        console.error('Ludo tournaments startup job failed:', err.message);
+      });
+    }, 5000);
   }
 
   stop() {

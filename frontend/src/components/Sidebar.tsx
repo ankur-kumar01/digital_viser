@@ -51,6 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'admin-big-wins', name: 'Big Wins Ticker', icon: <Gift size={20} /> },
     { id: 'admin-spin-wheel', name: 'Spin Wheel', icon: <Disc size={20} /> },
     { id: 'admin-game-simulations', name: 'Game Simulations', icon: <Cpu size={20} /> },
+    { id: 'admin-cron', name: 'Cron Jobs Manager', icon: <Cpu size={20} /> },
     { id: 'admin-player-analytics', name: 'Player Analytics', icon: <BarChart3 size={20} /> },
     { id: 'admin-settings', name: 'System Settings', icon: <Wallet size={20} /> },
     { id: 'admin-support', name: 'Support Tickets', icon: <MessageSquare size={20} /> },

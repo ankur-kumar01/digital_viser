@@ -409,3 +409,9 @@ export const dailyTasksAPI = {
   saveAdminSettings: (data: { reward_amount: number; wallet_type: 'main' | 'bonus' }) => adminRequest('POST', '/admin/daily-tasks/settings', data)
 };
 
+export const adminCronAPI = {
+  getJobs: () => adminRequest('GET', '/admin/cron/jobs'),
+  getHistory: (limit?: number) => adminRequest('GET', `/admin/cron/history${limit ? `?limit=${limit}` : ''}`),
+  triggerJob: (jobKey: string) => adminRequest('POST', `/admin/cron/trigger/${jobKey}`),
+};
+

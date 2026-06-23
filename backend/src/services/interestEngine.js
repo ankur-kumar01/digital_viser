@@ -3,7 +3,14 @@ const { addDays, logger } = require('../utils');
 
 async function processDailyFinancials() {
   const mainConn = await pool.getConnection();
+  let historyId = null;
   try {
+    // Insert running log entry in cron_history
+    const [histResult] = await mainConn.query(
+      "INSERT INTO cron_history (cron_name, status) VALUES ('daily_financials', 'running')"
+    );
+    historyId = histResult.insertId;
+
     // Retrieve simulated date
     const [stateRows] = await mainConn.query(
       "SELECT value_data FROM system_state WHERE key_name = 'simulated_date'"
@@ -229,8 +236,35 @@ async function processDailyFinancials() {
       lockConn.release();
     }
 
+    // Update daily_financials_last_processed_date key in system_state
+    await mainConn.query(
+      "INSERT INTO system_state (key_name, value_data) VALUES ('daily_financials_last_processed_date', ?) ON DUPLICATE KEY UPDATE value_data = ?",
+      [currentDate, currentDate]
+    );
+
+    // Update cron history to success
+    const detailsJson = JSON.stringify({
+      processed_fdrs: processedFdrs,
+      unlocked_funds: unlockedFunds,
+      simulated_date: currentDate
+    });
+    await mainConn.query(
+      "UPDATE cron_history SET status = 'success', completed_at = CURRENT_TIMESTAMP, details = ? WHERE id = ?",
+      [detailsJson, historyId]
+    );
+
     logger.info(`[Cron] Processed ${processedFdrs} active FDRs and unlocked ${unlockedFunds} time-locked funds for ${currentDate}.`);
   } catch (err) {
+    if (historyId) {
+      try {
+        await mainConn.query(
+          "UPDATE cron_history SET status = 'failure', completed_at = CURRENT_TIMESTAMP, error_message = ? WHERE id = ?",
+          [err.message, historyId]
+        );
+      } catch (logErr) {
+        console.error('Failed to log cron failure:', logErr.message);
+      }
+    }
     logger.error('Cron job global execution error', { error: err.message });
   } finally {
     mainConn.release();

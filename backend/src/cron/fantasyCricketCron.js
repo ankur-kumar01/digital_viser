@@ -16,20 +16,29 @@ class FantasyCricketCron {
     // Sync upcoming matches every 2 hours (reduced from 1 hour to save API quota)
     cron.schedule('0 */2 * * *', async () => {
       console.log('🔄 [Fantasy] Syncing Upcoming Matches...');
-      await this.syncUpcomingMatches();
+      const cronManager = require('../services/cronManager');
+      await cronManager.runJob('fantasy_sync_matches', 'system').catch(err => {
+        console.error('Fantasy sync matches scheduled job failed:', err.message);
+      });
     });
 
     // Every 15 minutes: Sync squads for upcoming matches within 24 hours
     // Reduced from 5 min to 15 min to preserve API quota
     cron.schedule('*/15 * * * *', async () => {
       console.log('🔄 [Fantasy] Syncing Squads...');
-      await this.syncSquads();
+      const cronManager = require('../services/cronManager');
+      await cronManager.runJob('fantasy_sync_squads', 'system').catch(err => {
+        console.error('Fantasy sync squads scheduled job failed:', err.message);
+      });
     });
 
     // Every 2 minutes: Update live scores & points for LIVE matches
     // Reduced from 1 min to 2 min to preserve API quota
     cron.schedule('*/2 * * * *', async () => {
-      await this.processLiveMatches();
+      const cronManager = require('../services/cronManager');
+      await cronManager.runJob('fantasy_process_live', 'system').catch(err => {
+        console.error('Fantasy process live scheduled job failed:', err.message);
+      });
     });
 
     // Check prize retry queue every 5 minutes
