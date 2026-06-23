@@ -59,6 +59,7 @@ import { AdminSupportTicketDetail } from './views/admin/AdminSupportTicketDetail
 import { trackActivity } from './api';
 import { Offers } from './views/Offers';
 import { AdminYieldBoosters } from './views/admin/AdminYieldBoosters';
+import { AdminDailyTasks } from './views/admin/AdminDailyTasks';
 
 interface User {
   id?: number;
@@ -349,6 +350,7 @@ export const App: React.FC = () => {
             {currentView === 'admin-fdr-plans' && <AdminFdrPlans />}
             {currentView === 'admin-fdrs' && <AdminFdrs />}
             {currentView === 'admin-yield-boosters' && <AdminYieldBoosters />}
+            {currentView === 'admin-daily-tasks' && <AdminDailyTasks />}
             {currentView === 'admin-schemes' && <AdminSchemes />}
             {currentView === 'admin-settings' && <AdminSettings />}
             {currentView === 'admin-profile' && <AdminProfile />}

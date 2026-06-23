@@ -397,3 +397,15 @@ export const yieldBoosterAPI = {
   deleteAdminBooster: (id: number) => adminRequest('DELETE', `/admin/yield-boosters/${id}`),
 };
 
+export const dailyTasksAPI = {
+  getTasks: () => request('GET', '/daily-tasks'),
+  checkIn: () => request('POST', '/daily-tasks/check-in'),
+  claimTask: (id: number) => request('POST', `/daily-tasks/${id}/claim`),
+  claimAllDone: () => request('POST', '/daily-tasks/claim-all-done'),
+  getAdminTasks: () => adminRequest('GET', '/admin/daily-tasks'),
+  createAdminTask: (data: any) => adminRequest('POST', '/admin/daily-tasks', data),
+  updateAdminTask: (id: number, data: any) => adminRequest('PUT', `/admin/daily-tasks/${id}`, data),
+  deleteAdminTask: (id: number) => adminRequest('DELETE', `/admin/daily-tasks/${id}`),
+  saveAdminSettings: (data: { reward_amount: number; wallet_type: 'main' | 'bonus' }) => adminRequest('POST', '/admin/daily-tasks/settings', data)
+};
+

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { yieldBoosterAPI } from '../api';
-import { Gift, TrendingUp, Clock, CheckCircle2, AlertCircle, Percent } from 'lucide-react';
+import { yieldBoosterAPI, dailyTasksAPI } from '../api';
+import { Gift, TrendingUp, Clock, CheckCircle2, AlertCircle, Percent, ClipboardCheck, Sparkles, Check } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
 const BoosterTimer: React.FC<{ endTime: string; simulatedDate: string | null; onExpire?: () => void }> = ({ endTime, simulatedDate, onExpire }) => {
@@ -86,7 +86,7 @@ const BoosterTimer: React.FC<{ endTime: string; simulatedDate: string | null; on
 };
 
 export const Offers: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'available' | 'active' | 'history'>('available');
+  const [activeTab, setActiveTab] = useState<'available' | 'active' | 'history' | 'daily_tasks'>('available');
   const [activeBoosters, setActiveBoosters] = useState<any[]>([]);
   const [completedBoosters, setCompletedBoosters] = useState<any[]>([]);
   const [claimableOffers, setClaimableOffers] = useState<any[]>([]);
@@ -94,6 +94,16 @@ export const Offers: React.FC = () => {
   const [isFetching, setIsFetching] = useState(true);
   const [claimingId, setClaimingId] = useState<number | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // Daily Tasks State
+  const [dailyTasks, setDailyTasks] = useState<any[]>([]);
+  const [allDoneEligible, setAllDoneEligible] = useState(false);
+  const [allDoneClaimed, setAllDoneClaimed] = useState(false);
+  const [allDoneAmount, setAllDoneAmount] = useState(15.00);
+  const [allDoneWallet, setAllDoneWallet] = useState('main');
+  const [isClaimingTask, setIsClaimingTask] = useState<number | null>(null);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [isClaimingAllDone, setIsClaimingAllDone] = useState(false);
 
   const fetchBoosters = async () => {
     try {
@@ -103,11 +113,61 @@ export const Offers: React.FC = () => {
       setCompletedBoosters(res.completed || []);
       setClaimableOffers(res.claimable || []);
       setSimulatedDate(res.simulatedDate || null);
+
+      // Fetch daily tasks
+      const taskRes = await dailyTasksAPI.getTasks();
+      setDailyTasks(taskRes.tasks || []);
+      setAllDoneEligible(taskRes.all_done_eligible);
+      setAllDoneClaimed(taskRes.all_done_claimed);
+      setAllDoneAmount(parseFloat(taskRes.all_done_amount) || 15.00);
+      setAllDoneWallet(taskRes.all_done_wallet || 'main');
     } catch (err: any) {
-      console.error('Failed to fetch yield boosters:', err);
+      console.error('Failed to fetch offers data:', err);
       setMessage({ text: err.message || 'Failed to load offers.', type: 'error' });
     } finally {
       setIsFetching(false);
+    }
+  };
+
+  const handleCheckIn = async () => {
+    setIsCheckingIn(true);
+    setMessage(null);
+    try {
+      const res = await dailyTasksAPI.checkIn();
+      setMessage({ text: res.message || 'Checked in successfully!', type: 'success' });
+      await fetchBoosters();
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Check-in failed.', type: 'error' });
+    } finally {
+      setIsCheckingIn(false);
+    }
+  };
+
+  const handleClaimTask = async (id: number) => {
+    setIsClaimingTask(id);
+    setMessage(null);
+    try {
+      const res = await dailyTasksAPI.claimTask(id);
+      setMessage({ text: res.message || 'Task reward claimed successfully!', type: 'success' });
+      await fetchBoosters();
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to claim task reward.', type: 'error' });
+    } finally {
+      setIsClaimingTask(null);
+    }
+  };
+
+  const handleClaimAllDone = async () => {
+    setIsClaimingAllDone(true);
+    setMessage(null);
+    try {
+      const res = await dailyTasksAPI.claimAllDone();
+      setMessage({ text: res.message || 'All Done Cash Bonus claimed!', type: 'success' });
+      await fetchBoosters();
+    } catch (err: any) {
+      setMessage({ text: err.message || 'Failed to claim All Done bonus.', type: 'error' });
+    } finally {
+      setIsClaimingAllDone(false);
     }
   };
 
@@ -173,6 +233,7 @@ export const Offers: React.FC = () => {
         {[
           { id: 'available', label: 'Available Offers', count: claimableOffers.length },
           { id: 'active', label: 'Active Boosters', count: activeBoosters.length },
+          { id: 'daily_tasks', label: 'Daily Task Board', count: dailyTasks.filter(t => !t.is_claimed && t.is_completed).length },
           { id: 'history', label: 'Booster History', count: completedBoosters.length }
         ].map((tab) => (
           <button
@@ -480,6 +541,174 @@ export const Offers: React.FC = () => {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* DAILY TASK BOARD TAB */}
+          {activeTab === 'daily_tasks' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              
+              {/* All Done Reward Card */}
+              <div 
+                className="glass-card" 
+                style={{ 
+                  padding: '24px', 
+                  background: 'linear-gradient(135deg, rgba(0, 245, 160, 0.05) 0%, rgba(0, 184, 212, 0.05) 100%)',
+                  border: '1px solid rgba(0, 245, 160, 0.25)',
+                  boxShadow: '0 4px 30px rgba(0, 245, 160, 0.03)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '20px'
+                }}
+              >
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                  <div style={{ background: 'rgba(0, 245, 160, 0.15)', borderRadius: '12px', padding: '12px', color: 'var(--accent-secondary)' }}>
+                    <Sparkles size={28} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>
+                      📋 Daily Checklist Reward
+                    </h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: 0 }}>
+                      Complete all individual daily tasks today and unlock a cash-back bonus!
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>All Done Prize</span>
+                    <strong style={{ fontSize: '1.4rem', color: 'var(--accent-secondary)', display: 'block' }}>
+                      ₹{allDoneAmount.toFixed(2)} {allDoneWallet === 'main' ? 'Cash' : 'Bonus'}
+                    </strong>
+                  </div>
+
+                  {allDoneClaimed ? (
+                    <button className="btn btn-secondary" style={{ background: 'rgba(0, 245, 160, 0.1)', color: 'var(--accent-secondary)', border: '1px solid rgba(0, 245, 160, 0.2)', padding: '10px 20px', cursor: 'not-allowed', display: 'flex', gap: '6px', alignItems: 'center' }} disabled>
+                      <CheckCircle2 size={16} />
+                      <span>Claimed Today</span>
+                    </button>
+                  ) : allDoneEligible ? (
+                    <button 
+                      onClick={handleClaimAllDone} 
+                      className="btn btn-primary animate-pulse" 
+                      style={{ padding: '10px 20px', display: 'flex', gap: '6px', alignItems: 'center' }}
+                      disabled={isClaimingAllDone}
+                    >
+                      {isClaimingAllDone ? 'Claiming...' : 'Claim Daily Bonus'}
+                    </button>
+                  ) : (
+                    <button className="btn btn-secondary" style={{ padding: '10px 20px', cursor: 'not-allowed', color: 'var(--text-muted)' }} disabled>
+                      In Progress ({dailyTasks.filter(t => t.is_claimed).length} / {dailyTasks.length} claimed)
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Individual task cards */}
+              {dailyTasks.length === 0 ? (
+                <div className="glass-card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  No tasks configured for today. Check back later!
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+                  {dailyTasks.map((task) => (
+                    <div 
+                      key={task.id} 
+                      className="glass-card"
+                      style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: '16px',
+                        border: task.is_claimed ? '1px solid var(--border-glass)' : '1px solid var(--border-card)',
+                        opacity: task.is_claimed ? 0.75 : 1,
+                        background: 'linear-gradient(135deg, var(--bg-glass) 0%, rgba(255, 255, 255, 0.01) 100%)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                          {task.title}
+                        </h4>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                          {task.task_type.replace('_', ' ')}
+                        </span>
+                      </div>
+
+                      {task.description && (
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
+                          {task.description}
+                        </p>
+                      )}
+
+                      {/* Progress representation */}
+                      {task.task_type !== 'check_in' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: 'auto' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            <span>Progress</span>
+                            <strong>
+                              {Math.min(task.current_count, task.target_count)} / {task.target_count}
+                            </strong>
+                          </div>
+                          
+                          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div 
+                              style={{ 
+                                width: `${Math.min(100, (task.current_count / task.target_count) * 100)}%`, 
+                                height: '100%', 
+                                background: task.is_claimed ? 'var(--text-muted)' : 'var(--accent-primary)',
+                                transition: 'width 0.3s ease'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Reward Footer */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-glass)', paddingTop: '12px', marginTop: task.task_type === 'check_in' ? 'auto' : '0' }}>
+                        <div>
+                          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Reward</span>
+                          <span style={{ fontSize: '0.9rem', color: 'var(--accent-secondary)', fontWeight: 700 }}>
+                            +₹{parseFloat(task.reward_amount).toFixed(2)} {task.reward_wallet === 'main' ? 'Cash' : 'Credits'}
+                          </span>
+                        </div>
+
+                        {task.is_claimed ? (
+                          <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', cursor: 'not-allowed', display: 'flex', gap: '4px', alignItems: 'center' }} disabled>
+                            <Check size={12} />
+                            <span>Claimed</span>
+                          </button>
+                        ) : task.is_completed ? (
+                          <button 
+                            onClick={() => handleClaimTask(task.id)}
+                            className="btn btn-primary" 
+                            style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                            disabled={isClaimingTask === task.id}
+                          >
+                            {isClaimingTask === task.id ? 'Claiming...' : 'Claim'}
+                          </button>
+                        ) : task.task_type === 'check_in' ? (
+                          <button 
+                            onClick={handleCheckIn}
+                            className="btn btn-primary" 
+                            style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                            disabled={isCheckingIn}
+                          >
+                            {isCheckingIn ? 'Claiming...' : 'Check In'}
+                          </button>
+                        ) : (
+                          <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem', cursor: 'not-allowed', color: 'var(--text-muted)' }} disabled>
+                            In Progress
+                          </button>
+                        )}
+                      </div>
+
+                    </div>
+                  ))}
+                </div>
+              )}
+
             </div>
           )}
 

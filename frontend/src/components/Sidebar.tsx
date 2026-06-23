@@ -42,6 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'admin-fdr-plans', name: 'FDR Plans', icon: <PlusCircle size={20} /> },
     { id: 'admin-fdrs', name: 'Manage FDRs', icon: <BarChart3 size={20} /> },
     { id: 'admin-yield-boosters', name: 'FDR Yield Boosters', icon: <Percent size={20} /> },
+    { id: 'admin-daily-tasks', name: 'Daily Tasks Manager', icon: <List size={20} /> },
     { id: 'admin-schemes', name: 'Reward Schemes', icon: <Gift size={20} /> },
     { id: 'admin-games', name: 'Manage Games', icon: <Gamepad2 size={20} /> },
     { id: 'admin-fantasy-cricket', name: 'Fantasy Cricket', icon: <Gamepad2 size={20} /> },
