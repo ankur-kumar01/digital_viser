@@ -8,9 +8,9 @@ const jobs = {
     schedule: "Hourly (checks for date change)",
     description: "Calculates FDR daily interests, unlocks matured FDR principal/bonus, updates referral commissions.",
     selfLogging: true,
-    run: async () => {
+    run: async (triggeredBy) => {
       const { processDailyFinancials } = require('./interestEngine');
-      await processDailyFinancials();
+      await processDailyFinancials(triggeredBy);
     }
   },
   fantasy_sync_matches: {
@@ -73,8 +73,32 @@ async function runJob(key, triggeredBy = 'manual') {
     throw new Error(`Job ${key} not found`);
   }
 
+  // If triggered by system scheduler, check if the job is disabled globally or individually
+  if (triggeredBy === 'system') {
+    const [rows] = await pool.query(
+      "SELECT key_name, value_data FROM system_state WHERE key_name IN ('cron_global_enabled', ?)",
+      [`cron_enabled_${key}`]
+    );
+    const stateMap = {};
+    rows.forEach(r => {
+      stateMap[r.key_name] = r.value_data;
+    });
+
+    const globalEnabled = stateMap['cron_global_enabled'] !== 'false';
+    const jobEnabled = stateMap[`cron_enabled_${key}`] !== 'false';
+
+    if (!globalEnabled) {
+      logger.info(`[CronManager] Skipping automated run of ${key}: Schedulers are paused globally.`);
+      return { skipped: true, reason: 'paused_globally' };
+    }
+    if (!jobEnabled) {
+      logger.info(`[CronManager] Skipping automated run of ${key}: Job is disabled.`);
+      return { skipped: true, reason: 'job_disabled' };
+    }
+  }
+
   if (job.selfLogging) {
-    await job.run();
+    await job.run(triggeredBy);
     return { success: true };
   }
 

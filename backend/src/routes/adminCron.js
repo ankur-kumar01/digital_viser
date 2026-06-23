@@ -66,6 +66,52 @@ router.get('/jobs', async (req, res) => {
   }
 });
 
+// GET /api/admin/cron/settings
+router.get('/settings', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT key_name, value_data FROM system_state WHERE key_name IN ('cron_global_enabled', 'cron_enabled_daily_financials', 'cron_enabled_fantasy_sync_matches', 'cron_enabled_fantasy_sync_squads', 'cron_enabled_fantasy_process_live', 'cron_enabled_ludo_cleanup', 'cron_enabled_ludo_tournaments')"
+    );
+
+    const settings = {
+      cron_global_enabled: true,
+      cron_enabled_daily_financials: true,
+      cron_enabled_fantasy_sync_matches: true,
+      cron_enabled_fantasy_sync_squads: true,
+      cron_enabled_fantasy_process_live: true,
+      cron_enabled_ludo_cleanup: true,
+      cron_enabled_ludo_tournaments: true
+    };
+
+    rows.forEach(r => {
+      settings[r.key_name] = r.value_data !== 'false';
+    });
+
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch settings: ' + err.message });
+  }
+});
+
+// POST /api/admin/cron/settings
+router.post('/settings', async (req, res) => {
+  const { key, value } = req.body;
+  if (!key || typeof value !== 'boolean') {
+    return res.status(400).json({ error: 'Invalid settings body' });
+  }
+
+  try {
+    const valStr = value ? 'true' : 'false';
+    await pool.query(
+      "INSERT INTO system_state (key_name, value_data) VALUES (?, ?) ON DUPLICATE KEY UPDATE value_data = ?",
+      [key, valStr, valStr]
+    );
+    res.json({ message: 'Setting updated successfully.', key, value });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update setting: ' + err.message });
+  }
+});
+
 // GET /api/admin/cron/history
 router.get('/history', async (req, res) => {
   try {

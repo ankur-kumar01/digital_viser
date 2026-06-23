@@ -5,6 +5,7 @@ import { Play, RefreshCw, CheckCircle2, XCircle, AlertCircle, Clock, Activity, T
 export const AdminCron: React.FC = () => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
+  const [settings, setSettings] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -34,16 +35,39 @@ export const AdminCron: React.FC = () => {
     }
   };
 
+  const fetchSettings = async () => {
+    try {
+      const res = await adminCronAPI.getSettings();
+      setSettings(res || {});
+    } catch (err: any) {
+      console.error('Error fetching settings:', err);
+    }
+  };
+
   const loadAllData = async () => {
     setIsLoading(true);
     setErrorMessage('');
-    await Promise.all([fetchJobs(), fetchHistory()]);
+    await Promise.all([fetchJobs(), fetchHistory(), fetchSettings()]);
     setIsLoading(false);
   };
 
   useEffect(() => {
     loadAllData();
   }, []);
+
+  const handleToggleSetting = async (key: string, currentValue: boolean) => {
+    setErrorMessage('');
+    setSuccessMessage('');
+    try {
+      const newValue = !currentValue;
+      await adminCronAPI.updateSetting(key, newValue);
+      setSettings(prev => ({ ...prev, [key]: newValue }));
+      setSuccessMessage(`Cron setting '${key.replace('cron_enabled_', '').replace('cron_', '')}' updated successfully to ${newValue ? 'Enabled' : 'Disabled'}.`);
+    } catch (err: any) {
+      console.error('Error updating setting:', err);
+      setErrorMessage(err.message || 'Failed to update cron setting.');
+    }
+  };
 
   const triggerJob = async (jobKey: string) => {
     if (!window.confirm(`Are you sure you want to manually trigger '${jobKey}' job right now?`)) {
@@ -133,6 +157,39 @@ export const AdminCron: React.FC = () => {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
           
+          {/* Global Schedulers Switchboard */}
+          <div className="glass-card" style={{ padding: '20px 24px', background: settings.cron_global_enabled !== false ? 'rgba(0, 245, 160, 0.02)' : 'rgba(255, 71, 87, 0.02)', border: `1px solid ${settings.cron_global_enabled !== false ? 'rgba(0, 245, 160, 0.15)' : 'rgba(255, 71, 87, 0.15)'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Activity size={24} color={settings.cron_global_enabled !== false ? 'var(--accent-secondary)' : 'var(--accent-danger)'} className={settings.cron_global_enabled !== false ? 'animate-pulse' : ''} />
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 4px 0' }}>
+                  Global Automated Schedulers: {settings.cron_global_enabled !== false ? 'ACTIVE' : 'PAUSED'}
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', margin: 0 }}>
+                  {settings.cron_global_enabled !== false 
+                    ? 'All automated background cron tasks are running according to their normal timetables.' 
+                    : 'All automated background executions are FORCE-STOPPED. Jobs will only run if triggered manually.'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => handleToggleSetting('cron_global_enabled', settings.cron_global_enabled !== false)}
+              className={`btn ${settings.cron_global_enabled !== false ? 'btn-secondary' : 'btn-primary'}`}
+              style={{ 
+                background: settings.cron_global_enabled !== false ? 'rgba(255, 71, 87, 0.1)' : 'var(--accent-secondary)', 
+                border: `1px solid ${settings.cron_global_enabled !== false ? 'rgba(255, 71, 87, 0.3)' : 'var(--accent-secondary)'}`,
+                color: settings.cron_global_enabled !== false ? 'var(--accent-danger)' : 'var(--bg-primary)',
+                fontWeight: 700,
+                padding: '10px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              {settings.cron_global_enabled !== false ? 'Pause All Schedulers' : 'Resume Schedulers'}
+            </button>
+          </div>
+
           {/* Section 1: Scheduler Jobs */}
           <div className="glass-card" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '12px' }}>
@@ -239,6 +296,26 @@ export const AdminCron: React.FC = () => {
                           )}
                         </>
                       )}
+                    </div>
+
+                    {/* Auto Execution Settings Toggle */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderTop: '1px solid var(--border-glass)', fontSize: '0.85rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Automatic Execution:</span>
+                      <button
+                        onClick={() => handleToggleSetting(`cron_enabled_${job.key}`, settings[`cron_enabled_${job.key}`] !== false)}
+                        style={{
+                          background: (settings[`cron_enabled_${job.key}`] !== false) ? 'rgba(0, 245, 160, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                          border: `1px solid ${(settings[`cron_enabled_${job.key}`] !== false) ? 'rgba(0, 245, 160, 0.2)' : 'var(--border-glass)'}`,
+                          borderRadius: '4px',
+                          color: (settings[`cron_enabled_${job.key}`] !== false) ? 'var(--accent-secondary)' : 'var(--text-secondary)',
+                          padding: '4px 10px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {settings[`cron_enabled_${job.key}`] !== false ? 'Enabled' : 'Disabled'}
+                      </button>
                     </div>
 
                     {/* Trigger Button */}

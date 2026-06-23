@@ -413,5 +413,7 @@ export const adminCronAPI = {
   getJobs: () => adminRequest('GET', '/admin/cron/jobs'),
   getHistory: (limit?: number) => adminRequest('GET', `/admin/cron/history${limit ? `?limit=${limit}` : ''}`),
   triggerJob: (jobKey: string) => adminRequest('POST', `/admin/cron/trigger/${jobKey}`),
+  getSettings: () => adminRequest('GET', '/admin/cron/settings'),
+  updateSetting: (key: string, value: boolean) => adminRequest('POST', '/admin/cron/settings', { key, value }),
 };
 

@@ -6,13 +6,25 @@ const { pool } = require('./db');
 async function checkAndProcessDailyFinancials() {
   try {
     const [stateRows] = await pool.query(
-      "SELECT key_name, value_data FROM system_state WHERE key_name IN ('simulated_date', 'daily_financials_last_processed_date')"
+      "SELECT key_name, value_data FROM system_state WHERE key_name IN ('simulated_date', 'daily_financials_last_processed_date', 'cron_global_enabled', 'cron_enabled_daily_financials')"
     );
     
     const stateMap = {};
     stateRows.forEach(row => {
       stateMap[row.key_name] = row.value_data;
     });
+
+    const globalEnabled = stateMap['cron_global_enabled'] !== 'false';
+    const jobEnabled = stateMap['cron_enabled_daily_financials'] !== 'false';
+
+    if (!globalEnabled) {
+      console.log('[Cron] Skipping daily financials check: Schedulers are paused globally.');
+      return;
+    }
+    if (!jobEnabled) {
+      console.log('[Cron] Skipping daily financials check: daily_financials job scheduling is disabled.');
+      return;
+    }
 
     const realDate = new Date().toISOString().split('T')[0];
     let simulatedDate = stateMap['simulated_date'];
@@ -32,7 +44,8 @@ async function checkAndProcessDailyFinancials() {
 
     if (simulatedDate !== lastProcessedDate) {
       console.log(`[Cron] Simulated date has changed or not yet processed (${simulatedDate}). Running daily financials...`);
-      await processDailyFinancials();
+      const cronManager = require('./services/cronManager');
+      await cronManager.runJob('daily_financials', 'system');
     } else {
       console.log(`[Cron] Daily financials already processed for simulated date: ${simulatedDate}`);
     }

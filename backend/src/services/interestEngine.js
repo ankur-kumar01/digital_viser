@@ -1,13 +1,14 @@
 const { pool } = require('../db');
 const { addDays, logger } = require('../utils');
 
-async function processDailyFinancials() {
+async function processDailyFinancials(triggeredBy = 'system') {
   const mainConn = await pool.getConnection();
   let historyId = null;
   try {
     // Insert running log entry in cron_history
     const [histResult] = await mainConn.query(
-      "INSERT INTO cron_history (cron_name, status) VALUES ('daily_financials', 'running')"
+      "INSERT INTO cron_history (cron_name, status, details) VALUES ('daily_financials', 'running', ?)",
+      [JSON.stringify({ triggered_by: triggeredBy })]
     );
     historyId = histResult.insertId;
 
@@ -246,7 +247,8 @@ async function processDailyFinancials() {
     const detailsJson = JSON.stringify({
       processed_fdrs: processedFdrs,
       unlocked_funds: unlockedFunds,
-      simulated_date: currentDate
+      simulated_date: currentDate,
+      triggered_by: triggeredBy
     });
     await mainConn.query(
       "UPDATE cron_history SET status = 'success', completed_at = CURRENT_TIMESTAMP, details = ? WHERE id = ?",
