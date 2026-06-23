@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SpinWheel } from '../components/SpinWheel';
 import { globalConfigAPI } from '../api';
-import { Disc } from 'lucide-react';
 
 interface Props {
   user: any;
@@ -34,7 +33,7 @@ export const SpinWheelPage: React.FC<Props> = ({ user, refreshUser }) => {
 
   if (!enableSpinWheel) {
     return (
-      <div className="animate-fade-in" style={{ padding: '40px', textAlign: 'center' }}>
+      <div className="animate-fade-in" style={{ padding: '40px 16px', textAlign: 'center' }}>
         <h2 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '12px' }}>🎡 Daily Spin Wheel</h2>
         <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '24px', borderRadius: '16px', display: 'inline-block' }}>
           <p style={{ color: 'var(--accent-danger)', margin: 0, fontWeight: 600 }}>The Spin Wheel is currently disabled by the administrator.</p>
@@ -44,18 +43,8 @@ export const SpinWheelPage: React.FC<Props> = ({ user, refreshUser }) => {
   }
 
   return (
-    <div className="animate-fade-in" style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '20px', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', marginBottom: '16px' }}>
-          <Disc size={32} />
-        </div>
-        <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '8px' }}>🎡 Daily Spin Wheel</h2>
-        <p style={{ color: 'var(--text-secondary)' }}>Spin the wheel every day to win free gaming bonuses and build your streak!</p>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-        <SpinWheel onBonusAwarded={() => refreshUser()} isFullPage={true} />
-      </div>
+    <div className="animate-fade-in" style={{ padding: '16px', width: '100%', maxWidth: '100%' }}>
+      <SpinWheel onBonusAwarded={() => refreshUser()} isFullPage={true} />
     </div>
   );
 };
