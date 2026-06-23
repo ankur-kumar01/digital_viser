@@ -30,6 +30,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 // Admin Views
 import { AdminAuth } from './views/admin/AdminAuth';
 import { AdminDashboard } from './views/admin/AdminDashboard';
+import { AdminAnalytics } from './views/admin/AdminAnalytics';
 import { AdminUsers } from './views/admin/AdminUsers';
 import { AdminDepositRequests } from './views/admin/AdminDepositRequests';
 import { AdminWithdrawalRequests } from './views/admin/AdminWithdrawalRequests';
@@ -355,6 +356,7 @@ export const App: React.FC = () => {
         ) : (
           <>
             {currentView === 'admin-dashboard' && <AdminDashboard />}
+            {currentView === 'admin-analytics' && <AdminAnalytics />}
             {currentView === 'admin-users' && (
               <AdminUsers 
                 onNavigate={setCurrentView} 

@@ -417,3 +417,23 @@ export const adminCronAPI = {
   updateSetting: (key: string, value: boolean) => adminRequest('POST', '/admin/cron/settings', { key, value }),
 };
 
+// ─── Analytics & Monitoring API ───────────────────────────────────────────────
+function buildAnalyticsParams(period: string, from?: string, to?: string): string {
+  if (period === 'custom' && from && to) {
+    return `?from=${from}&to=${to}`;
+  }
+  return `?period=${period}`;
+}
+
+export const analyticsAPI = {
+  getOverview: (period: string, from?: string, to?: string) =>
+    adminRequest('GET', `/admin/analytics/overview${buildAnalyticsParams(period, from, to)}`),
+  getGames: (period: string, from?: string, to?: string) =>
+    adminRequest('GET', `/admin/analytics/games${buildAnalyticsParams(period, from, to)}`),
+  getFdrs: (period: string, from?: string, to?: string) =>
+    adminRequest('GET', `/admin/analytics/fdrs${buildAnalyticsParams(period, from, to)}`),
+  getUsers: (period: string, from?: string, to?: string) =>
+    adminRequest('GET', `/admin/analytics/users${buildAnalyticsParams(period, from, to)}`),
+  getTransactions: (period: string, from?: string, to?: string) =>
+    adminRequest('GET', `/admin/analytics/transactions${buildAnalyticsParams(period, from, to)}`),
+};

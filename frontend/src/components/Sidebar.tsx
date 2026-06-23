@@ -29,6 +29,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
 
   const adminMenuItems = [
     { id: 'admin-dashboard', name: 'Platform Stats', icon: <LayoutDashboard size={20} /> },
+    { id: 'admin-analytics', name: 'Analytics & Monitor', icon: <BarChart3 size={20} /> },
     { id: 'admin-users', name: 'Manage Users', icon: <Users size={20} /> },
     { id: 'admin-deposit-requests', name: 'Deposit Requests', icon: <Receipt size={20} /> },
     { id: 'admin-withdrawal-requests', name: 'Withdrawal Requests', icon: <Receipt size={20} /> },

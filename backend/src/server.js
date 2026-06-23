@@ -31,6 +31,7 @@ const activityRoutes = require('./routes/activity');
 const fantasyRoutes = require('./routes/fantasy');
 const supportRoutes = require('./routes/support');
 const adminSupportRoutes = require('./routes/adminSupport');
+const adminAnalyticsRoutes = require('./routes/adminAnalytics');
 
 // ISSUE-014 FIX: Hard fail if JWT_SECRET is missing — don't allow server to start broken
 if (!process.env.JWT_SECRET) {
@@ -282,6 +283,7 @@ app.use('/api/admin/yield-boosters', require('./routes/adminYieldBoosters'));
 app.use('/api/daily-tasks', require('./routes/dailyTasks'));
 app.use('/api/admin/daily-tasks', require('./routes/adminDailyTasks'));
 app.use('/api/admin/cron', require('./routes/adminCron'));
+app.use('/api/admin/analytics', adminAnalyticsRoutes);
 
 // Public Config Endpoint
 app.get('/api/config', async (req, res) => {
