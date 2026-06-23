@@ -112,15 +112,25 @@ router.post('/settings', async (req, res) => {
   }
 });
 
-// GET /api/admin/cron/history
 router.get('/history', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit || '100', 10);
+    const limit = parseInt(req.query.limit) || 20;
+    const page = parseInt(req.query.page) || 1;
+    const offset = (page - 1) * limit;
+
     const [history] = await pool.query(
-      'SELECT * FROM cron_history ORDER BY id DESC LIMIT ?',
-      [limit]
+      'SELECT * FROM cron_history ORDER BY id DESC LIMIT ? OFFSET ?',
+      [limit, offset]
     );
-    res.json({ history });
+    const [countRows] = await pool.query('SELECT COUNT(*) as total FROM cron_history');
+    const total = countRows[0].total;
+
+    res.json({ 
+      history, 
+      total, 
+      page, 
+      totalPages: Math.ceil(total / limit) 
+    });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch history: ' + err.message });
   }

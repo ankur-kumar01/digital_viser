@@ -12,6 +12,12 @@ export const AdminCron: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  // Pagination state for history
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyLimit, setHistoryLimit] = useState(20);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
+  const [historyTotalRecords, setHistoryTotalRecords] = useState(0);
+
   const fetchJobs = async () => {
     try {
       const res = await adminCronAPI.getJobs();
@@ -22,11 +28,13 @@ export const AdminCron: React.FC = () => {
     }
   };
 
-  const fetchHistory = async () => {
+  const fetchHistory = async (p = historyPage, l = historyLimit) => {
     setIsHistoryLoading(true);
     try {
-      const res = await adminCronAPI.getHistory(50); // Fetch last 50 runs
+      const res = await adminCronAPI.getHistory(p, l);
       setHistory(res.history || []);
+      setHistoryTotalPages(res.totalPages || 1);
+      setHistoryTotalRecords(res.total || 0);
     } catch (err: any) {
       console.error('Error fetching history:', err);
       setErrorMessage(err.message || 'Failed to fetch execution history.');
@@ -34,6 +42,10 @@ export const AdminCron: React.FC = () => {
       setIsHistoryLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchHistory(historyPage, historyLimit);
+  }, [historyPage, historyLimit]);
 
   const fetchSettings = async () => {
     try {
@@ -47,7 +59,7 @@ export const AdminCron: React.FC = () => {
   const loadAllData = async () => {
     setIsLoading(true);
     setErrorMessage('');
-    await Promise.all([fetchJobs(), fetchHistory(), fetchSettings()]);
+    await Promise.all([fetchJobs(), fetchSettings()]);
     setIsLoading(false);
   };
 
@@ -376,7 +388,8 @@ export const AdminCron: React.FC = () => {
                 No execution history recorded in `cron_history`.
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
+              <>
+                <div style={{ overflowX: 'auto' }}>
                 <table className="table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
@@ -501,6 +514,53 @@ export const AdminCron: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+              
+              {/* Pagination Controls */}
+              {historyTotalRecords > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', flexWrap: 'wrap', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      Showing {((historyPage - 1) * historyLimit) + 1} to {Math.min(historyPage * historyLimit, historyTotalRecords)} of {historyTotalRecords} entries
+                    </span>
+                    <select 
+                      value={historyLimit} 
+                      onChange={(e) => {
+                        setHistoryLimit(Number(e.target.value));
+                        setHistoryPage(1);
+                      }}
+                      className="input-field"
+                      style={{ padding: '4px 8px', width: 'auto', minHeight: 'auto', height: 'auto', background: 'var(--bg-tertiary)', border: '1px solid var(--border-glass)' }}
+                    >
+                      <option value={20}>20 per page</option>
+                      <option value={50}>50 per page</option>
+                      <option value={100}>100 per page</option>
+                    </select>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      className="btn" 
+                      style={{ padding: '6px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-glass)', opacity: historyPage === 1 ? 0.5 : 1 }}
+                      disabled={historyPage === 1}
+                      onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                    >
+                      Previous
+                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '0 8px', fontSize: '0.9rem', fontWeight: 600 }}>
+                      Page {historyPage} of {historyTotalPages}
+                    </div>
+                    <button 
+                      className="btn" 
+                      style={{ padding: '6px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-glass)', opacity: historyPage === historyTotalPages ? 0.5 : 1 }}
+                      disabled={historyPage === historyTotalPages}
+                      onClick={() => setHistoryPage(p => Math.min(historyTotalPages, p + 1))}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+              </>
             )}
           </div>
 
