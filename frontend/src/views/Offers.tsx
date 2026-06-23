@@ -224,10 +224,15 @@ export const Offers: React.FC = () => {
 
       {/* Tabs */}
       <div 
+        className="hide-scrollbar"
         style={{ 
           display: 'flex', 
           borderBottom: '1px solid var(--border-glass)',
-          gap: '24px'
+          gap: '24px',
+          overflowX: 'auto',
+          whiteSpace: 'nowrap',
+          paddingBottom: '8px',
+          WebkitOverflowScrolling: 'touch'
         }}
       >
         {[
@@ -302,7 +307,7 @@ export const Offers: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '20px' }}>
                   {claimableOffers.map((offer) => (
                     <div 
                       key={offer.id} 
@@ -423,7 +428,7 @@ export const Offers: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '20px' }}>
                   {activeBoosters.map((booster) => (
                     <div 
                       key={booster.user_booster_id} 
@@ -613,7 +618,7 @@ export const Offers: React.FC = () => {
                   No tasks configured for today. Check back later!
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '20px' }}>
                   {dailyTasks.map((task) => (
                     <div 
                       key={task.id} 
