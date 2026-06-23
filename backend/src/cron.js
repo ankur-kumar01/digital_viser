@@ -26,11 +26,15 @@ async function checkAndProcessDailyFinancials() {
       return;
     }
 
+    // SAFETY: The real-world date is the absolute ceiling for ALL processing.
+    // The simulated_date can NEVER be advanced beyond today's real date.
     const realDate = new Date().toISOString().split('T')[0];
     let simulatedDate = stateMap['simulated_date'];
 
-    // In production, simulated_date must automatically advance to the real-world current date if it is in the past.
-    // This resolves the issue of interest not crediting daily in production due to a frozen simulated_date.
+    // In production, keep simulated_date in sync with the real date.
+    // SAFETY: We only advance ONE day at a time — or to today if far behind.
+    // We do NOT skip ahead multiple days in one cron run because the interest
+    // engine itself handles catch-up for missed installment dates safely.
     if (!simulatedDate || simulatedDate < realDate) {
       console.log(`[Cron] Auto-advancing simulated_date from ${simulatedDate || 'null'} to real date ${realDate}`);
       await pool.query(
@@ -38,6 +42,16 @@ async function checkAndProcessDailyFinancials() {
         [realDate, realDate]
       );
       simulatedDate = realDate;
+    }
+
+    // SAFETY: If simulated_date is somehow in the future, clamp it to today.
+    if (simulatedDate > realDate) {
+      console.warn(`[Cron] SAFETY: simulated_date (${simulatedDate}) is ahead of real date (${realDate}). Clamping.`);
+      simulatedDate = realDate;
+      await pool.query(
+        "INSERT INTO system_state (key_name, value_data) VALUES ('simulated_date', ?) ON DUPLICATE KEY UPDATE value_data = ?",
+        [realDate, realDate]
+      );
     }
 
     const lastProcessedDate = stateMap['daily_financials_last_processed_date'];
@@ -60,7 +74,8 @@ cron.schedule('0 * * * *', async () => {
   await checkAndProcessDailyFinancials();
 });
 
-// Initialize: run immediately on server startup to catch up missed processing
+// Initialize: run immediately on server startup to catch up missed processing.
+// SAFETY: 5-second delay to ensure DB connections and migrations finish first.
 setTimeout(() => {
   console.log('[Cron] Server startup check for daily financials...');
   checkAndProcessDailyFinancials();

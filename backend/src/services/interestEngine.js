@@ -5,18 +5,28 @@ async function processDailyFinancials(triggeredBy = 'system') {
   const mainConn = await pool.getConnection();
   let historyId = null;
   try {
-    // Insert running log entry in cron_history
-    const [histResult] = await mainConn.query(
-      "INSERT INTO cron_history (cron_name, status, details) VALUES ('daily_financials', 'running', ?)",
-      [JSON.stringify({ triggered_by: triggeredBy })]
-    );
-    historyId = histResult.insertId;
+    // --- SAFETY GUARD: Never process beyond today's REAL-WORLD date ---
+    const realWorldToday = new Date().toISOString().split('T')[0];
 
     // Retrieve simulated date
     const [stateRows] = await mainConn.query(
       "SELECT value_data FROM system_state WHERE key_name = 'simulated_date'"
     );
-    const currentDate = stateRows.length > 0 ? stateRows[0].value_data : new Date().toISOString().split('T')[0];
+    let currentDate = stateRows.length > 0 ? stateRows[0].value_data : realWorldToday;
+
+    // HARD SAFETY CEILING: simulated_date can NEVER exceed today's real-world date.
+    // This is the primary guard that prevents future-date interest from ever being credited.
+    if (currentDate > realWorldToday) {
+      logger.warn(`[InterestEngine] SAFETY BLOCK: simulated_date (${currentDate}) is in the future vs real date (${realWorldToday}). Clamping to today.`);
+      currentDate = realWorldToday;
+    }
+
+    // Insert running log entry in cron_history
+    const [histResult] = await mainConn.query(
+      "INSERT INTO cron_history (cron_name, status, details) VALUES ('daily_financials', 'running', ?)",
+      [JSON.stringify({ triggered_by: triggeredBy, processing_date: currentDate })]
+    );
+    historyId = histResult.insertId;
 
     // Auto-expire yield boosters that have expired relative to currentDate
     await mainConn.query(
@@ -73,8 +83,16 @@ async function processDailyFinancials(triggeredBy = 'system') {
         const interestPercent = parseFloat(fdr.interest_percent);
         let installmentProcessed = false;
 
-        // Process all pending installments up to the current date
-        while (nextInstDate && nextInstDate <= currentDate && nextInstDate <= endDate) {
+        // Process pending installments.
+        // SAFETY: nextInstDate must be:
+        //   1. <= currentDate (the processed simulated/real date)
+        //   2. <= endDate (must not exceed FDR maturity)
+        //   3. <= realWorldToday (HARD WALL: never credit future-date interest under any circumstance)
+        const installmentCeiling = currentDate < endDate ? currentDate : endDate;
+        // Apply the real-world ceiling as an additional hard guard
+        const hardCeiling = installmentCeiling < realWorldToday ? installmentCeiling : realWorldToday;
+
+        while (nextInstDate && nextInstDate <= hardCeiling) {
           // Query active yield boosters for user on this specific installment date
           const [boosterRows] = await conn.query(
             `SELECT b.yield_boost_percent, b.unlock_game, b.unlock_value, uyb.activated_at
@@ -127,25 +145,31 @@ async function processDailyFinancials(triggeredBy = 'system') {
           );
         }
 
-        // Handle maturity - only process if status is active
-        if (currentDate >= endDate) {
-          await conn.query("UPDATE fdrs SET status = 'completed' WHERE id = ? AND status = 'active'", [fdr.id]);
-          await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [fdrAmount, userId]);
-          await conn.query(
-            'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
-            [userId, 'fdr_maturity', fdrAmount, `FDR #${fdr.id} matured - principal returned`]
-          );
+        // Handle maturity - ONLY mark completed if real-world today >= endDate.
+        // This prevents marking FDRs as complete before their actual maturity date in production.
+        if (realWorldToday >= endDate && currentDate >= endDate) {
+          // Double-check it's still active (avoid double-processing in race conditions)
+          const [checkFdr] = await conn.query("SELECT status FROM fdrs WHERE id = ? FOR UPDATE", [fdr.id]);
+          if (checkFdr.length > 0 && checkFdr[0].status === 'active') {
+            await conn.query("UPDATE fdrs SET status = 'completed' WHERE id = ? AND status = 'active'", [fdr.id]);
+            await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [fdrAmount, userId]);
+            await conn.query(
+              'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+              [userId, 'fdr_maturity', fdrAmount, `FDR #${fdr.id} matured - principal returned`]
+            );
 
-          // Unlock linked bonus funds if any
-          const [lockedBonuses] = await conn.query("SELECT * FROM locked_funds WHERE linked_entity_type = 'fdr' AND linked_entity_id = ? AND status = 'locked'", [fdr.id]);
-          for (const locked of lockedBonuses) {
-            await conn.query("UPDATE locked_funds SET status = 'unlocked', unlocked_at = NOW() WHERE id = ?", [locked.id]);
-            await conn.query("UPDATE users SET locked_bonus_balance = locked_bonus_balance - ?, bonus_balance = bonus_balance + ? WHERE id = ?", [parseFloat(locked.amount), parseFloat(locked.amount), locked.user_id]);
-            await conn.query("INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)", [locked.user_id, 'bonus_unlocked', locked.amount, `FDR Bonus Unlocked from FDR #${fdr.id}`]);
+            // Unlock linked bonus funds if any
+            const [lockedBonuses] = await conn.query("SELECT * FROM locked_funds WHERE linked_entity_type = 'fdr' AND linked_entity_id = ? AND status = 'locked'", [fdr.id]);
+            for (const locked of lockedBonuses) {
+              await conn.query("UPDATE locked_funds SET status = 'unlocked', unlocked_at = NOW() WHERE id = ?", [locked.id]);
+              await conn.query("UPDATE users SET locked_bonus_balance = locked_bonus_balance - ?, bonus_balance = bonus_balance + ? WHERE id = ?", [parseFloat(locked.amount), parseFloat(locked.amount), locked.user_id]);
+              await conn.query("INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)", [locked.user_id, 'bonus_unlocked', locked.amount, `FDR Bonus Unlocked from FDR #${fdr.id}`]);
+            }
           }
         }
 
         // Process Referral Commission Daily
+        // SAFETY: Only process referral commission dates up to the real-world today ceiling
         if (monthlyReferralPercent > 0) {
           let lastRefCommDate = fdr.last_referral_commission_date
             ? (typeof fdr.last_referral_commission_date === 'string'
@@ -161,7 +185,10 @@ async function processDailyFinancials(triggeredBy = 'system') {
           let refInstDate = addDays(lastRefCommDate, 1);
           let refProcessed = false;
 
-          while (refInstDate <= currentDate && refInstDate <= endDate) {
+          // SAFETY: referral commission ceiling = min(currentDate, endDate, realWorldToday)
+          const refCeiling = [currentDate, endDate, realWorldToday].sort()[0];
+
+          while (refInstDate <= refCeiling) {
             if (invitedBy) {
               const dailyCommissionPercent = monthlyReferralPercent / 30;
               const dailyCommissionAmount = (fdrAmount * dailyCommissionPercent) / 100;
@@ -208,9 +235,10 @@ async function processDailyFinancials(triggeredBy = 'system') {
     const lockConn = await pool.getConnection();
     try {
       await lockConn.beginTransaction();
+      // SAFETY: Only unlock funds whose unlock_date has passed in the REAL world
       const [timeLockedFunds] = await lockConn.query(
         "SELECT * FROM locked_funds WHERE status = 'locked' AND unlock_date IS NOT NULL AND unlock_date <= ?",
-        [currentDate]
+        [realWorldToday]
       );
 
       for (const locked of timeLockedFunds) {
@@ -248,6 +276,7 @@ async function processDailyFinancials(triggeredBy = 'system') {
       processed_fdrs: processedFdrs,
       unlocked_funds: unlockedFunds,
       simulated_date: currentDate,
+      real_world_date: realWorldToday,
       triggered_by: triggeredBy
     });
     await mainConn.query(
@@ -255,7 +284,7 @@ async function processDailyFinancials(triggeredBy = 'system') {
       [detailsJson, historyId]
     );
 
-    logger.info(`[Cron] Processed ${processedFdrs} active FDRs and unlocked ${unlockedFunds} time-locked funds for ${currentDate}.`);
+    logger.info(`[Cron] Processed ${processedFdrs} active FDRs and unlocked ${unlockedFunds} time-locked funds for ${currentDate} (real date: ${realWorldToday}).`);
   } catch (err) {
     if (historyId) {
       try {
