@@ -11,10 +11,10 @@
   --border-input: #d1d5db;
   --border-input-focus: #059669;
 
-  --accent-primary: #b8860b;       /* Dark Golden Rod */
-  --accent-primary-hover: #996f09;
-  --accent-primary-glow: rgba(184, 134, 11, 0.15);
-  --accent-primary-light: rgba(184, 134, 11, 0.08);
+  --accent-primary: #f59e0b;       /* Activate Boost Orange */
+  --accent-primary-hover: #d97706;
+  --accent-primary-glow: rgba(245, 158, 11, 0.15);
+  --accent-primary-light: rgba(245, 158, 11, 0.08);
 
   --accent-secondary: #059669;     /* Emerald Green */
   --accent-secondary-hover: #047857;
@@ -65,10 +65,10 @@
     --border-input: #2a2d38;
     --border-input-focus: #10b981;
 
-    --accent-primary: #f0c040;       /* Bright Gold */
-    --accent-primary-hover: #daa520;
-    --accent-primary-glow: rgba(240, 192, 64, 0.15);
-    --accent-primary-light: rgba(240, 192, 64, 0.08);
+    --accent-primary: #f59e0b;       /* Activate Boost Orange */
+    --accent-primary-hover: #d97706;
+    --accent-primary-glow: rgba(245, 158, 11, 0.15);
+    --accent-primary-light: rgba(245, 158, 11, 0.08);
 
     --accent-secondary: #10b981;
     --accent-secondary-hover: #059669;

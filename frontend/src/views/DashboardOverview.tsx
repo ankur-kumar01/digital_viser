@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { walletAPI, fdrAPI, gamesAPI, globalConfigAPI } from '../api';
+import { walletAPI, fdrAPI, gamesAPI, globalConfigAPI, yieldBoosterAPI, dailyTasksAPI } from '../api';
 import { Award, ArrowRight, ArrowUpRight, ArrowDownLeft, Gift, Users, PlusCircle, Gamepad2, Copy, MessageCircle } from 'lucide-react';
 import { PortfolioHero } from '../components/PortfolioHero';
 import { AviatorChatWidget } from '../components/AviatorChatWidget';
@@ -175,6 +175,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const [copied, setCopied] = useState(false);
   const [referralPercent, setReferralPercent] = useState(10);
   const [fdrReferralPercent, setFdrReferralPercent] = useState(5);
+  const [claimableOffers, setClaimableOffers] = useState<any[]>([]);
+  const [dailyTasks, setDailyTasks] = useState<any[]>([]);
+  const [claimingId, setClaimingId] = useState<number | null>(null);
+  const [isClaimingTask, setIsClaimingTask] = useState<number | null>(null);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
 
   const loadData = async () => {
     try {
@@ -219,6 +224,23 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       } catch (e) {
         console.error('Failed to load active offers', e);
       }
+      
+      // Load claimable yield boosters
+      try {
+        const boosterRes = await yieldBoosterAPI.getUserBoosters();
+        setClaimableOffers(boosterRes.claimable || []);
+      } catch (e) {
+        console.error('Failed to load yield boosters', e);
+      }
+      
+      // Load daily tasks
+      try {
+        const taskRes = await dailyTasksAPI.getTasks();
+        setDailyTasks(taskRes.tasks || []);
+      } catch (e) {
+        console.error('Failed to load daily tasks', e);
+      }
+
       // Load big wins
       try {
         const bw = await gamesAPI.getBigWins();
@@ -242,6 +264,45 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   useEffect(() => {
     loadData();
   }, [user]);
+
+  const handleClaimBooster = async (id: number) => {
+    setClaimingId(id);
+    try {
+      await yieldBoosterAPI.claimBooster(id);
+      loadData();
+      refreshUser();
+    } catch (err: any) {
+      alert(err.message || 'Failed to claim yield booster.');
+    } finally {
+      setClaimingId(null);
+    }
+  };
+
+  const handleCheckIn = async () => {
+    setIsCheckingIn(true);
+    try {
+      await dailyTasksAPI.checkIn();
+      loadData();
+      refreshUser();
+    } catch (err: any) {
+      alert(err.message || 'Check-in failed.');
+    } finally {
+      setIsCheckingIn(false);
+    }
+  };
+
+  const handleClaimTask = async (id: number) => {
+    setIsClaimingTask(id);
+    try {
+      await dailyTasksAPI.claimTask(id);
+      loadData();
+      refreshUser();
+    } catch (err: any) {
+      alert(err.message || 'Failed to claim task reward.');
+    } finally {
+      setIsClaimingTask(null);
+    }
+  };
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -279,7 +340,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             flex: '1 1 auto', 
             minWidth: '140px', 
             background: 'var(--accent-primary)', 
-            color: '#fff' 
+            color: '#000',
+            fontWeight: 700 
           }}
           onClick={() => onNavigate('withdraw')}
         >
@@ -401,10 +463,91 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </div>
           )}
 
+          {/* Daily Tasks Section */}
+          {dailyTasks.length > 0 && (
+            <div style={{ marginTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  Daily Tasks <span style={{ fontSize: '0.75rem', background: 'var(--accent-primary)', color: '#fff', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>Earn Rewards</span>
+                </h4>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => onNavigate('offers')}>View All</span>
+              </div>
+              
+              <div className="hide-scrollbar" style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', scrollSnapType: 'x mandatory' }}>
+                {dailyTasks.map(task => (
+                  <div key={task.id} className="glass-card" style={{ flex: '0 0 auto', width: '260px', padding: '14px', scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid var(--border-glass)', borderRadius: '12px', background: task.is_claimed ? 'rgba(255,255,255,0.02)' : 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.01) 100%)', borderLeft: '3px solid #10b981', opacity: task.is_claimed ? 0.6 : 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <h5 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{task.title}</h5>
+                      <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                        +₹{parseFloat(task.reward_amount)}
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.3, height: '34px', overflow: 'hidden' }}>{task.description}</p>
+                    
+                    {task.task_type !== 'check_in' && (
+                      <div style={{ width: '100%', background: 'rgba(16, 185, 129, 0.1)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${Math.min(100, (task.current_count / task.target_count) * 100)}%`, background: '#10b981' }} />
+                      </div>
+                    )}
+                    
+                    <div style={{ marginTop: 'auto', paddingTop: '8px', borderTop: '1px dashed rgba(16, 185, 129, 0.2)' }}>
+                      {task.is_claimed ? (
+                        <button className="btn" style={{ width: '100%', padding: '6px', fontSize: '0.8rem', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--text-muted)' }} disabled>Claimed</button>
+                      ) : task.task_type === 'check_in' ? (
+                        <button className="btn" style={{ width: '100%', padding: '6px', fontSize: '0.8rem', background: '#10b981', color: '#fff', fontWeight: 700 }} onClick={handleCheckIn} disabled={isCheckingIn}>{isCheckingIn ? 'Wait...' : 'Check In Now'}</button>
+                      ) : task.current_count >= task.target_count ? (
+                        <button className="btn" style={{ width: '100%', padding: '6px', fontSize: '0.8rem', background: '#10b981', color: '#fff', fontWeight: 700, animation: 'pulse 2s infinite' }} onClick={() => handleClaimTask(task.id)} disabled={isClaimingTask === task.id}>{isClaimingTask === task.id ? 'Wait...' : 'Claim Reward'}</button>
+                      ) : (
+                        <button className="btn" style={{ width: '100%', padding: '6px', fontSize: '0.8rem', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: 700, border: '1px solid rgba(16, 185, 129, 0.3)' }} onClick={() => onNavigate('games')}>Play to Complete</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Yield Booster Offers Section */}
+          {claimableOffers.length > 0 && (
+            <div style={{ marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  Yield Boosters <span style={{ fontSize: '0.75rem', background: 'var(--accent-secondary)', color: '#000', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>Hot</span>
+                </h4>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => onNavigate('offers')}>View All</span>
+              </div>
+              
+              <div className="hide-scrollbar" style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', scrollSnapType: 'x mandatory' }}>
+                {claimableOffers.map(offer => (
+                  <div key={offer.id} className="glass-card" style={{ flex: '0 0 auto', width: '260px', padding: '14px', scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid var(--border-glass)', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(251, 191, 36, 0.01) 100%)', borderLeft: '3px solid #f59e0b' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <h5 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{offer.name}</h5>
+                      <span style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#f59e0b', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                        +{parseFloat(offer.yield_boost_percent)}%
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.3, height: '34px', overflow: 'hidden' }}>{offer.description}</p>
+                    
+                    <div style={{ marginTop: 'auto', paddingTop: '8px', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
+                      <button 
+                        className="btn" 
+                        style={{ width: '100%', padding: '6px', fontSize: '0.8rem', background: '#f59e0b', color: '#000', fontWeight: 700 }} 
+                        onClick={() => handleClaimBooster(offer.id)}
+                        disabled={claimingId === offer.id}
+                      >
+                        {claimingId === offer.id ? 'Activating...' : 'Activate Boost'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Referral Offer Banner */}
           <div className="glass-card glow-card promo-offer-card">
             <div className="promo-offer-card-left">
-              <div className="emoji" style={{ fontSize: '3rem', flexShrink: 0 }}>🎁</div>
+              <div className="emoji" style={{ fontSize: '3rem', flexShrink: 0 }}>💸</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
                   <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
@@ -437,7 +580,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }}
-                style={{ background: 'var(--accent-primary)', color: '#fff' }}
+                style={{ background: '#f59e0b', color: '#000', fontWeight: 700 }}
               >
                 <Copy size={16} /> {copied ? 'Copied!' : 'Copy Link'}
               </button>

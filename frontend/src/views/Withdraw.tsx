@@ -361,8 +361,8 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
 
                 <button
                   type="submit"
-                  className="btn btn-primary"
-                  style={{ width: '100%', padding: '16px', fontSize: '1.1rem', marginTop: '10px' }}
+                  className="btn"
+                  style={{ width: '100%', padding: '16px', fontSize: '1.1rem', marginTop: '10px', background: 'var(--accent-primary)', color: '#000', fontWeight: 700 }}
                   disabled={isLoading || !amount || parseFloat(amount) <= 0 || (user && parseFloat(amount) > parseFloat(((user as any)[sourceWallet === 'main' ? 'balance' : `${sourceWallet}_balance`] || '0'))) || netPayout <= 0}
                 >
                   {isLoading ? 'Processing Request...' : `Withdraw ${amount ? `₹${parseFloat(amount).toLocaleString()}` : ''}`}
