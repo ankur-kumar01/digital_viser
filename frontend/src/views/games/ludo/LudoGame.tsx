@@ -439,8 +439,6 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
     const interval = setInterval(() => {
       setMatchingTimeLeft(prev => {
         if (prev <= 1) {
-          clearInterval(interval);
-          handleMatchmakingTimeout();
           return 0;
         }
         return prev - 1;
@@ -448,34 +446,26 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isMatching, matchingRoomId, matchingWager]);
+  }, [isMatching]);
+
+  // Handle matchmaking timeout when timer reaches 0
+  useEffect(() => {
+    if (isMatching && matchingTimeLeft === 0) {
+      handleMatchmakingTimeout();
+    }
+  }, [isMatching, matchingTimeLeft]);
 
   const handleMatchmakingTimeout = () => {
     setIsMatching(false);
     
-    // Cancel search room we created on server
-    if (matchingRoomId !== null) {
-      socketRef.current?.emit('ludo:cancel_room', { roomId: matchingRoomId }, (res: any) => {
-        setMatchingRoomId(null);
-        
-        // Launch bot match
-        showToast('Match found! Starting game...');
-        socketRef.current?.emit('ludo:play_bot', { entryFee: matchingWager, tournamentId: selectedTournament }, (botRes: any) => {
-          if (botRes.error) {
-            showToast(botRes.error);
-          }
-          refreshUser();
-        });
-      });
-    } else {
-      showToast('Match found! Starting game...');
-      socketRef.current?.emit('ludo:play_bot', { entryFee: matchingWager, tournamentId: selectedTournament }, (botRes: any) => {
-        if (botRes.error) {
-          showToast(botRes.error);
-        }
-        refreshUser();
-      });
-    }
+    showToast('Match found! Starting game...');
+    socketRef.current?.emit('ludo:play_bot', { entryFee: matchingWager, tournamentId: selectedTournament, roomId: matchingRoomId }, (botRes: any) => {
+      setMatchingRoomId(null);
+      if (botRes.error) {
+        showToast(botRes.error);
+      }
+      refreshUser();
+    });
   };
 
   // Actions

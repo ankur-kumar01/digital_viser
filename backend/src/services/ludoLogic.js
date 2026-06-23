@@ -226,8 +226,9 @@ class LudoLogic {
     socket.on('ludo:play_bot', async (data, callback) => {
       const entryFee = parseFloat(data.entryFee);
       const tournamentId = data.tournamentId || null;
+      const roomId = data.roomId || null;
       try {
-        const result = await this.playWithBot(userId, entryFee, socket, tournamentId);
+        const result = await this.playWithBot(userId, entryFee, socket, tournamentId, roomId);
         if (typeof callback === 'function') callback({ success: true, room: result });
       } catch (err) {
         if (typeof callback === 'function') callback({ error: err.message });
@@ -466,7 +467,7 @@ class LudoLogic {
     }
   }
 
-  async playWithBot(hostId, entryFee, socket, tournamentId = null) {
+  async playWithBot(hostId, entryFee, socket, tournamentId = null, existingRoomId = null) {
     const bot = await this._getActiveBot();
     if (!bot) throw new Error('No active bot available. Please contact admin.');
 
@@ -476,25 +477,9 @@ class LudoLogic {
     try {
       await conn.beginTransaction();
 
-      // Check balance
-      const [userRows] = await conn.query('SELECT balance, gaming_bonus_balance FROM users WHERE id = ? FOR UPDATE', [hostId]);
-      if (userRows.length === 0) throw new Error('User not found');
-
-      const mainBal = parseFloat(userRows[0].balance) || 0;
-      const bonusBal = parseFloat(userRows[0].gaming_bonus_balance) || 0;
-      const totalBal = Math.max(mainBal, bonusBal);
-
-      if (totalBal < entryFee) {
-        throw new Error('Insufficient balance to join room');
-      }
-
-      // Deduct entry fee
-      const walletField = bonusBal >= entryFee ? 'gaming_bonus_balance' : 'balance';
-      await conn.query(`UPDATE users SET ${walletField} = ${walletField} - ? WHERE id = ?`, [entryFee, hostId]);
-      await conn.query(
-        'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
-        [hostId, 'game_bet', -entryFee, `Ludo Entry Fee (${walletField === 'gaming_bonus_balance' ? 'Bonus' : 'Main'})`]
-      );
+      let roomId = existingRoomId;
+      let hostName = 'Player 1';
+      let walletField = 'balance';
 
       // Setup board state
       const initialBoard = {
@@ -509,15 +494,60 @@ class LudoLogic {
 
       const challengerId = bot.userId;
       const challengerName = bot.name;
-      const [hostRows] = await conn.query('SELECT name FROM users WHERE id = ?', [hostId]);
-      const hostName = hostRows[0]?.name || 'Player 1';
 
-      const [result] = await conn.query(
-        'INSERT INTO ludo_rooms (entry_fee, host_id, challenger_id, board_state, status, tournament_id) VALUES (?, ?, ?, ?, "playing", ?)',
-        [entryFee, hostId, challengerId, JSON.stringify(initialBoard), tournamentId]
-      );
+      let isRoomReused = false;
 
-      const roomId = result.insertId;
+      if (roomId) {
+        // Verify the room exists, belongs to host, is waiting, and matches the entry fee
+        const [rooms] = await conn.query(
+          'SELECT * FROM ludo_rooms WHERE id = ? AND host_id = ? AND status = "waiting" AND entry_fee = ? FOR UPDATE',
+          [roomId, hostId, entryFee]
+        );
+        if (rooms.length > 0) {
+          isRoomReused = true;
+          walletField = rooms[0].host_wallet_used || 'balance';
+          
+          const [hostRows] = await conn.query('SELECT name FROM users WHERE id = ?', [hostId]);
+          hostName = hostRows[0]?.name || 'Player 1';
+
+          // Just update challenger and status to playing
+          await conn.query(
+            'UPDATE ludo_rooms SET challenger_id = ?, status = "playing", board_state = ?, challenger_wallet_used = ? WHERE id = ?',
+            [challengerId, JSON.stringify(initialBoard), walletField, roomId]
+          );
+        }
+      }
+
+      if (!isRoomReused) {
+        // Fallback: Check balance and create a new room
+        const [userRows] = await conn.query('SELECT balance, gaming_bonus_balance FROM users WHERE id = ? FOR UPDATE', [hostId]);
+        if (userRows.length === 0) throw new Error('User not found');
+
+        const mainBal = parseFloat(userRows[0].balance) || 0;
+        const bonusBal = parseFloat(userRows[0].gaming_bonus_balance) || 0;
+        const totalBal = Math.max(mainBal, bonusBal);
+
+        if (totalBal < entryFee) {
+          throw new Error('Insufficient balance to join room');
+        }
+
+        // Deduct entry fee
+        walletField = bonusBal >= entryFee ? 'gaming_bonus_balance' : 'balance';
+        await conn.query(`UPDATE users SET ${walletField} = ${walletField} - ? WHERE id = ?`, [entryFee, hostId]);
+        await conn.query(
+          'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+          [hostId, 'game_bet', -entryFee, `Ludo Entry Fee (${walletField === 'gaming_bonus_balance' ? 'Bonus' : 'Main'})`]
+        );
+
+        const [hostRows] = await conn.query('SELECT name FROM users WHERE id = ?', [hostId]);
+        hostName = hostRows[0]?.name || 'Player 1';
+
+        const [result] = await conn.query(
+          'INSERT INTO ludo_rooms (entry_fee, host_id, challenger_id, board_state, status, tournament_id, host_wallet_used, challenger_wallet_used) VALUES (?, ?, ?, ?, "playing", ?, ?, ?)',
+          [entryFee, hostId, challengerId, JSON.stringify(initialBoard), tournamentId, walletField, walletField]
+        );
+        roomId = result.insertId;
+      }
 
       await conn.commit();
 
