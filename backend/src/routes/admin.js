@@ -1674,6 +1674,13 @@ router.get('/settings', adminAuth, async (req, res) => {
     const [rows] = await pool.query('SELECT setting_key, setting_value FROM system_settings');
     const settings = {};
     rows.forEach(r => settings[r.setting_key] = r.setting_value);
+    
+    // Fetch UPI ID from system_state
+    const [upiRows] = await pool.query("SELECT value_data FROM system_state WHERE key_name = 'admin_upi_id'");
+    if (upiRows.length > 0) {
+      settings.admin_upi_id = upiRows[0].value_data;
+    }
+    
     res.json(settings);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch settings' });
