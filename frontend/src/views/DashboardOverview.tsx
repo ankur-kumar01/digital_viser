@@ -368,13 +368,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <Gamepad2 size={20} color="var(--accent-primary)" />
             Gaming Zone
           </h3>
-          <button 
-            className="btn btn-text" 
-            style={{ padding: '4px 8px', fontSize: '0.85rem' }}
-            onClick={() => onNavigate('games')}
-          >
-            View All <ArrowRight size={14} />
-          </button>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => onNavigate('games')}>View All</span>
         </div>
         
         <div 
