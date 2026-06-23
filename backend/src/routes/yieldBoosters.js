@@ -20,7 +20,8 @@ router.get('/', async (req, res) => {
     // Fetch user's claimed boosters
     const [claimedRows] = await pool.query(
       `SELECT uyb.id as user_booster_id, uyb.booster_id, uyb.status, uyb.activated_at, uyb.expires_at,
-              b.name, b.description, b.yield_boost_percent, b.duration_days, b.target_type
+              b.name, b.description, b.yield_boost_percent, b.duration_days, b.target_type,
+              b.unlock_game, b.unlock_value
        FROM user_yield_boosters uyb
        JOIN fdr_yield_boosters b ON uyb.booster_id = b.id
        WHERE uyb.user_id = ?
@@ -31,15 +32,38 @@ router.get('/', async (req, res) => {
     const active = [];
     const completed = [];
 
-    claimedRows.forEach(row => {
+    const { getGameplayCount } = require('../services/audienceResolver');
+
+    for (const row of claimedRows) {
       // booster is active if status is 'active' and expires_at is >= simulatedDate
-      const expiresDateStr = row.expires_at.split(' ')[0] || new Date(row.expires_at).toISOString().split('T')[0];
-      if (row.status === 'active' && expiresDateStr >= simulatedDate) {
-        active.push(row);
-      } else {
-        completed.push(row);
+      const expiresDateStr = row.expires_at instanceof Date 
+        ? row.expires_at.toISOString().split('T')[0]
+        : (typeof row.expires_at === 'string' ? row.expires_at.split(' ')[0] : new Date(row.expires_at).toISOString().split('T')[0]);
+      
+      const activatedDateStr = row.activated_at instanceof Date
+        ? row.activated_at.toISOString().split('T')[0]
+        : (typeof row.activated_at === 'string' ? row.activated_at.split(' ')[0] : new Date(row.activated_at).toISOString().split('T')[0]);
+
+      // Calculate current plays progress
+      let currentPlays = 0;
+      let isUnlocked = true;
+      if (row.unlock_value > 0) {
+        currentPlays = await getGameplayCount(userId, row.unlock_game, activatedDateStr, simulatedDate);
+        isUnlocked = currentPlays >= row.unlock_value;
       }
-    });
+
+      const rowWithProgress = {
+        ...row,
+        current_plays: currentPlays,
+        is_unlocked: isUnlocked
+      };
+
+      if (row.status === 'active' && expiresDateStr >= simulatedDate) {
+        active.push(rowWithProgress);
+      } else {
+        completed.push(rowWithProgress);
+      }
+    }
 
     // Fetch all active booster configs
     const [boosterConfigs] = await pool.query(

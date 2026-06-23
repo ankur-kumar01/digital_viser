@@ -69,7 +69,7 @@ async function processDailyFinancials() {
         while (nextInstDate && nextInstDate <= currentDate && nextInstDate <= endDate) {
           // Query active yield boosters for user on this specific installment date
           const [boosterRows] = await conn.query(
-            `SELECT SUM(b.yield_boost_percent) as total_boost
+            `SELECT b.yield_boost_percent, b.unlock_game, b.unlock_value, uyb.activated_at
              FROM user_yield_boosters uyb
              JOIN fdr_yield_boosters b ON uyb.booster_id = b.id
              WHERE uyb.user_id = ?
@@ -77,7 +77,24 @@ async function processDailyFinancials() {
                AND DATE(uyb.expires_at) >= DATE(?)`,
             [userId, nextInstDate, nextInstDate]
           );
-          const totalBoost = boosterRows[0]?.total_boost ? parseFloat(boosterRows[0].total_boost) : 0.0;
+          
+          const { getGameplayCount } = require('./audienceResolver');
+          let totalBoost = 0.0;
+
+          for (const booster of boosterRows) {
+            let isUnlocked = true;
+            if (booster.unlock_value > 0) {
+              const activatedDateStr = booster.activated_at instanceof Date
+                ? booster.activated_at.toISOString().split('T')[0]
+                : (typeof booster.activated_at === 'string' ? booster.activated_at.split(' ')[0] : new Date(booster.activated_at).toISOString().split('T')[0]);
+              
+              const playsCount = await getGameplayCount(userId, booster.unlock_game, activatedDateStr, nextInstDate);
+              isUnlocked = playsCount >= booster.unlock_value;
+            }
+            if (isUnlocked) {
+              totalBoost += parseFloat(booster.yield_boost_percent);
+            }
+          }
           const boostedRate = interestPercent + totalBoost;
           const interest = fdrAmount * boostedRate / 100;
 

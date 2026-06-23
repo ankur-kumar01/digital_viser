@@ -151,7 +151,10 @@ router.get('/my-fdrs', async (req, res) => {
       [userId]
     );
 
-    const result = fdrs.map((fdr) => {
+    const { getGameplayCount } = require('../services/audienceResolver');
+    const result = [];
+
+    for (const fdr of fdrs) {
       const startMs = new Date(fdr.start_date + 'T00:00:00').getTime();
       const endMs = new Date(fdr.end_date + 'T00:00:00').getTime();
       const currentMs = new Date(simulatedDate + 'T00:00:00').getTime();
@@ -166,14 +169,56 @@ router.get('/my-fdrs', async (req, res) => {
         progress_percent = 100;
       }
 
-      return {
+      // Query active yield boosters for user on this simulated date
+      let totalBoost = 0.0;
+      const activeBoosters = [];
+
+      if (fdr.status === 'active') {
+        const [boosterRows] = await pool.query(
+          `SELECT b.name, b.yield_boost_percent, b.unlock_game, b.unlock_value, uyb.activated_at
+           FROM user_yield_boosters uyb
+           JOIN fdr_yield_boosters b ON uyb.booster_id = b.id
+           WHERE uyb.user_id = ?
+             AND uyb.status = 'active'
+             AND DATE(uyb.activated_at) <= DATE(?)
+             AND DATE(uyb.expires_at) >= DATE(?)`,
+          [userId, simulatedDate, simulatedDate]
+        );
+
+        for (const booster of boosterRows) {
+          let isUnlocked = true;
+          let currentPlays = 0;
+          if (booster.unlock_value > 0) {
+            const activatedDateStr = booster.activated_at instanceof Date
+              ? booster.activated_at.toISOString().split('T')[0]
+              : (typeof booster.activated_at === 'string' ? booster.activated_at.split(' ')[0] : new Date(booster.activated_at).toISOString().split('T')[0]);
+
+            currentPlays = await getGameplayCount(userId, booster.unlock_game, activatedDateStr, simulatedDate);
+            isUnlocked = currentPlays >= booster.unlock_value;
+          }
+          if (isUnlocked) {
+            totalBoost += parseFloat(booster.yield_boost_percent);
+          }
+          activeBoosters.push({
+            name: booster.name,
+            yield_boost_percent: parseFloat(booster.yield_boost_percent),
+            is_unlocked: isUnlocked,
+            current_plays: currentPlays,
+            unlock_value: booster.unlock_value
+          });
+        }
+      }
+
+      result.push({
         ...fdr,
         amount: parseFloat(fdr.amount),
         interest_percent: parseFloat(fdr.interest_percent),
         accrued_interest: parseFloat(fdr.accrued_interest),
         progress_percent: Math.round(progress_percent * 100) / 100,
-      };
-    });
+        total_boost: totalBoost,
+        active_boosters: activeBoosters
+      });
+    }
 
     res.json(result);
   } catch (err) {

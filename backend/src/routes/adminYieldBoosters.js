@@ -58,7 +58,8 @@ router.post('/', async (req, res) => {
   try {
     const { 
       name, description, yield_boost_percent, target_type, duration_days, is_active,
-      target_game, target_operator, target_value, target_days 
+      target_game, target_operator, target_value, target_days,
+      unlock_game, unlock_value
     } = req.body;
 
     if (!name || !description || yield_boost_percent === undefined || !target_type || !duration_days) {
@@ -119,13 +120,39 @@ router.post('/', async (req, res) => {
       }
     }
 
+    let dbUnlockGame = null;
+    let dbUnlockValue = 0;
+
+    if (unlock_game !== undefined && unlock_game !== null && unlock_game !== '') {
+      const validGames = ['any', 'aviator', 'colour-trading', 'fruit-slasher', 'ludo', 'cricket-fantasy'];
+      const parts = unlock_game.split(',').map(g => g.trim());
+      for (const p of parts) {
+        if (!validGames.includes(p)) {
+          return res.status(400).json({ error: `Invalid unlock game type: ${p}` });
+        }
+      }
+      dbUnlockGame = unlock_game;
+    }
+
+    if (unlock_value !== undefined && unlock_value !== null && unlock_value !== '') {
+      const val = parseInt(unlock_value, 10);
+      if (isNaN(val) || val < 0) {
+        return res.status(400).json({ error: 'Unlock target count must be a non-negative integer.' });
+      }
+      dbUnlockValue = val;
+    }
+
     const activeStatus = is_active !== false;
 
     await pool.query(
       `INSERT INTO fdr_yield_boosters 
-        (name, description, yield_boost_percent, target_type, duration_days, is_active, target_game, target_operator, target_value, target_days)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [name, description, boostPercent, target_type, duration, activeStatus, dbTargetGame, dbTargetOperator, dbTargetValue, dbTargetDays]
+        (name, description, yield_boost_percent, target_type, duration_days, is_active, 
+         target_game, target_operator, target_value, target_days,
+         unlock_game, unlock_value)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, description, boostPercent, target_type, duration, activeStatus, 
+       dbTargetGame, dbTargetOperator, dbTargetValue, dbTargetDays,
+       dbUnlockGame, dbUnlockValue]
     );
 
     res.status(201).json({ message: 'Yield booster config successfully created!' });
@@ -141,7 +168,8 @@ router.put('/:id', async (req, res) => {
     const boosterId = parseInt(req.params.id, 10);
     const { 
       name, description, yield_boost_percent, target_type, duration_days, is_active,
-      target_game, target_operator, target_value, target_days 
+      target_game, target_operator, target_value, target_days,
+      unlock_game, unlock_value
     } = req.body;
 
     if (!name || !description || yield_boost_percent === undefined || !target_type || !duration_days) {
@@ -207,14 +235,39 @@ router.put('/:id', async (req, res) => {
       }
     }
 
+    let dbUnlockGame = null;
+    let dbUnlockValue = 0;
+
+    if (unlock_game !== undefined && unlock_game !== null && unlock_game !== '') {
+      const validGames = ['any', 'aviator', 'colour-trading', 'fruit-slasher', 'ludo', 'cricket-fantasy'];
+      const parts = unlock_game.split(',').map(g => g.trim());
+      for (const p of parts) {
+        if (!validGames.includes(p)) {
+          return res.status(400).json({ error: `Invalid unlock game type: ${p}` });
+        }
+      }
+      dbUnlockGame = unlock_game;
+    }
+
+    if (unlock_value !== undefined && unlock_value !== null && unlock_value !== '') {
+      const val = parseInt(unlock_value, 10);
+      if (isNaN(val) || val < 0) {
+        return res.status(400).json({ error: 'Unlock target count must be a non-negative integer.' });
+      }
+      dbUnlockValue = val;
+    }
+
     const activeStatus = is_active !== false;
 
     await pool.query(
       `UPDATE fdr_yield_boosters 
        SET name = ?, description = ?, yield_boost_percent = ?, target_type = ?, duration_days = ?, is_active = ?,
-           target_game = ?, target_operator = ?, target_value = ?, target_days = ?
+           target_game = ?, target_operator = ?, target_value = ?, target_days = ?,
+           unlock_game = ?, unlock_value = ?
        WHERE id = ?`,
-      [name, description, boostPercent, target_type, duration, activeStatus, dbTargetGame, dbTargetOperator, dbTargetValue, dbTargetDays, boosterId]
+      [name, description, boostPercent, target_type, duration, activeStatus, 
+       dbTargetGame, dbTargetOperator, dbTargetValue, dbTargetDays,
+       dbUnlockGame, dbUnlockValue, boosterId]
     );
 
     res.json({ message: 'Yield booster successfully updated!' });

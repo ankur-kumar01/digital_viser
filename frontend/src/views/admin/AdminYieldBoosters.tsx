@@ -26,11 +26,87 @@ export const AdminYieldBoosters: React.FC = () => {
     target_game: 'any',
     target_operator: '>=',
     target_value: '0',
-    target_days: ''
+    target_days: '',
+    unlock_game: '',
+    unlock_value: '0'
   });
 
   // Edit Booster State
   const [editingBooster, setEditingBooster] = useState<any | null>(null);
+
+  // Helper for unlock options checkboxes
+  const isNewUnlockSelected = (gameKey: string) => {
+    if (newBooster.unlock_game === 'any') return true;
+    return newBooster.unlock_game ? newBooster.unlock_game.split(',').includes(gameKey) : false;
+  };
+
+  const handleNewUnlockToggle = (gameKey: string) => {
+    if (newBooster.unlock_game === 'any') {
+      const selected = GAME_OPTIONS.filter(o => o.key !== gameKey).map(o => o.key).join(',');
+      setNewBooster({ ...newBooster, unlock_game: selected });
+    } else {
+      const currentList = newBooster.unlock_game ? newBooster.unlock_game.split(',') : [];
+      let updatedList;
+      if (currentList.includes(gameKey)) {
+        updatedList = currentList.filter(k => k !== gameKey);
+      } else {
+        updatedList = [...currentList, gameKey];
+      }
+      if (updatedList.length === GAME_OPTIONS.length) {
+        setNewBooster({ ...newBooster, unlock_game: 'any' });
+      } else if (updatedList.length === 0) {
+        setNewBooster({ ...newBooster, unlock_game: '' });
+      } else {
+        setNewBooster({ ...newBooster, unlock_game: updatedList.join(',') });
+      }
+    }
+  };
+
+  const handleNewUnlockSelectAllToggle = () => {
+    if (newBooster.unlock_game === 'any') {
+      setNewBooster({ ...newBooster, unlock_game: '' });
+    } else {
+      setNewBooster({ ...newBooster, unlock_game: 'any' });
+    }
+  };
+
+  const isEditUnlockSelected = (gameKey: string) => {
+    if (!editingBooster || !editingBooster.unlock_game) return false;
+    if (editingBooster.unlock_game === 'any') return true;
+    return editingBooster.unlock_game.split(',').includes(gameKey);
+  };
+
+  const handleEditUnlockToggle = (gameKey: string) => {
+    if (!editingBooster) return;
+    if (editingBooster.unlock_game === 'any') {
+      const selected = GAME_OPTIONS.filter(o => o.key !== gameKey).map(o => o.key).join(',');
+      setEditingBooster({ ...editingBooster, unlock_game: selected });
+    } else {
+      const currentList = editingBooster.unlock_game ? editingBooster.unlock_game.split(',') : [];
+      let updatedList;
+      if (currentList.includes(gameKey)) {
+        updatedList = currentList.filter(k => k !== gameKey);
+      } else {
+        updatedList = [...currentList, gameKey];
+      }
+      if (updatedList.length === GAME_OPTIONS.length) {
+        setEditingBooster({ ...editingBooster, unlock_game: 'any' });
+      } else if (updatedList.length === 0) {
+        setEditingBooster({ ...editingBooster, unlock_game: '' });
+      } else {
+        setEditingBooster({ ...editingBooster, unlock_game: updatedList.join(',') });
+      }
+    }
+  };
+
+  const handleEditUnlockSelectAllToggle = () => {
+    if (!editingBooster) return;
+    if (editingBooster.unlock_game === 'any') {
+      setEditingBooster({ ...editingBooster, unlock_game: '' });
+    } else {
+      setEditingBooster({ ...editingBooster, unlock_game: 'any' });
+    }
+  };
 
   // Helper for game options checkboxes
   const isNewGameSelected = (gameKey: string) => {
@@ -142,6 +218,8 @@ export const AdminYieldBoosters: React.FC = () => {
         target_operator: newBooster.target_type === 'custom' ? newBooster.target_operator : null,
         target_value: newBooster.target_type === 'custom' ? parseInt(newBooster.target_value, 10) : 0,
         target_days: newBooster.target_type === 'custom' && newBooster.target_days ? parseInt(newBooster.target_days, 10) : null,
+        unlock_game: newBooster.unlock_game || null,
+        unlock_value: newBooster.unlock_game && newBooster.unlock_value ? parseInt(newBooster.unlock_value, 10) : 0,
         is_active: true
       });
       setNewBooster({
@@ -153,7 +231,9 @@ export const AdminYieldBoosters: React.FC = () => {
         target_game: 'any',
         target_operator: '>=',
         target_value: '0',
-        target_days: ''
+        target_days: '',
+        unlock_game: '',
+        unlock_value: '0'
       });
       setSuccessMessage('Yield booster successfully created!');
       fetchBoosters();
@@ -182,6 +262,8 @@ export const AdminYieldBoosters: React.FC = () => {
         target_operator: editingBooster.target_type === 'custom' ? editingBooster.target_operator : null,
         target_value: editingBooster.target_type === 'custom' ? parseInt(editingBooster.target_value, 10) : 0,
         target_days: editingBooster.target_type === 'custom' && editingBooster.target_days ? parseInt(editingBooster.target_days, 10) : null,
+        unlock_game: editingBooster.unlock_game || null,
+        unlock_value: editingBooster.unlock_game && editingBooster.unlock_value ? parseInt(editingBooster.unlock_value, 10) : 0,
         is_active: !!editingBooster.is_active
       });
       setEditingBooster(null);
@@ -208,6 +290,8 @@ export const AdminYieldBoosters: React.FC = () => {
         target_operator: target.target_operator,
         target_value: target.target_value,
         target_days: target.target_days,
+        unlock_game: target.unlock_game,
+        unlock_value: target.unlock_value,
         is_active: !currentStatus
       });
       setSuccessMessage(`Yield booster status updated!`);
@@ -362,6 +446,33 @@ export const AdminYieldBoosters: React.FC = () => {
             </div>
           )}
 
+          {/* GAMEPLAY UNLOCK CHALLENGE REQUIREMENT */}
+          <div className="glass-card" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', background: 'rgba(255, 255, 255, 0.01)', padding: '16px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)' }}>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Gameplay Unlock Challenge (Optional)</h4>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Users must complete this gameplay target during the booster's duration to unlock the interest boost.</p>
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label className="input-label" style={{ marginBottom: '8px', display: 'block' }}>Unlock Challenge Games</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                <label className="badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 12px', background: newBooster.unlock_game === 'any' ? 'rgba(0, 245, 160, 0.15)' : 'rgba(255, 255, 255, 0.05)', color: newBooster.unlock_game === 'any' ? 'var(--accent-secondary)' : 'var(--text-secondary)', border: '1px solid var(--border-glass)' }}>
+                  <input type="checkbox" checked={newBooster.unlock_game === 'any'} onChange={handleNewUnlockSelectAllToggle} style={{ cursor: 'pointer' }} />
+                  Any Game (All)
+                </label>
+                {GAME_OPTIONS.map(opt => (
+                  <label key={opt.key} className="badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 12px', background: isNewUnlockSelected(opt.key) ? 'rgba(0, 245, 160, 0.1)' : 'rgba(255, 255, 255, 0.02)', color: isNewUnlockSelected(opt.key) ? 'var(--text-primary)' : 'var(--text-muted)', border: '1px solid var(--border-glass)' }}>
+                    <input type="checkbox" checked={isNewUnlockSelected(opt.key)} onChange={() => handleNewUnlockToggle(opt.key)} style={{ cursor: 'pointer' }} />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="input-label">Unlock Plays Required Count</label>
+              <input type="number" className="input-field" value={newBooster.unlock_value} onChange={e => setNewBooster({...newBooster, unlock_value: e.target.value})} min={0} placeholder="0 = Unlocks instantly" />
+            </div>
+          </div>
+
           <div>
             <label className="input-label">Offer Description</label>
             <textarea 
@@ -404,6 +515,20 @@ export const AdminYieldBoosters: React.FC = () => {
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400, marginTop: '2px', maxWidth: '300px', whiteSpace: 'normal' }}>
                           {b.description}
                         </div>
+                        {b.unlock_value > 0 && (
+                          <div style={{ fontSize: '0.72rem', color: 'var(--accent-secondary)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Info size={12} />
+                            <span>
+                              Requires <strong>{b.unlock_value}</strong> plays on <strong>{b.unlock_game === 'any' ? 'Any game' : b.unlock_game.split(',').map((g: string) => {
+                                const trimmed = g.trim();
+                                if (trimmed === 'colour-trading') return 'Colour Trading';
+                                if (trimmed === 'cricket-fantasy') return 'Cricket Fantasy';
+                                if (trimmed === 'fruit-slasher') return 'Fruit Slasher';
+                                return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+                              }).join(' + ')}</strong>
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -524,6 +649,32 @@ export const AdminYieldBoosters: React.FC = () => {
                   </div>
                 </div>
               )}
+              {/* GAMEPLAY UNLOCK CHALLENGE REQUIREMENT FOR EDIT */}
+              <div className="glass-card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: 'rgba(255, 255, 255, 0.01)', padding: '16px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', marginBottom: '10px' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Gameplay Unlock Challenge (Optional)</h4>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Users must complete this gameplay target during the booster's duration to unlock the interest boost.</p>
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label className="input-label" style={{ marginBottom: '8px', display: 'block' }}>Unlock Challenge Games</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                    <label className="badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '4px 10px', background: editingBooster.unlock_game === 'any' ? 'rgba(0, 245, 160, 0.15)' : 'rgba(255, 255, 255, 0.05)', color: editingBooster.unlock_game === 'any' ? 'var(--accent-secondary)' : 'var(--text-secondary)', border: '1px solid var(--border-glass)' }}>
+                      <input type="checkbox" checked={editingBooster.unlock_game === 'any'} onChange={handleEditUnlockSelectAllToggle} style={{ cursor: 'pointer' }} />
+                      Any Game (All)
+                    </label>
+                    {GAME_OPTIONS.map(opt => (
+                      <label key={opt.key} className="badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '4px 10px', background: isEditUnlockSelected(opt.key) ? 'rgba(0, 245, 160, 0.1)' : 'rgba(255, 255, 255, 0.02)', color: isEditUnlockSelected(opt.key) ? 'var(--text-primary)' : 'var(--text-muted)', border: '1px solid var(--border-glass)' }}>
+                        <input type="checkbox" checked={isEditUnlockSelected(opt.key)} onChange={() => handleEditUnlockToggle(opt.key)} style={{ cursor: 'pointer' }} />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label className="input-label">Unlock Plays Required Count</label>
+                  <input type="number" className="input-field" value={editingBooster.unlock_value !== undefined ? editingBooster.unlock_value : '0'} onChange={e => setEditingBooster({...editingBooster, unlock_value: e.target.value})} min={0} placeholder="0 = Unlocks instantly" />
+                </div>
+              </div>
 
               <div>
                 <label className="input-label">Offer Description</label>

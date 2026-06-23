@@ -182,6 +182,69 @@ async function checkEligibility(userId, targetType, booster = null) {
   return false;
 }
 
+/**
+ * Count plays for a user in specific games between startDate and endDate (inclusive).
+ * @param {number} userId
+ * @param {string} gamesString - comma-separated list of games (e.g. 'aviator,ludo') or 'any'
+ * @param {string|Date} startDate
+ * @param {string|Date} endDate
+ * @returns {Promise<number>}
+ */
+async function getGameplayCount(userId, gamesString, startDate, endDate) {
+  if (!gamesString) return 0;
+
+  const selectedGames = gamesString.split(',').map(g => g.trim());
+  let totalCount = 0;
+
+  const countQuery = async (table, userCol = 'user_id') => {
+    let sql = `SELECT COUNT(*) as count FROM ${table} WHERE `;
+    let params = [];
+    if (table === 'ludo_rooms') {
+      sql += `(host_id = ? OR challenger_id = ?)`;
+      params.push(userId, userId);
+    } else {
+      sql += `${userCol} = ?`;
+      params.push(userId);
+    }
+
+    if (startDate) {
+      sql += ` AND DATE(created_at) >= DATE(?)`;
+      params.push(startDate);
+    }
+    if (endDate) {
+      sql += ` AND DATE(created_at) <= DATE(?)`;
+      params.push(endDate);
+    }
+
+    const [res] = await pool.query(sql, params);
+    return res[0]?.count || 0;
+  };
+
+  for (const g of selectedGames) {
+    if (g === 'any') {
+      const pAviator = await countQuery('aviator_bets');
+      const pCt = await countQuery('ct_bets');
+      const pFruit = await countQuery('fruit_bets');
+      const pLudo = await countQuery('ludo_rooms');
+      const pFantasy = await countQuery('fantasy_contest_entries');
+      totalCount += (pAviator + pCt + pFruit + pLudo + pFantasy);
+    } else if (g === 'aviator') {
+      totalCount += await countQuery('aviator_bets');
+    } else if (g === 'colour-trading') {
+      totalCount += await countQuery('ct_bets');
+    } else if (g === 'fruit-slasher') {
+      totalCount += await countQuery('fruit_bets');
+    } else if (g === 'ludo') {
+      totalCount += await countQuery('ludo_rooms');
+    } else if (g === 'cricket-fantasy') {
+      totalCount += await countQuery('fantasy_contest_entries');
+    }
+  }
+
+  return totalCount;
+}
+
 module.exports = {
-  checkEligibility
+  checkEligibility,
+  getGameplayCount
 };

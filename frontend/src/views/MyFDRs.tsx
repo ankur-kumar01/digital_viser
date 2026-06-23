@@ -250,6 +250,31 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
                   </div>
                 </div>
 
+                {/* Linked Yield Boosters */}
+                {fdr.active_boosters && fdr.active_boosters.length > 0 && (
+                  <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-glass)', borderRadius: '6px', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Linked Yield Boosters</span>
+                    {fdr.active_boosters.map((b: any, idx: number) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
+                        <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{b.name} (+{parseFloat(b.yield_boost_percent).toFixed(2)}%)</span>
+                        <span 
+                          style={{ 
+                            fontSize: '0.7rem', 
+                            fontWeight: 700, 
+                            color: b.is_unlocked ? 'var(--accent-secondary)' : 'rgba(251, 191, 36, 0.9)',
+                            background: b.is_unlocked ? 'rgba(0, 245, 160, 0.1)' : 'rgba(251, 191, 36, 0.15)',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            border: b.is_unlocked ? '1px solid rgba(0, 245, 160, 0.2)' : '1px solid rgba(251, 191, 36, 0.3)'
+                          }}
+                        >
+                          {b.is_unlocked ? 'Active' : 'Locked'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* Grid Details */}
                 <div 
                   style={{ 
@@ -265,14 +290,32 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
                 >
                   <div>
                     <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.75rem' }}>Interest:</span>
-                    <strong>{parseFloat(fdr.interest_percent)}% / {fdr.period_days} Days</strong>
+                    <strong style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px' }}>
+                      <span>{parseFloat(fdr.interest_percent)}%</span>
+                      {fdr.total_boost > 0 && (
+                        <span 
+                          style={{ 
+                            background: 'rgba(0, 245, 160, 0.15)', 
+                            color: 'var(--accent-secondary)', 
+                            fontSize: '0.7rem', 
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(0, 245, 160, 0.3)',
+                            fontWeight: 700
+                          }}
+                        >
+                          +{fdr.total_boost.toFixed(2)}% Boost
+                        </span>
+                      )}
+                      <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>/ {fdr.period_days}d</span>
+                    </strong>
                   </div>
                   <div>
                     <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.75rem' }}>Yield Accrued:</span>
                     <LiveYieldDisplay 
                       baseAccrued={accrued} 
                       principal={principal} 
-                      interestPercent={parseFloat(fdr.interest_percent)} 
+                      interestPercent={parseFloat(fdr.interest_percent) + (fdr.total_boost || 0)} 
                       periodDays={parseInt(fdr.period_days, 10)} 
                       isCompleted={isCompleted} 
                       lastInstDate={fdr.last_installment_date ? fdr.last_installment_date.split('T')[0] : fdr.start_date.split('T')[0]}

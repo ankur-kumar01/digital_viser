@@ -3,11 +3,18 @@ import { yieldBoosterAPI } from '../api';
 import { Gift, TrendingUp, Clock, CheckCircle2, AlertCircle, Percent } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
-const BoosterTimer: React.FC<{ endTime: string; onExpire?: () => void }> = ({ endTime, onExpire }) => {
+const BoosterTimer: React.FC<{ endTime: string; simulatedDate: string | null; onExpire?: () => void }> = ({ endTime, simulatedDate, onExpire }) => {
   const calculateTimeLeft = () => {
     // Normalize date format for Safari/various environments
     const safeEndTime = endTime.includes('Z') ? endTime : endTime.replace(' ', 'T') + 'Z';
-    const difference = +new Date(safeEndTime) - +new Date();
+    const now = new Date();
+    
+    // Construct simulated current time string by swapping real date with simulated_date (YYYY-MM-DD)
+    const simulatedNowStr = simulatedDate 
+      ? `${simulatedDate}T${now.toISOString().split('T')[1]}`
+      : now.toISOString();
+      
+    const difference = +new Date(safeEndTime) - +new Date(simulatedNowStr);
     let timeLeft = {
       days: '00',
       hours: '00',
@@ -37,6 +44,8 @@ const BoosterTimer: React.FC<{ endTime: string; onExpire?: () => void }> = ({ en
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
   useEffect(() => {
+    setTimeLeft(calculateTimeLeft());
+
     const timer = setInterval(() => {
       const updated = calculateTimeLeft();
       setTimeLeft(updated);
@@ -47,7 +56,7 @@ const BoosterTimer: React.FC<{ endTime: string; onExpire?: () => void }> = ({ en
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [endTime]);
+  }, [endTime, simulatedDate]);
 
   if (timeLeft.expired) {
     return <span style={{ color: 'var(--accent-danger)', fontWeight: 700, fontSize: '0.85rem' }}>Expired</span>;
@@ -81,6 +90,7 @@ export const Offers: React.FC = () => {
   const [activeBoosters, setActiveBoosters] = useState<any[]>([]);
   const [completedBoosters, setCompletedBoosters] = useState<any[]>([]);
   const [claimableOffers, setClaimableOffers] = useState<any[]>([]);
+  const [simulatedDate, setSimulatedDate] = useState<string | null>(null);
   const [isFetching, setIsFetching] = useState(true);
   const [claimingId, setClaimingId] = useState<number | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -92,6 +102,7 @@ export const Offers: React.FC = () => {
       setActiveBoosters(res.active || []);
       setCompletedBoosters(res.completed || []);
       setClaimableOffers(res.claimable || []);
+      setSimulatedDate(res.simulatedDate || null);
     } catch (err: any) {
       console.error('Failed to fetch yield boosters:', err);
       setMessage({ text: err.message || 'Failed to load offers.', type: 'error' });
@@ -280,6 +291,20 @@ export const Offers: React.FC = () => {
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.4, minHeight: '40px', margin: 0 }}>
                           {offer.description}
                         </p>
+                        {offer.unlock_value > 0 && (
+                          <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-glass)', borderRadius: '6px', padding: '8px 12px', marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Unlock Challenge Requirement</span>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--accent-secondary)', fontWeight: 500 }}>
+                              Play {offer.unlock_game === 'any' ? 'Any game' : offer.unlock_game.split(',').map((g: string) => {
+                                const trimmed = g.trim();
+                                if (trimmed === 'colour-trading') return 'Colour Trading';
+                                if (trimmed === 'cricket-fantasy') return 'Cricket Fantasy';
+                                if (trimmed === 'fruit-slasher') return 'Fruit Slasher';
+                                return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+                              }).join(' + ')} at least {offer.unlock_value} times
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div 
@@ -370,14 +395,15 @@ export const Offers: React.FC = () => {
                           style={{ 
                             fontSize: '0.75rem', 
                             fontWeight: 700, 
-                            color: 'var(--accent-secondary)',
-                            background: 'rgba(0, 245, 160, 0.1)',
+                            color: booster.unlock_value === 0 || booster.is_unlocked ? 'var(--accent-secondary)' : 'rgba(251, 191, 36, 0.9)',
+                            background: booster.unlock_value === 0 || booster.is_unlocked ? 'rgba(0, 245, 160, 0.1)' : 'rgba(251, 191, 36, 0.15)',
                             borderRadius: '10px',
                             padding: '4px 10px',
-                            textTransform: 'uppercase'
+                            textTransform: 'uppercase',
+                            border: booster.unlock_value === 0 || booster.is_unlocked ? '1px solid rgba(0, 245, 160, 0.2)' : '1px solid rgba(251, 191, 36, 0.3)'
                           }}
                         >
-                          Active
+                          {booster.unlock_value === 0 || booster.is_unlocked ? 'Active' : 'Locked'}
                         </span>
                       </div>
 
@@ -385,10 +411,45 @@ export const Offers: React.FC = () => {
                         <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
                           {booster.name}
                         </h3>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.4, margin: 0 }}>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.4, margin: 0, marginBottom: '8px' }}>
                           {booster.description}
                         </p>
                       </div>
+                      
+                      {booster.unlock_value > 0 && (
+                        <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-glass)', borderRadius: '6px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: booster.is_unlocked ? 'var(--accent-secondary)' : 'rgba(251, 191, 36, 0.9)' }}>
+                              {booster.is_unlocked ? '✓ Challenge Completed' : '⚡ Play Challenge Progress'}
+                            </span>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                              {Math.min(booster.current_plays, booster.unlock_value)} / {booster.unlock_value} plays
+                            </span>
+                          </div>
+                          
+                          {/* Progress Bar */}
+                          <div style={{ width: '100%', height: '6px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div 
+                              style={{ 
+                                width: `${Math.min(100, (booster.current_plays / booster.unlock_value) * 100)}%`, 
+                                height: '100%', 
+                                background: booster.is_unlocked ? 'var(--accent-secondary)' : 'rgba(251, 191, 36, 0.8)',
+                                transition: 'width 0.3s ease'
+                              }} 
+                            />
+                          </div>
+
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                            Target: {booster.unlock_game === 'any' ? 'Any game' : booster.unlock_game.split(',').map((g: string) => {
+                              const trimmed = g.trim();
+                              if (trimmed === 'colour-trading') return 'Colour Trading';
+                              if (trimmed === 'cricket-fantasy') return 'Cricket Fantasy';
+                              if (trimmed === 'fruit-slasher') return 'Fruit Slasher';
+                              return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+                            }).join(' + ')}
+                          </div>
+                        </div>
+                      )}
 
                       <div 
                         style={{ 
@@ -407,7 +468,7 @@ export const Offers: React.FC = () => {
                               +{parseFloat(booster.yield_boost_percent).toFixed(2)}%
                             </div>
                           </div>
-                          <BoosterTimer endTime={booster.expires_at} onExpire={fetchBoosters} />
+                          <BoosterTimer endTime={booster.expires_at} simulatedDate={simulatedDate} onExpire={fetchBoosters} />
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
