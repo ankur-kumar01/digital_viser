@@ -61,6 +61,7 @@ import { Offers } from './views/Offers';
 import { AdminYieldBoosters } from './views/admin/AdminYieldBoosters';
 import { AdminDailyTasks } from './views/admin/AdminDailyTasks';
 import { AdminCron } from './views/admin/AdminCron';
+import { MaintenancePage } from './views/MaintenancePage';
 
 interface User {
   id?: number;
@@ -86,6 +87,7 @@ export const App: React.FC = () => {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMaintenance, setIsMaintenance] = useState(false);
 
   const isGameView = !isAdmin && currentView.startsWith('game-');
 
@@ -95,6 +97,15 @@ export const App: React.FC = () => {
         const config = await globalConfigAPI.getConfig();
         if (config && config.global_timezone) {
           setGlobalTimeZone(config.global_timezone);
+        }
+        // Check maintenance mode — admins bypass it
+        if (config && config.maintenance_mode === true) {
+          const isAdminRouteCheck = window.location.pathname === '/admin';
+          if (!isAdminRouteCheck) {
+            setIsMaintenance(true);
+            setIsInitializing(false);
+            return; // Stop init — show maintenance page
+          }
         }
       } catch (err) {
         console.error('Failed to fetch global config', err);
@@ -221,6 +232,11 @@ export const App: React.FC = () => {
     return (
       <LoadingSpinner message="Checking secure gateway credentials..." fullPage />
     );
+  }
+
+  // Show maintenance page for non-admin users when maintenance mode is active
+  if (isMaintenance && !isAdmin) {
+    return <MaintenancePage />;
   }
 
   if (!isAuthenticated) {

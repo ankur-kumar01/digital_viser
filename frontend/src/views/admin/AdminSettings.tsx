@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../../api';
-import { Save, CheckCircle2, Mail } from 'lucide-react';
+import { Save, CheckCircle2, Mail, AlertTriangle } from 'lucide-react';
 
 export const AdminSettings: React.FC = () => {
   const [upiId, setUpiId] = useState('');
@@ -12,6 +12,8 @@ export const AdminSettings: React.FC = () => {
   const [enableAviatorChat, setEnableAviatorChat] = useState(true);
   const [enableAviatorBet, setEnableAviatorBet] = useState(true);
   const [enableColourTradingBet, setEnableColourTradingBet] = useState(true);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceEndTime, setMaintenanceEndTime] = useState('');
 
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState('587');
@@ -33,6 +35,25 @@ export const AdminSettings: React.FC = () => {
       setEnableAviatorChat(res.enable_aviator_chat_simulation !== 'false');
       setEnableAviatorBet(res.enable_aviator_bet_simulation !== 'false');
       setEnableColourTradingBet(res.enable_colour_trading_bet_simulation !== 'false');
+      setMaintenanceMode(res.maintenance_mode === 'true');
+      // Convert stored ISO/timestamp to local datetime-local format
+      if (res.maintenance_end_time) {
+        try {
+          const d = new Date(res.maintenance_end_time);
+          if (!isNaN(d.getTime())) {
+            const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+              .toISOString()
+              .slice(0, 16);
+            setMaintenanceEndTime(local);
+          } else {
+            setMaintenanceEndTime('');
+          }
+        } catch {
+          setMaintenanceEndTime('');
+        }
+      } else {
+        setMaintenanceEndTime('');
+      }
       setSmtpHost(res.smtp_host || '');
       setSmtpPort(res.smtp_port || '587');
       setSmtpUser(res.smtp_user || '');
@@ -96,6 +117,33 @@ export const AdminSettings: React.FC = () => {
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       setError(err.message || 'Failed to update settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleMaintenanceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      // Convert local datetime-local value to ISO string for storage (or empty string)
+      let endTimeValue = '';
+      if (maintenanceEndTime) {
+        const d = new Date(maintenanceEndTime);
+        if (!isNaN(d.getTime())) {
+          endTimeValue = d.toISOString();
+        }
+      }
+      await adminAPI.updateSettings({
+        maintenance_mode: String(maintenanceMode),
+        maintenance_end_time: endTimeValue
+      });
+      setSuccess('Maintenance mode settings updated successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update maintenance settings');
     } finally {
       setSaving(false);
     }
@@ -261,6 +309,58 @@ export const AdminSettings: React.FC = () => {
           <button type="submit" className="btn btn-primary" disabled={saving}>
             <Save size={18} />
             {saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </form>
+      </div>
+
+      {/* ===== MAINTENANCE MODE CARD ===== */}
+      <div className="glass-card" style={{ borderTop: '3px solid var(--accent-danger)' }}>
+        <h3 style={{ marginBottom: '8px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertTriangle size={18} color="var(--accent-danger)" />
+          Maintenance Mode
+        </h3>
+        <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>
+          When enabled, all user-facing API endpoints and pages will be blocked. Administrators can still log in and manage the platform. Users will be shown a countdown timer if an end-time is configured.
+        </p>
+        <form onSubmit={handleMaintenanceSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <label className="input-label">Mode</label>
+            <select
+              className="input-field"
+              value={maintenanceMode ? 'true' : 'false'}
+              onChange={e => setMaintenanceMode(e.target.value === 'true')}
+              style={maintenanceMode ? { borderColor: 'var(--accent-danger)', background: 'rgba(220,38,38,0.06)' } : {}}
+            >
+              <option value="false">🟢 Platform Active — Normal Operation</option>
+              <option value="true">🔴 Maintenance Mode — Block All Users</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="input-label">Scheduled End Date &amp; Time <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              Set the expected restoration time. This will be displayed to users in a live countdown. Leave blank if unknown.
+            </p>
+            <input
+              type="datetime-local"
+              className="input-field"
+              value={maintenanceEndTime}
+              onChange={e => setMaintenanceEndTime(e.target.value)}
+            />
+          </div>
+
+          {maintenanceMode && (
+            <div style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <AlertTriangle size={16} color="var(--accent-danger)" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: '0.86rem', color: 'var(--accent-danger)', fontWeight: 500 }}>
+                Maintenance mode is <strong>ACTIVE</strong>. All user-facing pages and APIs are currently blocked.
+              </span>
+            </div>
+          )}
+
+          <button type="submit" className="btn btn-danger" disabled={saving}>
+            <Save size={18} />
+            {saving ? 'Saving...' : 'Save Maintenance Settings'}
           </button>
         </form>
       </div>

@@ -207,6 +207,54 @@ const otpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders
 const spinLimiter = rateLimit({ windowMs: 60 * 1000, max: 1, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many spin requests.' } });
 const adminLoginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many admin login attempts. Try again in 15 minutes.' } });
 
+// Maintenance Mode Intercept Middleware
+app.use(async (req, res, next) => {
+  const path = req.path;
+  
+  // Allow admin endpoints, public config check, and local file serving uploads
+  const isAdminPath = path.startsWith('/api/admin');
+  const isPublicPath = path === '/api/config' || path.startsWith('/uploads') || path.startsWith('/api/uploads');
+  
+  if (isAdminPath || isPublicPath) {
+    return next();
+  }
+
+  try {
+    const cacheKey = 'config:public';
+    let configData = cache.get(cacheKey);
+    
+    let isMaintenanceActive = false;
+    let endTime = null;
+    
+    if (configData) {
+      isMaintenanceActive = configData.maintenance_mode === true;
+      endTime = configData.maintenance_end_time;
+    } else {
+      const [rows] = await pool.query(
+        "SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('maintenance_mode', 'maintenance_end_time')"
+      );
+      const settings = {};
+      rows.forEach(r => {
+        settings[r.setting_key] = r.setting_value;
+      });
+      isMaintenanceActive = settings.maintenance_mode === 'true';
+      endTime = settings.maintenance_end_time || null;
+    }
+
+    if (isMaintenanceActive) {
+      return res.status(503).json({
+        error: 'Scheduled System Maintenance',
+        maintenance: true,
+        end_time: endTime
+      });
+    }
+  } catch (err) {
+    console.error('[MaintenanceMiddleware] Error checking status:', err);
+  }
+
+  next();
+});
+
 // Mount routes
 app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth/register', registerLimiter);
@@ -256,7 +304,9 @@ app.get('/api/config', async (req, res) => {
       enable_colour_trading_bet_simulation: settings.enable_colour_trading_bet_simulation !== 'false',
       enable_spin_wheel: settings.enable_spin_wheel !== 'false',
       referral_percent: referralPercent ? parseFloat(referralPercent.reward_amount) : 10,
-      fdr_referral_percent: fdrReferralPercent ? parseFloat(fdrReferralPercent.reward_amount) : 5
+      fdr_referral_percent: fdrReferralPercent ? parseFloat(fdrReferralPercent.reward_amount) : 5,
+      maintenance_mode: settings.maintenance_mode === 'true',
+      maintenance_end_time: settings.maintenance_end_time || null
     };
     cache.set(cacheKey, configData, 30000);
     res.json(configData);
