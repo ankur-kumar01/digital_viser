@@ -3,10 +3,11 @@ const { pool } = require('../db');
 /**
  * Check user eligibility for yield booster target types based on simulated date.
  * @param {number} userId - ID of the user to check
- * @param {string} targetType - Type of targeting ('all', 'inactive_2d', 'inactive_7d_reg')
+ * @param {string} targetType - Type of targeting ('all', 'inactive_2d', 'inactive_7d_reg', 'custom')
+ * @param {object|number|string|null} booster - Booster configuration object, or booster ID
  * @returns {Promise<boolean>}
  */
-async function checkEligibility(userId, targetType) {
+async function checkEligibility(userId, targetType, booster = null) {
   if (targetType === 'all') {
     return true;
   }
@@ -100,6 +101,82 @@ async function checkEligibility(userId, targetType) {
       (fantasy[0]?.count || 0);
 
     return totalLifetimeGames === 0;
+  }
+
+  if (targetType === 'custom') {
+    if (!booster) return false;
+
+    // Load booster config if only ID was passed
+    if (typeof booster === 'number' || typeof booster === 'string') {
+      const [boosterRows] = await pool.query('SELECT * FROM fdr_yield_boosters WHERE id = ?', [booster]);
+      booster = boosterRows[0] || null;
+    }
+
+    if (!booster) return false;
+
+    const game = booster.target_game || 'any';
+    const operator = booster.target_operator || '>=';
+    const targetValue = parseInt(booster.target_value, 10) || 0;
+    const days = booster.target_days; // null or positive number
+
+    let queryDateFilter = '';
+    let queryParams = [];
+
+    if (days !== null && days !== undefined && !isNaN(parseInt(days, 10))) {
+      queryDateFilter = ' AND DATE(created_at) >= DATE(?) - INTERVAL ? DAY';
+    }
+
+    const getCount = async (table, userCol = 'user_id') => {
+      let sql = `SELECT COUNT(*) as count FROM ${table} WHERE `;
+      let params = [];
+      if (table === 'ludo_rooms') {
+        sql += `(host_id = ? OR challenger_id = ?)`;
+        params.push(userId, userId);
+      } else {
+        sql += `${userCol} = ?`;
+        params.push(userId);
+      }
+
+      if (queryDateFilter) {
+        sql += queryDateFilter;
+        params.push(simulatedDate, parseInt(days, 10));
+      }
+
+      const [res] = await pool.query(sql, params);
+      return res[0]?.count || 0;
+    };
+
+    let totalPlays = 0;
+    const selectedGames = game.split(',').map(g => g.trim());
+
+    for (const g of selectedGames) {
+      if (g === 'any') {
+        const pAviator = await getCount('aviator_bets');
+        const pCt = await getCount('ct_bets');
+        const pFruit = await getCount('fruit_bets');
+        const pLudo = await getCount('ludo_rooms');
+        const pFantasy = await getCount('fantasy_contest_entries');
+        totalPlays += (pAviator + pCt + pFruit + pLudo + pFantasy);
+      } else if (g === 'aviator') {
+        totalPlays += await getCount('aviator_bets');
+      } else if (g === 'colour-trading') {
+        totalPlays += await getCount('ct_bets');
+      } else if (g === 'fruit-slasher') {
+        totalPlays += await getCount('fruit_bets');
+      } else if (g === 'ludo') {
+        totalPlays += await getCount('ludo_rooms');
+      } else if (g === 'cricket-fantasy') {
+        totalPlays += await getCount('fantasy_contest_entries');
+      }
+    }
+
+    if (operator === '<') {
+      return totalPlays < targetValue;
+    } else if (operator === '>=') {
+      return totalPlays >= targetValue;
+    } else if (operator === '=') {
+      return totalPlays === targetValue;
+    }
   }
 
   return false;

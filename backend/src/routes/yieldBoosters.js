@@ -56,7 +56,7 @@ router.get('/', async (req, res) => {
       }
 
       // Check eligibility
-      const isEligible = await checkEligibility(userId, config.target_type);
+      const isEligible = await checkEligibility(userId, config.target_type, config);
       if (isEligible) {
         claimable.push(config);
       }
@@ -115,7 +115,7 @@ router.post('/:id/claim', async (req, res) => {
     }
 
     // 4. Check eligibility
-    const isEligible = await checkEligibility(userId, booster.target_type);
+    const isEligible = await checkEligibility(userId, booster.target_type, booster);
     if (!isEligible) {
       await conn.rollback();
       conn.release();

@@ -56,7 +56,10 @@ router.get('/', async (req, res) => {
 // POST /api/admin/yield-boosters
 router.post('/', async (req, res) => {
   try {
-    const { name, description, yield_boost_percent, target_type, duration_days, is_active } = req.body;
+    const { 
+      name, description, yield_boost_percent, target_type, duration_days, is_active,
+      target_game, target_operator, target_value, target_days 
+    } = req.body;
 
     if (!name || !description || yield_boost_percent === undefined || !target_type || !duration_days) {
       return res.status(400).json({ error: 'All fields (name, description, yield_boost_percent, target_type, duration_days) are required.' });
@@ -73,17 +76,56 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Duration days must be a positive integer.' });
     }
 
-    const validTargets = ['all', 'inactive_2d', 'inactive_7d_reg'];
+    const validTargets = ['all', 'inactive_2d', 'inactive_7d_reg', 'custom'];
     if (!validTargets.includes(target_type)) {
       return res.status(400).json({ error: 'Invalid target type.' });
+    }
+
+    // Additional validations for custom rule
+    let dbTargetGame = null;
+    let dbTargetOperator = null;
+    let dbTargetValue = 0;
+    let dbTargetDays = null;
+
+    if (target_type === 'custom') {
+      if (!target_game || typeof target_game !== 'string') {
+        return res.status(400).json({ error: 'Target game selection is required for custom gameplay rule.' });
+      }
+      const validGames = ['any', 'aviator', 'colour-trading', 'fruit-slasher', 'ludo', 'cricket-fantasy'];
+      const parts = target_game.split(',').map(g => g.trim());
+      for (const p of parts) {
+        if (!validGames.includes(p)) {
+          return res.status(400).json({ error: `Invalid custom game type: ${p}` });
+        }
+      }
+      const validOps = ['<', '>=', '='];
+      if (!validOps.includes(target_operator)) {
+        return res.status(400).json({ error: 'Invalid custom operator.' });
+      }
+      const val = parseInt(target_value, 10);
+      if (isNaN(val) || val < 0) {
+        return res.status(400).json({ error: 'Target count must be a non-negative integer.' });
+      }
+      dbTargetGame = target_game;
+      dbTargetOperator = target_operator;
+      dbTargetValue = val;
+
+      if (target_days !== undefined && target_days !== null && target_days !== '') {
+        const days = parseInt(target_days, 10);
+        if (isNaN(days) || days <= 0) {
+          return res.status(400).json({ error: 'Target timeframe days must be a positive integer.' });
+        }
+        dbTargetDays = days;
+      }
     }
 
     const activeStatus = is_active !== false;
 
     await pool.query(
-      `INSERT INTO fdr_yield_boosters (name, description, yield_boost_percent, target_type, duration_days, is_active)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [name, description, boostPercent, target_type, duration, activeStatus]
+      `INSERT INTO fdr_yield_boosters 
+        (name, description, yield_boost_percent, target_type, duration_days, is_active, target_game, target_operator, target_value, target_days)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, description, boostPercent, target_type, duration, activeStatus, dbTargetGame, dbTargetOperator, dbTargetValue, dbTargetDays]
     );
 
     res.status(201).json({ message: 'Yield booster config successfully created!' });
@@ -97,7 +139,10 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const boosterId = parseInt(req.params.id, 10);
-    const { name, description, yield_boost_percent, target_type, duration_days, is_active } = req.body;
+    const { 
+      name, description, yield_boost_percent, target_type, duration_days, is_active,
+      target_game, target_operator, target_value, target_days 
+    } = req.body;
 
     if (!name || !description || yield_boost_percent === undefined || !target_type || !duration_days) {
       return res.status(400).json({ error: 'All fields (name, description, yield_boost_percent, target_type, duration_days) are required.' });
@@ -114,7 +159,7 @@ router.put('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Duration days must be a positive integer.' });
     }
 
-    const validTargets = ['all', 'inactive_2d', 'inactive_7d_reg'];
+    const validTargets = ['all', 'inactive_2d', 'inactive_7d_reg', 'custom'];
     if (!validTargets.includes(target_type)) {
       return res.status(400).json({ error: 'Invalid target type.' });
     }
@@ -124,13 +169,52 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Yield booster not found.' });
     }
 
+    // Additional validations for custom rule
+    let dbTargetGame = null;
+    let dbTargetOperator = null;
+    let dbTargetValue = 0;
+    let dbTargetDays = null;
+
+    if (target_type === 'custom') {
+      if (!target_game || typeof target_game !== 'string') {
+        return res.status(400).json({ error: 'Target game selection is required for custom gameplay rule.' });
+      }
+      const validGames = ['any', 'aviator', 'colour-trading', 'fruit-slasher', 'ludo', 'cricket-fantasy'];
+      const parts = target_game.split(',').map(g => g.trim());
+      for (const p of parts) {
+        if (!validGames.includes(p)) {
+          return res.status(400).json({ error: `Invalid custom game type: ${p}` });
+        }
+      }
+      const validOps = ['<', '>=', '='];
+      if (!validOps.includes(target_operator)) {
+        return res.status(400).json({ error: 'Invalid custom operator.' });
+      }
+      const val = parseInt(target_value, 10);
+      if (isNaN(val) || val < 0) {
+        return res.status(400).json({ error: 'Target count must be a non-negative integer.' });
+      }
+      dbTargetGame = target_game;
+      dbTargetOperator = target_operator;
+      dbTargetValue = val;
+
+      if (target_days !== undefined && target_days !== null && target_days !== '') {
+        const days = parseInt(target_days, 10);
+        if (isNaN(days) || days <= 0) {
+          return res.status(400).json({ error: 'Target timeframe days must be a positive integer.' });
+        }
+        dbTargetDays = days;
+      }
+    }
+
     const activeStatus = is_active !== false;
 
     await pool.query(
       `UPDATE fdr_yield_boosters 
-       SET name = ?, description = ?, yield_boost_percent = ?, target_type = ?, duration_days = ?, is_active = ?
+       SET name = ?, description = ?, yield_boost_percent = ?, target_type = ?, duration_days = ?, is_active = ?,
+           target_game = ?, target_operator = ?, target_value = ?, target_days = ?
        WHERE id = ?`,
-      [name, description, boostPercent, target_type, duration, activeStatus, boosterId]
+      [name, description, boostPercent, target_type, duration, activeStatus, dbTargetGame, dbTargetOperator, dbTargetValue, dbTargetDays, boosterId]
     );
 
     res.json({ message: 'Yield booster successfully updated!' });

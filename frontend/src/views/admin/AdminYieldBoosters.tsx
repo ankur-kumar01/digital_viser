@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { yieldBoosterAPI } from '../../api';
-import { Percent, Clock, Plus, Trash2, Edit, Power, PowerOff, Users, X, Info } from 'lucide-react';
+import { Percent, Plus, Trash2, Edit, Power, PowerOff, Users, X, Info } from 'lucide-react';
+
+const GAME_OPTIONS = [
+  { key: 'aviator', label: 'Aviator' },
+  { key: 'colour-trading', label: 'Colour Trading' },
+  { key: 'fruit-slasher', label: 'Fruit Slasher' },
+  { key: 'ludo', label: 'Ludo' },
+  { key: 'cricket-fantasy', label: 'Cricket Fantasy' },
+];
 
 export const AdminYieldBoosters: React.FC = () => {
   const [boosters, setBoosters] = useState<any[]>([]);
@@ -14,11 +22,89 @@ export const AdminYieldBoosters: React.FC = () => {
     description: '',
     yield_boost_percent: '',
     target_type: 'all',
-    duration_days: ''
+    duration_days: '',
+    target_game: 'any',
+    target_operator: '>=',
+    target_value: '0',
+    target_days: ''
   });
 
   // Edit Booster State
   const [editingBooster, setEditingBooster] = useState<any | null>(null);
+
+  // Helper for game options checkboxes
+  const isNewGameSelected = (gameKey: string) => {
+    if (newBooster.target_game === 'any') return true;
+    return newBooster.target_game.split(',').includes(gameKey);
+  };
+
+  const handleNewGameToggle = (gameKey: string) => {
+    if (newBooster.target_game === 'any') {
+      const selected = GAME_OPTIONS.filter(o => o.key !== gameKey).map(o => o.key).join(',');
+      setNewBooster({ ...newBooster, target_game: selected });
+    } else {
+      const currentList = newBooster.target_game ? newBooster.target_game.split(',') : [];
+      let updatedList;
+      if (currentList.includes(gameKey)) {
+        updatedList = currentList.filter(k => k !== gameKey);
+      } else {
+        updatedList = [...currentList, gameKey];
+      }
+      if (updatedList.length === GAME_OPTIONS.length) {
+        setNewBooster({ ...newBooster, target_game: 'any' });
+      } else if (updatedList.length === 0) {
+        setNewBooster({ ...newBooster, target_game: '' });
+      } else {
+        setNewBooster({ ...newBooster, target_game: updatedList.join(',') });
+      }
+    }
+  };
+
+  const handleNewSelectAllToggle = () => {
+    if (newBooster.target_game === 'any') {
+      setNewBooster({ ...newBooster, target_game: '' });
+    } else {
+      setNewBooster({ ...newBooster, target_game: 'any' });
+    }
+  };
+
+  const isEditGameSelected = (gameKey: string) => {
+    if (!editingBooster || !editingBooster.target_game) return false;
+    if (editingBooster.target_game === 'any') return true;
+    return editingBooster.target_game.split(',').includes(gameKey);
+  };
+
+  const handleEditGameToggle = (gameKey: string) => {
+    if (!editingBooster) return;
+    if (editingBooster.target_game === 'any') {
+      const selected = GAME_OPTIONS.filter(o => o.key !== gameKey).map(o => o.key).join(',');
+      setEditingBooster({ ...editingBooster, target_game: selected });
+    } else {
+      const currentList = editingBooster.target_game ? editingBooster.target_game.split(',') : [];
+      let updatedList;
+      if (currentList.includes(gameKey)) {
+        updatedList = currentList.filter(k => k !== gameKey);
+      } else {
+        updatedList = [...currentList, gameKey];
+      }
+      if (updatedList.length === GAME_OPTIONS.length) {
+        setEditingBooster({ ...editingBooster, target_game: 'any' });
+      } else if (updatedList.length === 0) {
+        setEditingBooster({ ...editingBooster, target_game: '' });
+      } else {
+        setEditingBooster({ ...editingBooster, target_game: updatedList.join(',') });
+      }
+    }
+  };
+
+  const handleEditSelectAllToggle = () => {
+    if (!editingBooster) return;
+    if (editingBooster.target_game === 'any') {
+      setEditingBooster({ ...editingBooster, target_game: '' });
+    } else {
+      setEditingBooster({ ...editingBooster, target_game: 'any' });
+    }
+  };
 
   const fetchBoosters = async () => {
     try {
@@ -41,6 +127,10 @@ export const AdminYieldBoosters: React.FC = () => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
+    if (newBooster.target_type === 'custom' && !newBooster.target_game) {
+      setErrorMessage('Please select at least one target game for the custom gameplay rule.');
+      return;
+    }
     try {
       await yieldBoosterAPI.createAdminBooster({
         name: newBooster.name,
@@ -48,9 +138,23 @@ export const AdminYieldBoosters: React.FC = () => {
         yield_boost_percent: parseFloat(newBooster.yield_boost_percent),
         target_type: newBooster.target_type,
         duration_days: parseInt(newBooster.duration_days, 10),
+        target_game: newBooster.target_type === 'custom' ? newBooster.target_game : null,
+        target_operator: newBooster.target_type === 'custom' ? newBooster.target_operator : null,
+        target_value: newBooster.target_type === 'custom' ? parseInt(newBooster.target_value, 10) : 0,
+        target_days: newBooster.target_type === 'custom' && newBooster.target_days ? parseInt(newBooster.target_days, 10) : null,
         is_active: true
       });
-      setNewBooster({ name: '', description: '', yield_boost_percent: '', target_type: 'all', duration_days: '' });
+      setNewBooster({
+        name: '',
+        description: '',
+        yield_boost_percent: '',
+        target_type: 'all',
+        duration_days: '',
+        target_game: 'any',
+        target_operator: '>=',
+        target_value: '0',
+        target_days: ''
+      });
       setSuccessMessage('Yield booster successfully created!');
       fetchBoosters();
     } catch (err: any) {
@@ -63,6 +167,10 @@ export const AdminYieldBoosters: React.FC = () => {
     if (!editingBooster) return;
     setErrorMessage('');
     setSuccessMessage('');
+    if (editingBooster.target_type === 'custom' && !editingBooster.target_game) {
+      setErrorMessage('Please select at least one target game for the custom gameplay rule.');
+      return;
+    }
     try {
       await yieldBoosterAPI.updateAdminBooster(editingBooster.id, {
         name: editingBooster.name,
@@ -70,6 +178,10 @@ export const AdminYieldBoosters: React.FC = () => {
         yield_boost_percent: parseFloat(editingBooster.yield_boost_percent),
         target_type: editingBooster.target_type,
         duration_days: parseInt(editingBooster.duration_days, 10),
+        target_game: editingBooster.target_type === 'custom' ? editingBooster.target_game : null,
+        target_operator: editingBooster.target_type === 'custom' ? editingBooster.target_operator : null,
+        target_value: editingBooster.target_type === 'custom' ? parseInt(editingBooster.target_value, 10) : 0,
+        target_days: editingBooster.target_type === 'custom' && editingBooster.target_days ? parseInt(editingBooster.target_days, 10) : null,
         is_active: !!editingBooster.is_active
       });
       setEditingBooster(null);
@@ -92,6 +204,10 @@ export const AdminYieldBoosters: React.FC = () => {
         yield_boost_percent: parseFloat(target.yield_boost_percent),
         target_type: target.target_type,
         duration_days: parseInt(target.duration_days, 10),
+        target_game: target.target_game,
+        target_operator: target.target_operator,
+        target_value: target.target_value,
+        target_days: target.target_days,
         is_active: !currentStatus
       });
       setSuccessMessage(`Yield booster status updated!`);
@@ -122,18 +238,39 @@ export const AdminYieldBoosters: React.FC = () => {
         return { background: 'rgba(96, 165, 250, 0.15)', color: '#60a5fa' };
       case 'inactive_7d_reg':
         return { background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24' };
+      case 'custom':
+        return { background: 'rgba(167, 139, 250, 0.15)', color: '#c084fc' };
       default:
         return { background: 'var(--bg-glass)', color: 'var(--text-secondary)' };
     }
   };
 
-  const getTargetLabel = (target: string) => {
-    switch (target) {
-      case 'all': return 'All Users';
-      case 'inactive_2d': return 'Inactive 2d';
-      case 'inactive_7d_reg': return 'Reg 7d+ / 0 Plays';
-      default: return target;
+  const getTargetLabel = (b: any) => {
+    if (b.target_type === 'all') return 'All Users';
+    if (b.target_type === 'inactive_2d') return 'Inactive 2d';
+    if (b.target_type === 'inactive_7d_reg') return 'Reg 7d+ / 0 Plays';
+    if (b.target_type === 'custom') {
+      if (!b.target_game) return 'No game selected';
+      let gameLabel = '';
+      if (b.target_game === 'any') {
+        gameLabel = 'Any game';
+      } else {
+        const parts = b.target_game.split(',');
+        const labels = parts.map((g: string) => {
+          const trimmed = g.trim();
+          if (trimmed === 'colour-trading') return 'Colour Trading';
+          if (trimmed === 'cricket-fantasy') return 'Cricket Fantasy';
+          if (trimmed === 'fruit-slasher') return 'Fruit Slasher';
+          return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+        });
+        gameLabel = labels.join(' + ');
+      }
+      const operator = b.target_operator;
+      const count = b.target_value;
+      const timeframe = b.target_days ? `in past ${b.target_days}d` : 'lifetime';
+      return `${gameLabel} ${operator} ${count} plays (${timeframe})`;
     }
+    return b.target_type;
   };
 
   if (isLoading && boosters.length === 0) return <div style={{ padding: '32px' }}>Loading Yield Booster Management...</div>;
@@ -183,9 +320,48 @@ export const AdminYieldBoosters: React.FC = () => {
                 <option value="all">All Users</option>
                 <option value="inactive_2d">Inactive for previous 2 Days (no game plays)</option>
                 <option value="inactive_7d_reg">Registered 7+ Days with 0 lifetime plays</option>
+                <option value="custom">Custom Gameplay Rule...</option>
               </select>
             </div>
           </div>
+
+          {/* DYNAMIC RULE BUILDER FOR NEW BOOSTER */}
+          {newBooster.target_type === 'custom' && (
+            <div className="glass-card" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', background: 'rgba(255, 255, 255, 0.01)', padding: '16px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)' }}>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="input-label" style={{ marginBottom: '8px', display: 'block' }}>Target Games (Select at least one)</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                  <label className="badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 12px', background: newBooster.target_game === 'any' ? 'rgba(0, 245, 160, 0.15)' : 'rgba(255, 255, 255, 0.05)', color: newBooster.target_game === 'any' ? 'var(--accent-secondary)' : 'var(--text-secondary)', border: '1px solid var(--border-glass)' }}>
+                    <input type="checkbox" checked={newBooster.target_game === 'any'} onChange={handleNewSelectAllToggle} style={{ cursor: 'pointer' }} />
+                    Any Game (All)
+                  </label>
+                  {GAME_OPTIONS.map(opt => (
+                    <label key={opt.key} className="badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '6px 12px', background: isNewGameSelected(opt.key) ? 'rgba(0, 245, 160, 0.1)' : 'rgba(255, 255, 255, 0.02)', color: isNewGameSelected(opt.key) ? 'var(--text-primary)' : 'var(--text-muted)', border: '1px solid var(--border-glass)' }}>
+                      <input type="checkbox" checked={isNewGameSelected(opt.key)} onChange={() => handleNewGameToggle(opt.key)} style={{ cursor: 'pointer' }} />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="input-label">Comparison Operator</label>
+                <select className="input-field" value={newBooster.target_operator} onChange={e => setNewBooster({...newBooster, target_operator: e.target.value})}>
+                  <option value=">=">At least (&gt;=)</option>
+                  <option value="<">Less than (&lt;)</option>
+                  <option value="=">Exactly (=)</option>
+                </select>
+              </div>
+              <div>
+                <label className="input-label">Plays Target Count</label>
+                <input type="number" className="input-field" value={newBooster.target_value} onChange={e => setNewBooster({...newBooster, target_value: e.target.value})} required min={0} />
+              </div>
+              <div>
+                <label className="input-label">Timeframe Days (empty = Lifetime)</label>
+                <input type="number" className="input-field" value={newBooster.target_days} onChange={e => setNewBooster({...newBooster, target_days: e.target.value})} placeholder="Lifetime" min={1} />
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="input-label">Offer Description</label>
             <textarea 
@@ -235,7 +411,7 @@ export const AdminYieldBoosters: React.FC = () => {
                   <td>{b.duration_days} Days</td>
                   <td>
                     <span className="badge" style={getTargetBadgeStyle(b.target_type)}>
-                      {getTargetLabel(b.target_type)}
+                      {getTargetLabel(b)}
                     </span>
                   </td>
                   <td>
@@ -308,8 +484,47 @@ export const AdminYieldBoosters: React.FC = () => {
                   <option value="all">All Users</option>
                   <option value="inactive_2d">Inactive for previous 2 Days (no game plays)</option>
                   <option value="inactive_7d_reg">Registered 7+ Days with 0 lifetime plays</option>
+                  <option value="custom">Custom Gameplay Rule...</option>
                 </select>
               </div>
+
+              {/* DYNAMIC RULE BUILDER FOR EDIT BOOSTER */}
+              {editingBooster.target_type === 'custom' && (
+                <div className="glass-card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: 'rgba(255, 255, 255, 0.01)', padding: '16px', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', marginBottom: '10px' }}>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label className="input-label" style={{ marginBottom: '8px', display: 'block' }}>Target Games (Select at least one)</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                      <label className="badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '4px 10px', background: editingBooster.target_game === 'any' ? 'rgba(0, 245, 160, 0.15)' : 'rgba(255, 255, 255, 0.05)', color: editingBooster.target_game === 'any' ? 'var(--accent-secondary)' : 'var(--text-secondary)', border: '1px solid var(--border-glass)' }}>
+                        <input type="checkbox" checked={editingBooster.target_game === 'any'} onChange={handleEditSelectAllToggle} style={{ cursor: 'pointer' }} />
+                        Any Game (All)
+                      </label>
+                      {GAME_OPTIONS.map(opt => (
+                        <label key={opt.key} className="badge" style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '4px 10px', background: isEditGameSelected(opt.key) ? 'rgba(0, 245, 160, 0.1)' : 'rgba(255, 255, 255, 0.02)', color: isEditGameSelected(opt.key) ? 'var(--text-primary)' : 'var(--text-muted)', border: '1px solid var(--border-glass)' }}>
+                          <input type="checkbox" checked={isEditGameSelected(opt.key)} onChange={() => handleEditGameToggle(opt.key)} style={{ cursor: 'pointer' }} />
+                          {opt.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="input-label">Comparison Operator</label>
+                    <select className="input-field" value={editingBooster.target_operator || '>='} onChange={e => setEditingBooster({...editingBooster, target_operator: e.target.value})}>
+                      <option value=">=">At least (&gt;=)</option>
+                      <option value="<">Less than (&lt;)</option>
+                      <option value="=">Exactly (=)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="input-label">Plays Target Count</label>
+                    <input type="number" className="input-field" value={editingBooster.target_value !== undefined ? editingBooster.target_value : '0'} onChange={e => setEditingBooster({...editingBooster, target_value: e.target.value})} required min={0} />
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label className="input-label">Timeframe Days (empty = Lifetime)</label>
+                    <input type="number" className="input-field" value={editingBooster.target_days || ''} onChange={e => setEditingBooster({...editingBooster, target_days: e.target.value})} placeholder="Lifetime" min={1} />
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="input-label">Offer Description</label>
                 <textarea 
