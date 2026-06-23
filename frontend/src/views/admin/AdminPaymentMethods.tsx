@@ -22,12 +22,16 @@ export const AdminPaymentMethods: React.FC = () => {
   // New Method State
   const [newMethodName, setNewMethodName] = useState('');
   const [newMethodType, setNewMethodType] = useState('deposit');
+  const [newMinAmount, setNewMinAmount] = useState('0');
+  const [newMaxAmount, setNewMaxAmount] = useState('10000000');
 
   // Configuration Modal State
   const [configuringMethod, setConfiguringMethod] = useState<any | null>(null);
   const [adminInstructions, setAdminInstructions] = useState<FieldDef[]>([]);
   const [userForm, setUserForm] = useState<FieldDef[]>([]);
   const [withdrawalCharges, setWithdrawalCharges] = useState<ChargeDef[]>([]);
+  const [minAmount, setMinAmount] = useState('0');
+  const [maxAmount, setMaxAmount] = useState('10000000');
   const [isSavingConfig, setIsSavingConfig] = useState(false);
 
   const fetchData = async () => {
@@ -49,8 +53,19 @@ export const AdminPaymentMethods: React.FC = () => {
     e.preventDefault();
     if (!newMethodName) return;
     try {
-      await adminAPI.createMethod({ name: newMethodName, type: newMethodType, is_active: true, admin_instructions: [], user_form: [], withdrawal_charges: [] });
+      await adminAPI.createMethod({
+        name: newMethodName,
+        type: newMethodType,
+        is_active: true,
+        admin_instructions: [],
+        user_form: [],
+        withdrawal_charges: [],
+        min_amount: parseFloat(newMinAmount) || 0,
+        max_amount: parseFloat(newMaxAmount) || 0
+      });
       setNewMethodName('');
+      setNewMinAmount('0');
+      setNewMaxAmount('10000000');
       fetchData();
     } catch (err) {
       alert('Failed to create method');
@@ -81,6 +96,8 @@ export const AdminPaymentMethods: React.FC = () => {
     setAdminInstructions(method.admin_instructions ? (typeof method.admin_instructions === 'string' ? JSON.parse(method.admin_instructions) : method.admin_instructions) : []);
     setUserForm(method.user_form ? (typeof method.user_form === 'string' ? JSON.parse(method.user_form) : method.user_form) : []);
     setWithdrawalCharges(method.withdrawal_charges ? (typeof method.withdrawal_charges === 'string' ? JSON.parse(method.withdrawal_charges) : method.withdrawal_charges) : []);
+    setMinAmount(typeof method.min_amount !== 'undefined' ? String(method.min_amount) : '0');
+    setMaxAmount(typeof method.max_amount !== 'undefined' ? String(method.max_amount) : '10000000');
   };
 
   const handleSaveConfig = async () => {
@@ -90,7 +107,9 @@ export const AdminPaymentMethods: React.FC = () => {
       await adminAPI.updateMethod(configuringMethod.id, {
         admin_instructions: adminInstructions,
         user_form: userForm,
-        withdrawal_charges: withdrawalCharges
+        withdrawal_charges: withdrawalCharges,
+        min_amount: parseFloat(minAmount) || 0,
+        max_amount: parseFloat(maxAmount) || 0
       });
       setConfiguringMethod(null);
       fetchData();
@@ -124,16 +143,24 @@ export const AdminPaymentMethods: React.FC = () => {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <form onSubmit={handleCreateMethod} className="glass-card" style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '200px' }}>
+          <div style={{ flex: 1.5, minWidth: '200px' }}>
             <label className="input-label">Channel Name</label>
             <input className="input-field" value={newMethodName} onChange={e => setNewMethodName(e.target.value)} placeholder="e.g. PayPal" required />
           </div>
-          <div style={{ flex: 1, minWidth: '150px' }}>
+          <div style={{ flex: 1, minWidth: '120px' }}>
             <label className="input-label">Type</label>
             <select className="input-field" value={newMethodType} onChange={e => setNewMethodType(e.target.value)}>
               <option value="deposit">Deposit</option>
               <option value="withdraw">Withdrawal</option>
             </select>
+          </div>
+          <div style={{ flex: 1, minWidth: '120px' }}>
+            <label className="input-label">Min Amount (₹)</label>
+            <input type="number" className="input-field" value={newMinAmount} onChange={e => setNewMinAmount(e.target.value)} required min="0" step="any" />
+          </div>
+          <div style={{ flex: 1, minWidth: '120px' }}>
+            <label className="input-label">Max Amount (₹)</label>
+            <input type="number" className="input-field" value={newMaxAmount} onChange={e => setNewMaxAmount(e.target.value)} required min="0" step="any" />
           </div>
           <button type="submit" className="btn btn-primary" style={{ padding: '14px 20px' }}>
             <Plus size={18} /> Add Channel
@@ -142,7 +169,7 @@ export const AdminPaymentMethods: React.FC = () => {
 
         <div className="table-container">
           <table className="custom-table">
-            <thead><tr><th>Name</th><th>Type</th><th>Status</th><th style={{ textAlign: 'right' }}>Actions</th></tr></thead>
+            <thead><tr><th>Name</th><th>Type</th><th>Limits (₹)</th><th>Status</th><th style={{ textAlign: 'right' }}>Actions</th></tr></thead>
             <tbody>
               {methods.map(m => (
                 <tr key={m.id}>
@@ -153,6 +180,9 @@ export const AdminPaymentMethods: React.FC = () => {
                     </div>
                   </td>
                   <td style={{ textTransform: 'capitalize' }}>{m.type}</td>
+                  <td>
+                    ₹{parseFloat(m.min_amount || '0').toLocaleString()} - ₹{parseFloat(m.max_amount || '0').toLocaleString()}
+                  </td>
                   <td>
                     <span className={`badge ${m.is_active ? 'badge-active' : 'badge-danger'}`}>
                       {m.is_active ? 'Active' : 'Inactive'}
@@ -173,7 +203,7 @@ export const AdminPaymentMethods: React.FC = () => {
                   </td>
                 </tr>
               ))}
-              {methods.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center' }}>No methods configured.</td></tr>}
+              {methods.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center' }}>No methods configured.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -192,9 +222,37 @@ export const AdminPaymentMethods: React.FC = () => {
             <h3 style={{ fontSize: '1.4rem', marginBottom: '4px', fontWeight: 700 }}>
               Configure: {configuringMethod.name}
             </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
               Define instructions to show the user, and fields the user must fill.
             </p>
+
+            {/* Limit Settings */}
+            <div style={{ display: 'flex', gap: '16px', background: 'var(--bg-tertiary)', padding: '20px', borderRadius: 'var(--radius-md)', marginBottom: '24px', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <label className="input-label">Minimum Transaction Amount (₹)</label>
+                <input 
+                  type="number" 
+                  className="input-field" 
+                  value={minAmount} 
+                  onChange={e => setMinAmount(e.target.value)} 
+                  required 
+                  min="0" 
+                  step="any"
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <label className="input-label">Maximum Transaction Amount (₹)</label>
+                <input 
+                  type="number" 
+                  className="input-field" 
+                  value={maxAmount} 
+                  onChange={e => setMaxAmount(e.target.value)} 
+                  required 
+                  min="0" 
+                  step="any"
+                />
+              </div>
+            </div>
 
             <div className="responsive-two-col" style={{ alignItems: 'flex-start' }}>
               {/* Admin Instructions Builder */}

@@ -88,13 +88,16 @@ router.get('/methods', async (req, res) => {
 // POST /methods
 router.post('/methods', async (req, res) => {
   try {
-    const { name, type, is_active, admin_instructions, user_form, withdrawal_charges } = req.body;
+    const { name, type, is_active, admin_instructions, user_form, withdrawal_charges, min_amount, max_amount } = req.body;
+    const minVal = typeof min_amount !== 'undefined' ? parseFloat(min_amount) : 0.00;
+    const maxVal = typeof max_amount !== 'undefined' ? parseFloat(max_amount) : 10000000.00;
+
     cache.del('payment:active-methods');
     const [result] = await pool.query(
-      'INSERT INTO payment_methods (name, type, is_active, admin_instructions, user_form, withdrawal_charges) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, type, is_active !== false, JSON.stringify(admin_instructions || []), JSON.stringify(user_form || []), JSON.stringify(withdrawal_charges || [])]
+      'INSERT INTO payment_methods (name, type, is_active, admin_instructions, user_form, withdrawal_charges, min_amount, max_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [name, type, is_active !== false, JSON.stringify(admin_instructions || []), JSON.stringify(user_form || []), JSON.stringify(withdrawal_charges || []), minVal, maxVal]
     );
-    res.json({ id: result.insertId, name, type, is_active });
+    res.json({ id: result.insertId, name, type, is_active, min_amount: minVal, max_amount: maxVal });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to create payment method' });
@@ -104,7 +107,7 @@ router.post('/methods', async (req, res) => {
 // PUT /methods/:id
 router.put('/methods/:id', async (req, res) => {
   try {
-    const { is_active, admin_instructions, user_form, withdrawal_charges } = req.body;
+    const { is_active, admin_instructions, user_form, withdrawal_charges, min_amount, max_amount } = req.body;
     const updates = [];
     const values = [];
 
@@ -123,6 +126,14 @@ router.put('/methods/:id', async (req, res) => {
     if (typeof withdrawal_charges !== 'undefined') {
       updates.push('withdrawal_charges = ?');
       values.push(JSON.stringify(withdrawal_charges));
+    }
+    if (typeof min_amount !== 'undefined') {
+      updates.push('min_amount = ?');
+      values.push(parseFloat(min_amount));
+    }
+    if (typeof max_amount !== 'undefined') {
+      updates.push('max_amount = ?');
+      values.push(parseFloat(max_amount));
     }
 
     if (updates.length > 0) {

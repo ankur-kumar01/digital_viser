@@ -143,6 +143,19 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
       return;
     }
 
+    if (selectedMethod) {
+      const minLimit = parseFloat(selectedMethod.min_amount || '0');
+      const maxLimit = parseFloat(selectedMethod.max_amount || '10000000');
+      if (numericAmount < minLimit) {
+        setError(`Minimum withdrawal amount for this method is ₹${minLimit.toLocaleString()}.`);
+        return;
+      }
+      if (numericAmount > maxLimit) {
+        setError(`Maximum withdrawal amount for this method is ₹${maxLimit.toLocaleString()}.`);
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
       // 1. Upload any files in customData first
@@ -271,6 +284,11 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
                     min="1"
                     max={user ? parseFloat(((user as any)[sourceWallet === 'main' ? 'balance' : `${sourceWallet}_balance`] || '0')) : undefined}
                   />
+                  {selectedMethod && (
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginTop: '6px' }}>
+                      Allowed Limit: ₹{parseFloat(selectedMethod.min_amount || '0').toLocaleString()} - ₹{parseFloat(selectedMethod.max_amount || '10000000').toLocaleString()}
+                    </span>
+                  )}
                 </div>
 
                 <div>

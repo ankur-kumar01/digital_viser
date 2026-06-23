@@ -114,6 +114,19 @@ export const Deposit: React.FC<DepositProps> = ({ refreshUser }) => {
       return;
     }
 
+    if (selectedMethod) {
+      const minLimit = parseFloat(selectedMethod.min_amount || '0');
+      const maxLimit = parseFloat(selectedMethod.max_amount || '10000000');
+      if (numericAmount < minLimit) {
+        setError(`Minimum deposit amount for this method is ₹${minLimit.toLocaleString()}.`);
+        return;
+      }
+      if (numericAmount > maxLimit) {
+        setError(`Maximum deposit amount for this method is ₹${maxLimit.toLocaleString()}.`);
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
       // 1. Upload any files in customData first
@@ -195,6 +208,11 @@ export const Deposit: React.FC<DepositProps> = ({ refreshUser }) => {
                     required
                     min="1"
                   />
+                  {selectedMethod && (
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginTop: '6px' }}>
+                      Allowed Limit: ₹{parseFloat(selectedMethod.min_amount || '0').toLocaleString()} - ₹{parseFloat(selectedMethod.max_amount || '10000000').toLocaleString()}
+                    </span>
+                  )}
                 </div>
 
                 <div>

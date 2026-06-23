@@ -31,6 +31,24 @@ router.post('/deposit', [
     const userId = req.user.userId;
     const depositAmount = parseFloat(amount);
 
+    // Enforce min/max deposit limits
+    if (payment_method && payment_method !== 'direct') {
+      const [pmRows] = await conn.query(
+        'SELECT min_amount, max_amount FROM payment_methods WHERE name = ? AND type = "deposit" AND is_active = 1 LIMIT 1',
+        [payment_method]
+      );
+      if (pmRows.length > 0) {
+        const minAmt = parseFloat(pmRows[0].min_amount);
+        const maxAmt = parseFloat(pmRows[0].max_amount);
+        if (depositAmount < minAmt) {
+          return res.status(400).json({ error: `Minimum deposit amount for ${payment_method} is ₹${minAmt.toFixed(2)}.` });
+        }
+        if (depositAmount > maxAmt) {
+          return res.status(400).json({ error: `Maximum deposit amount for ${payment_method} is ₹${maxAmt.toFixed(2)}.` });
+        }
+      }
+    }
+
     const transactionId = uuidv4();
 
     await conn.beginTransaction();
@@ -84,6 +102,32 @@ router.post('/withdraw', [
     const userId = req.user.userId;
     const withdrawAmount = parseFloat(amount);
 
+    let minAmt = 0;
+    let maxAmt = 10000000.00;
+    let dynamicCharges = [];
+
+    // Enforce min/max withdrawal limits
+    if (payment_method && payment_method !== 'direct') {
+      const [pmRows] = await conn.query(
+        'SELECT min_amount, max_amount, withdrawal_charges FROM payment_methods WHERE name = ? AND type = "withdraw" AND is_active = 1 LIMIT 1',
+        [payment_method]
+      );
+      if (pmRows.length > 0) {
+        minAmt = parseFloat(pmRows[0].min_amount);
+        maxAmt = parseFloat(pmRows[0].max_amount);
+        if (pmRows[0].withdrawal_charges) {
+          dynamicCharges = typeof pmRows[0].withdrawal_charges === 'string' ? JSON.parse(pmRows[0].withdrawal_charges) : pmRows[0].withdrawal_charges;
+        }
+
+        if (withdrawAmount < minAmt) {
+          return res.status(400).json({ error: `Minimum withdrawal amount for ${payment_method} is ₹${minAmt.toFixed(2)}.` });
+        }
+        if (withdrawAmount > maxAmt) {
+          return res.status(400).json({ error: `Maximum withdrawal amount for ${payment_method} is ₹${maxAmt.toFixed(2)}.` });
+        }
+      }
+    }
+
     const walletColumn = resolveWalletColumn(source_wallet);
 
     await conn.beginTransaction();
@@ -95,13 +139,6 @@ router.post('/withdraw', [
     if (currentBalance < withdrawAmount) {
       await conn.rollback();
       return res.status(400).json({ error: 'Insufficient balance.' });
-    }
-
-    // Fetch dynamic charges for this payment method
-    const [pmRows] = await conn.query('SELECT withdrawal_charges FROM payment_methods WHERE name = ? LIMIT 1', [payment_method]);
-    let dynamicCharges = [];
-    if (pmRows.length > 0 && pmRows[0].withdrawal_charges) {
-      dynamicCharges = typeof pmRows[0].withdrawal_charges === 'string' ? JSON.parse(pmRows[0].withdrawal_charges) : pmRows[0].withdrawal_charges;
     }
 
     let totalChargeAmount = 0;
@@ -221,7 +258,7 @@ router.get('/active-methods', async (req, res) => {
     const cached = cache.get(cacheKey);
     if (cached) return res.json(cached);
 
-    const [rows] = await pool.query('SELECT id, name, type, is_active, admin_instructions, user_form, withdrawal_charges, created_at FROM payment_methods WHERE is_active = 1 ORDER BY created_at ASC');
+    const [rows] = await pool.query('SELECT id, name, type, is_active, admin_instructions, user_form, withdrawal_charges, min_amount, max_amount, created_at FROM payment_methods WHERE is_active = 1 ORDER BY created_at ASC');
     cache.set(cacheKey, rows, 30000);
     res.json(rows);
   } catch (err) {
