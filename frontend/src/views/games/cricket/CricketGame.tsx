@@ -5,13 +5,71 @@ import { LogOut, RefreshCw, Trophy, Users, Shield, Zap, Eye, Info, Trash2, Edit3
 
 type ViewState = 'dashboard' | 'match_details' | 'create_team' | 'leaderboard' | 'my_entries' | 'how_to_play';
 
+interface FantasyPlayer {
+  id: number;
+  api_player_id: string;
+  name: string;
+  team_name: string;
+  role: 'batsman' | 'bowler' | 'all-rounder' | 'wicket-keeper';
+  image_url?: string;
+  credit_value: string | number;
+  points?: number;
+  is_playing?: boolean;
+  stats_json?: any;
+}
+
+interface FantasyMatch {
+  id: number;
+  api_match_id: string;
+  title: string;
+  short_title: string;
+  subtitle: string;
+  format: string;
+  team_a: string;
+  team_a_logo: string;
+  team_b: string;
+  team_b_logo: string;
+  start_time: string;
+  status: 'upcoming' | 'live' | 'completed' | 'abandoned';
+  winning_team?: string;
+  toss_winner?: string;
+  toss_decision?: string;
+  score_team_a?: string;
+  score_team_b?: string;
+}
+
+interface FantasyContest {
+  id: number;
+  match_id: number;
+  name: string;
+  entry_fee: string | number;
+  prize_pool: string | number;
+  total_spots: number;
+  filled_spots: number;
+  is_guaranteed: boolean;
+  status: 'open' | 'closed' | 'completed' | 'cancelled';
+  first_prize?: string | number;
+  admin_commission_pct: string | number;
+  max_entries_per_user?: number;
+}
+
+interface FantasyTeam {
+  id: number;
+  user_id: number;
+  match_id: number;
+  captain_player_id: number;
+  vice_captain_player_id: number;
+  total_points: string | number;
+  team_rank?: number | null;
+}
+
 export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavigate: (view: string) => void }> = ({ user, refreshUser, onNavigate }) => {
-  const [matches, setMatches] = useState<any[]>([]);
+  const [matches, setMatches] = useState<FantasyMatch[]>([]);
   const [viewState, setViewState] = useState<ViewState>('dashboard');
-  const [selectedMatch, setSelectedMatch] = useState<any>(null);
-  const [squad, setSquad] = useState<any[]>([]);
-  const [contests, setContests] = useState<any[]>([]);
-  const [userTeams, setUserTeams] = useState<any[]>([]);
+  const [selectedMatch, setSelectedMatch] = useState<FantasyMatch | null>(null);
+  const [squad, setSquad] = useState<FantasyPlayer[]>([]);
+  const [contests, setContests] = useState<FantasyContest[]>([]);
+  const [userTeams, setUserTeams] = useState<FantasyTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [matchFilter, setMatchFilter] = useState<'upcoming' | 'live' | 'completed'>('upcoming');
@@ -36,11 +94,7 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
   // My entries
   const [myEntries, setMyEntries] = useState<any[]>([]);
 
-  useEffect(() => {
-    fetchMatches();
-  }, [matchFilter]);
-
-  const fetchMatches = async () => {
+  const fetchMatches = useCallback(async () => {
     setLoading(true);
     setErrorMsg('');
     try {
@@ -52,7 +106,25 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
     } finally {
       setLoading(false);
     }
-  };
+  }, [matchFilter]);
+
+  useEffect(() => {
+    fetchMatches();
+  }, [fetchMatches]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (viewState === 'match_details' && selectedMatch && selectedMatch.status === 'live') {
+      interval = setInterval(() => {
+        loadMatchDetails(selectedMatch);
+      }, 30000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [viewState, selectedMatch]);
+
+
 
   const loadMatchDetails = async (match: any) => {
     setLoading(true);
@@ -72,7 +144,7 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
       const joined = new Set<number>();
       if (teamsData.length > 0) {
         try {
-          const entries = await fantasyAPI.getMyEntries();
+          const entries = await fantasyAPI.getMyEntries(match.id);
           entries.forEach((e: any) => {
             if (e.contest_id) joined.add(e.contest_id);
           });
@@ -179,17 +251,21 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
     }
   };
 
-  const openEditTeam = (team: any) => {
-    // For editing, we load the team's players and C/VC
-    // For simplicity, we just allow C/VC change in current implementation
-    // Full re-draft would need another flow
-    setEditingTeamId(team.id);
-    setCaptainId(team.captain_player_id);
-    setViceCaptainId(team.vice_captain_player_id);
-    // Load the players this team used
-    setSelectedPlayers([]); // Would need team_players fetch
-    setTeamSelectionPhase('pick_captain');
-    setViewState('create_team');
+  const openEditTeam = async (team: any) => {
+    setLoading(true);
+    try {
+      const playerIds = await fantasyAPI.getTeamPlayers(team.id);
+      setSelectedPlayers(playerIds);
+      setCaptainId(team.captain_player_id);
+      setViceCaptainId(team.vice_captain_player_id);
+      setEditingTeamId(team.id);
+      setTeamSelectionPhase('pick_captain');
+      setViewState('create_team');
+    } catch (err: any) {
+      alert(err.error || err.message || 'Failed to fetch team players');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Contest joining
@@ -317,7 +393,7 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
               <div key={m.id} className="cric-match-card slide-up" style={{ animationDelay: `${index * 0.1}s` }} onClick={() => loadMatchDetails(m)}>
                 <div className="cric-match-header">
                   {m.title}
-                  <span className={`cric-status-badge cric-status-${m.status}`}>{m.status.toUpperCase()}</span>
+                  <span className={`cric-status-badge ${m.status}`}>{m.status.toUpperCase()}</span>
                 </div>
                 <div className="cric-match-teams">
                   <div className="cric-team">
@@ -383,7 +459,7 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
           
           <div className="cric-match-hero">
             <h2>{selectedMatch.short_title}</h2>
-            <span className={`cric-status-badge cric-status-${selectedMatch.status}`}>{selectedMatch.status.toUpperCase()}</span>
+            <span className={`cric-status-badge ${selectedMatch.status}`}>{selectedMatch.status.toUpperCase()}</span>
           </div>
 
           <div className="cric-action-bar">
@@ -691,40 +767,7 @@ export const CricketGame: React.FC<{ user: any, refreshUser: () => void, onNavig
         </div>
       )}
 
-      <style>{`
-        .cric-dialog-overlay {
-          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
-          z-index: 1000; padding: 20px;
-        }
-        .cric-dialog {
-          background: var(--card-bg); border: 1px solid var(--border-color);
-          border-radius: 12px; padding: 24px; max-width: 450px; width: 100%;
-        }
-        .cric-team-select-card {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 12px 16px; margin-bottom: 8px; border-radius: 8px;
-          background: rgba(255,255,255,0.05); cursor: pointer; transition: all 0.2s;
-        }
-        .cric-team-select-card:hover {
-          background: rgba(255,255,255,0.1);
-        }
-        .cric-team-select-info {
-          display: flex; gap: 16px; align-items: center;
-        }
-        .cric-info-btn {
-          background: none; border: 1px solid var(--border-color); color: var(--text-secondary);
-          border-radius: 50%; width: 24px; height: 24px; display: inline-flex;
-          align-items: center; justify-content: center; cursor: pointer;
-          margin-left: 8px; vertical-align: middle;
-        }
-        .cric-info-btn:hover { color: white; border-color: var(--accent-primary); }
-        .cric-icon-btn {
-          background: rgba(255,255,255,0.1); border: none; color: var(--text-secondary);
-          padding: 6px; border-radius: 6px; cursor: pointer;
-        }
-        .cric-icon-btn:hover { color: white; background: rgba(255,255,255,0.15); }
-      `}</style>
+
     </div>
   );
 };

@@ -143,69 +143,83 @@ class FantasyCricketCron {
       const pointsConfig = pointRows.reduce((acc, row) => ({ ...acc, [row.action_key]: parseFloat(row.points) }), {});
 
       for (const m of liveMatches) {
-        this._processingMatches.add(m.id);
+        try {
+          this._processingMatches.add(m.id);
 
-        // API quota protection: skip if we synced this match less than 2 minutes ago (real API only)
-        const apiKey = await fantasyApi.getApiKey();
-        if (apiKey && this._lastLiveSync[m.api_match_id]) {
-          const elapsed = Date.now() - this._lastLiveSync[m.api_match_id];
-          if (elapsed < 120000) { // 2 min cooldown
-            // Still recalc points from stored data without hitting API
-            await this._recalculateTeamPoints(m.id, pointsConfig);
-            this._processingMatches.delete(m.id);
-            continue;
-          }
-        }
-
-        const scorecard = await fantasyApi.fetchLiveScorecard(m.api_match_id);
-        this._lastLiveSync[m.api_match_id] = Date.now();
-        
-        // 2. Update player points (PERF-001)
-        if (scorecard.players && scorecard.players.length > 0) {
-          const apiPlayerIds = scorecard.players.map(p => p.api_player_id);
-          const [dbPlayers] = await pool.query('SELECT id, api_player_id FROM fantasy_players WHERE api_player_id IN (?)', [apiPlayerIds]);
-          const playerMap = new Map(dbPlayers.map(r => [r.api_player_id, r.id]));
-
-          for (const p of scorecard.players) {
-            const s = p.stats;
-            let calculatedPoints = 0;
-            calculatedPoints += (s.runs || 0) * (pointsConfig['run'] || 1);
-            calculatedPoints += (s.boundaries || 0) * (pointsConfig['boundary'] || 1);
-            calculatedPoints += (s.sixes || 0) * (pointsConfig['six'] || 2);
-            calculatedPoints += (s.wickets || 0) * (pointsConfig['wicket'] || 25);
-            calculatedPoints += (s.catches || 0) * (pointsConfig['catch'] || 8);
-            if (s.runs >= 100) calculatedPoints += (pointsConfig['century'] || 16);
-            else if (s.runs >= 50) calculatedPoints += (pointsConfig['half_century'] || 8);
-            if (s.is_duck) calculatedPoints += (pointsConfig['duck'] || -2);
-
-            const dbPlayerId = playerMap.get(p.api_player_id);
-            if (dbPlayerId) {
-              await pool.query(`
-                UPDATE fantasy_match_players SET points = ?, stats_json = ? 
-                WHERE match_id = ? AND player_id = ?
-              `, [calculatedPoints, JSON.stringify(s), m.id, dbPlayerId]);
+          // API quota protection: skip if we synced this match less than 2 minutes ago (real API only)
+          const apiKey = await fantasyApi.getApiKey();
+          if (apiKey && this._lastLiveSync[m.api_match_id]) {
+            const elapsed = Date.now() - this._lastLiveSync[m.api_match_id];
+            if (elapsed < 120000) { // 2 min cooldown
+              // Still recalc points from stored data without hitting API
+              await this._recalculateTeamPoints(m.id, pointsConfig);
+              continue;
             }
           }
+
+          const scorecard = await fantasyApi.fetchLiveScorecard(m.api_match_id);
+          this._lastLiveSync[m.api_match_id] = Date.now();
+          
+          // 2. Update player points (PERF-001)
+          if (scorecard.players && scorecard.players.length > 0) {
+            const apiPlayerIds = scorecard.players.map(p => p.api_player_id);
+            const [dbPlayers] = await pool.query('SELECT id, api_player_id FROM fantasy_players WHERE api_player_id IN (?)', [apiPlayerIds]);
+            const playerMap = new Map(dbPlayers.map(r => [r.api_player_id, r.id]));
+
+            for (const p of scorecard.players) {
+              const s = p.stats;
+              let calculatedPoints = 0;
+              calculatedPoints += (s.runs || 0) * (pointsConfig['run'] || 1);
+              calculatedPoints += (s.boundaries || 0) * (pointsConfig['boundary'] || 1);
+              calculatedPoints += (s.sixes || 0) * (pointsConfig['six'] || 2);
+              calculatedPoints += (s.wickets || 0) * (pointsConfig['wicket'] || 25);
+              calculatedPoints += (s.catches || 0) * (pointsConfig['catch'] || 8);
+              if (s.runs >= 100) calculatedPoints += (pointsConfig['century'] || 16);
+              else if (s.runs >= 50) calculatedPoints += (pointsConfig['half_century'] || 8);
+              if (s.is_duck) calculatedPoints += (pointsConfig['duck'] || -2);
+
+              // 11 missing rules
+              calculatedPoints += (s.lbwBowleds || 0) * (pointsConfig['lbw_bowled'] || 8);
+              if (s.wickets >= 5) calculatedPoints += (pointsConfig['five_wickets'] || 16);
+              else if (s.wickets >= 4) calculatedPoints += (pointsConfig['four_wickets'] || 8);
+              else if (s.wickets >= 3) calculatedPoints += (pointsConfig['three_wickets'] || 4);
+              calculatedPoints += (s.maidenOvers || 0) * (pointsConfig['maiden_over'] || 12);
+              if (s.catches >= 3) calculatedPoints += (pointsConfig['three_catches'] || 4);
+              calculatedPoints += (s.stumpings || 0) * (pointsConfig['stumping'] || 12);
+              calculatedPoints += (s.runOuts || 0) * (pointsConfig['run_out_direct'] || 12);
+              calculatedPoints += (s.runOutThrowers || 0) * (pointsConfig['run_out_thrower'] || 6);
+              calculatedPoints += (s.runOutCatchers || 0) * (pointsConfig['run_out_catcher'] || 6);
+
+              const dbPlayerId = playerMap.get(p.api_player_id);
+              if (dbPlayerId) {
+                await pool.query(`
+                  UPDATE fantasy_match_players SET points = ?, stats_json = ? 
+                  WHERE match_id = ? AND player_id = ?
+                `, [calculatedPoints, JSON.stringify(s), m.id, dbPlayerId]);
+              }
+            }
+          }
+
+          // 3. Recalculate all team points
+          await this._recalculateTeamPoints(m.id, pointsConfig);
+
+          // 4. Check for abandoned/completed
+          if (scorecard.status === 'abandoned') {
+            // Refund all entries for all contests in this match
+            await this._refundMatchEntries(m.id);
+            await pool.query('UPDATE fantasy_matches SET status = "abandoned" WHERE id = ?', [m.id]);
+          } else if (scorecard.status === 'completed') {
+            await pool.query('UPDATE fantasy_matches SET status = "completed", winning_team = ? WHERE id = ?', [scorecard.winning_team, m.id]);
+            await this.distributePrizes(m.id);
+          }
+        } catch (matchErr) {
+          console.error(`❌ [Fantasy] Process match ${m.id} failed:`, matchErr.message);
+        } finally {
+          this._processingMatches.delete(m.id);
         }
-
-        // 3. Recalculate all team points
-        await this._recalculateTeamPoints(m.id, pointsConfig);
-
-        // 4. Check for abandoned/completed
-        if (scorecard.status === 'abandoned') {
-          // Refund all entries for all contests in this match
-          await this._refundMatchEntries(m.id);
-          await pool.query('UPDATE fantasy_matches SET status = "abandoned" WHERE id = ?', [m.id]);
-        } else if (scorecard.status === 'completed') {
-          await pool.query('UPDATE fantasy_matches SET status = "completed", winning_team = ? WHERE id = ?', [scorecard.winning_team, m.id]);
-          await this.distributePrizes(m.id);
-        }
-
-        this._processingMatches.delete(m.id);
       }
     } catch (err) {
       console.error('❌ [Fantasy] Process Live Matches failed:', err.message);
-      this._processingMatches.clear();
     }
   }
 
@@ -234,16 +248,17 @@ class FantasyCricketCron {
 
     // PERF-002: Batch update ranks for all contest entries in this match using ROW_NUMBER()
     await pool.query(`
-      UPDATE fantasy_user_teams ut
+      UPDATE fantasy_contest_entries ce
+      JOIN fantasy_user_teams ut ON ce.team_id = ut.id
       JOIN (
         SELECT 
-          ce.team_id,
-          ROW_NUMBER() OVER (PARTITION BY ce.contest_id ORDER BY ut.total_points DESC) as rnk
-        FROM fantasy_contest_entries ce
-        JOIN fantasy_user_teams ut ON ce.team_id = ut.id
-        WHERE ut.match_id = ?
-      ) as ranked ON ut.id = ranked.team_id
-      SET ut.team_rank = ranked.rnk
+          ce2.id as entry_id,
+          ROW_NUMBER() OVER (PARTITION BY ce2.contest_id ORDER BY ut2.total_points DESC) as rnk
+        FROM fantasy_contest_entries ce2
+        JOIN fantasy_user_teams ut2 ON ce2.team_id = ut2.id
+        WHERE ut2.match_id = ?
+      ) as ranked ON ce.id = ranked.entry_id
+      SET ce.team_rank = ranked.rnk
     `, [matchId]);
   }
 
@@ -299,13 +314,12 @@ class FantasyCricketCron {
       );
 
       for (const contest of contests) {
-        // Get entries ranked by per-contest rank (use team_rank from recalculate)
         const [entries] = await conn.query(`
-          SELECT ce.id, ce.user_id, ce.team_id, ut.team_rank, ut.total_points
+          SELECT ce.id, ce.user_id, ce.team_id, ce.fee_paid, ce.team_rank, ut.total_points
           FROM fantasy_contest_entries ce
           JOIN fantasy_user_teams ut ON ce.team_id = ut.id
           WHERE ce.contest_id = ?
-          ORDER BY ut.team_rank ASC
+          ORDER BY ce.team_rank ASC
         `, [contest.id]);
 
         if (entries.length === 0) {

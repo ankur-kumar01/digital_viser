@@ -75,16 +75,22 @@ router.put('/matches/:id', async (req, res) => {
 
 // 4. Delete a match
 router.delete('/matches/:id', async (req, res) => {
+  const conn = await pool.getConnection();
   try {
-    await pool.query('DELETE FROM fantasy_contest_entries WHERE contest_id IN (SELECT id FROM fantasy_contests WHERE match_id = ?)', [req.params.id]);
-    await pool.query('DELETE FROM fantasy_contests WHERE match_id = ?', [req.params.id]);
-    await pool.query('DELETE FROM fantasy_team_players WHERE team_id IN (SELECT id FROM fantasy_user_teams WHERE match_id = ?)', [req.params.id]);
-    await pool.query('DELETE FROM fantasy_user_teams WHERE match_id = ?', [req.params.id]);
-    await pool.query('DELETE FROM fantasy_match_players WHERE match_id = ?', [req.params.id]);
-    await pool.query('DELETE FROM fantasy_matches WHERE id = ?', [req.params.id]);
+    await conn.beginTransaction();
+    await conn.query('DELETE FROM fantasy_contest_entries WHERE contest_id IN (SELECT id FROM fantasy_contests WHERE match_id = ?)', [req.params.id]);
+    await conn.query('DELETE FROM fantasy_contests WHERE match_id = ?', [req.params.id]);
+    await conn.query('DELETE FROM fantasy_team_players WHERE team_id IN (SELECT id FROM fantasy_user_teams WHERE match_id = ?)', [req.params.id]);
+    await conn.query('DELETE FROM fantasy_user_teams WHERE match_id = ?', [req.params.id]);
+    await conn.query('DELETE FROM fantasy_match_players WHERE match_id = ?', [req.params.id]);
+    await conn.query('DELETE FROM fantasy_matches WHERE id = ?', [req.params.id]);
+    await conn.commit();
     res.json({ success: true, message: 'Match and all related data deleted.' });
   } catch (err) {
+    await conn.rollback();
     res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
   }
 });
 
@@ -182,11 +188,26 @@ router.post('/contests', async (req, res) => {
 // 11. Update Contest
 router.put('/contests/:id', async (req, res) => {
   const { name, entry_fee, prize_pool, total_spots, is_guaranteed, admin_commission_pct, max_entries_per_user, status } = req.body;
+
+  // Validation
+  if (!name || entry_fee === undefined || prize_pool === undefined || total_spots === undefined) {
+    return res.status(400).json({ error: 'name, entry_fee, prize_pool, and total_spots are required' });
+  }
+  const fee = parseFloat(entry_fee);
+  const prize = parseFloat(prize_pool);
+  const spots = parseInt(total_spots);
+  const comm = parseFloat(admin_commission_pct || 0);
+
+  if (fee <= 0) return res.status(400).json({ error: 'Entry fee must be positive' });
+  if (prize <= 0) return res.status(400).json({ error: 'Prize pool must be positive' });
+  if (spots < 2) return res.status(400).json({ error: 'Total spots must be at least 2' });
+  if (comm < 0 || comm > 100) return res.status(400).json({ error: 'Admin commission must be between 0 and 100' });
+
   try {
     await pool.query(`
       UPDATE fantasy_contests SET name=?, entry_fee=?, prize_pool=?, total_spots=?, is_guaranteed=?, admin_commission_pct=?, max_entries_per_user=?, status=?
       WHERE id=?
-    `, [name, entry_fee, prize_pool, total_spots, is_guaranteed, admin_commission_pct, max_entries_per_user, status, req.params.id]);
+    `, [name, fee, prize, spots, is_guaranteed !== undefined ? is_guaranteed : true, comm, max_entries_per_user || 1, status || 'open', req.params.id]);
     res.json({ success: true, message: 'Contest updated successfully!' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -252,12 +273,12 @@ router.post('/contests/:id/cancel', async (req, res) => {
 router.get('/contests/:id/entries', async (req, res) => {
   try {
     const [entries] = await pool.query(`
-      SELECT ce.id, ce.user_id, ce.team_id, ce.fee_paid, ce.prize_won, u.name as user_name, u.email, ut.total_points, ut.team_rank
+      SELECT ce.id, ce.user_id, ce.team_id, ce.fee_paid, ce.prize_won, u.name as user_name, u.email, ut.total_points, ce.team_rank
       FROM fantasy_contest_entries ce
       JOIN users u ON ce.user_id = u.id
       LEFT JOIN fantasy_user_teams ut ON ce.team_id = ut.id
       WHERE ce.contest_id = ?
-      ORDER BY ut.team_rank ASC
+      ORDER BY ce.team_rank ASC
     `, [req.params.id]);
     res.json(entries);
   } catch (err) {

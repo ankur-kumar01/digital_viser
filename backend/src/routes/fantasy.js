@@ -54,8 +54,10 @@ router.get('/match/:id/contests', async (req, res) => {
 
 // 4. Create Team
 router.post('/team', async (req, res) => {
-  const { matchId, playerIds, captainId, viceCaptainId } = req.body;
-  // FIX: require auth middleware (fantasy router must have authMiddleware applied in server.js)
+  const matchId = Number(req.body.matchId);
+  const captainId = Number(req.body.captainId);
+  const viceCaptainId = Number(req.body.viceCaptainId);
+  const playerIds = (req.body.playerIds || []).map(Number);
   const userId = req.user ? req.user.userId : null;
   if (!userId) return res.status(401).json({ error: 'Authentication required.' });
 
@@ -139,11 +141,28 @@ router.post('/team', async (req, res) => {
 // 5. Get User's Teams for a Match
 router.get('/match/:id/my-teams', async (req, res) => {
   try {
-    const [teams] = await pool.query(
-      'SELECT * FROM fantasy_user_teams WHERE user_id = ? AND match_id = ? ORDER BY total_points DESC',
-      [req.user.userId, req.params.id]
-    );
+    const [teams] = await pool.query(`
+      SELECT ut.*, MIN(ce.team_rank) as team_rank
+      FROM fantasy_user_teams ut
+      LEFT JOIN fantasy_contest_entries ce ON ut.id = ce.team_id
+      WHERE ut.user_id = ? AND ut.match_id = ?
+      GROUP BY ut.id
+      ORDER BY ut.total_points DESC
+    `, [req.user.userId, req.params.id]);
     res.json(teams);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get player IDs of a specific team
+router.get('/team/:id/players', async (req, res) => {
+  try {
+    const [players] = await pool.query(
+      'SELECT player_id FROM fantasy_team_players WHERE team_id = ?',
+      [req.params.id]
+    );
+    res.json(players.map(p => p.player_id));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -151,7 +170,8 @@ router.get('/match/:id/my-teams', async (req, res) => {
 
 // 6. Edit Team (captain/VC only, can't change players once match is live)
 router.put('/team/:id', async (req, res) => {
-  const { captainId, viceCaptainId } = req.body;
+  const captainId = Number(req.body.captainId);
+  const viceCaptainId = Number(req.body.viceCaptainId);
   const userId = req.user.userId;
   const teamId = req.params.id;
 
@@ -265,13 +285,6 @@ router.post('/contest/join', async (req, res) => {
       throw new Error('Team does not belong to the same match as this contest');
     }
 
-    // Check if user already joined
-    const [entries] = await conn.query(
-      'SELECT id FROM fantasy_contest_entries WHERE user_id = ? AND contest_id = ?',
-      [userId, contestId]
-    );
-    if (entries.length > 0) throw new Error('You have already joined this contest');
-
     // Check per-user entry limit for this contest
     const [existingEntries] = await conn.query(
       'SELECT COUNT(*) as cnt FROM fantasy_contest_entries WHERE user_id = ? AND contest_id = ?',
@@ -336,7 +349,7 @@ router.get('/contest/:id/leaderboard', async (req, res) => {
   try {
     // Rank entries within this contest only
     const [entries] = await pool.query(`
-      SELECT ce.id, u.name, ut.total_points,
+      SELECT ce.id, ce.user_id, u.name, ut.total_points,
         ROW_NUMBER() OVER (ORDER BY ut.total_points DESC) as team_rank,
         ce.prize_won
       FROM fantasy_contest_entries ce
@@ -355,16 +368,23 @@ router.get('/contest/:id/leaderboard', async (req, res) => {
 // 10. Get User's Contest Entries (prize history)
 router.get('/my-entries', async (req, res) => {
   try {
-    const [entries] = await pool.query(`
+    const matchId = req.query.matchId;
+    let query = `
       SELECT ce.*, c.name as contest_name, m.title as match_title, ut.total_points
       FROM fantasy_contest_entries ce
       JOIN fantasy_contests c ON ce.contest_id = c.id
       JOIN fantasy_matches m ON c.match_id = m.id
       JOIN fantasy_user_teams ut ON ce.team_id = ut.id
       WHERE ce.user_id = ?
-      ORDER BY ce.id DESC
-    `, [req.user.userId]);
+    `;
+    const params = [req.user.userId];
+    if (matchId) {
+      query += ` AND c.match_id = ?`;
+      params.push(Number(matchId));
+    }
+    query += ` ORDER BY ce.id DESC`;
 
+    const [entries] = await pool.query(query, params);
     res.json(entries);
   } catch (err) {
     res.status(500).json({ error: err.message });

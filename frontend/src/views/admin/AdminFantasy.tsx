@@ -73,11 +73,12 @@ export const AdminFantasy: React.FC = () => {
         const data = await adminRequest('GET', '/admin/fantasy/matches');
         setMatches(data);
       } else if (activeTab === 'contests') {
-        const [data, pointsData] = await Promise.all([
+        const [data, matchData] = await Promise.all([
           adminRequest('GET', '/admin/fantasy/contests'),
-          activeTab === 'contests' ? null : adminRequest('GET', '/admin/fantasy/point-system').catch(() => null)
+          adminRequest('GET', '/admin/fantasy/matches').catch(() => [])
         ]);
         setContests(data);
+        setMatches(matchData);
       } else if (activeTab === 'points') {
         const data = await adminRequest('GET', '/admin/fantasy/point-system');
         setPointRules(data);

@@ -762,6 +762,39 @@
 
 .cric-team-select-card:hover { border-color: var(--cric-primary); }
 
+.cric-team-select-info {
+  display: flex; gap: 16px; align-items: center;
+}
+
+.cric-info-btn {
+  background: none; border: 1px solid var(--cric-border-light); color: var(--cric-text-muted);
+  border-radius: 50%; width: 24px; height: 24px; display: inline-flex;
+  align-items: center; justify-content: center; cursor: pointer;
+  margin-left: 8px; vertical-align: middle;
+}
+.cric-info-btn:hover { color: white; border-color: var(--cric-primary); }
+
+.cric-icon-btn {
+  background: rgba(255,255,255,0.1); border: none; color: var(--cric-text-muted);
+  padding: 6px; border-radius: 6px; cursor: pointer;
+}
+.cric-icon-btn:hover { color: white; background: rgba(255,255,255,0.15); }
+
 .cric-loading { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 40px; color: var(--cric-text-muted); font-weight: 600; }
 .spin { animation: spin 1s linear infinite; }
+
 @keyframes spin { 100% { transform: rotate(360deg); } }
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-up {
+  animation: slideUpFade 0.4s ease-out forwards;
+}

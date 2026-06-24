@@ -208,8 +208,6 @@ export const gamesAPI = {
 export const adminFantasyAPI = {
   getMatches: () => adminRequest('GET', '/admin/fantasy/matches'),
   updateMatchStatus: (matchId: string, status: string) => adminRequest('PUT', `/admin/fantasy/matches/${matchId}/status`, { status }),
-  settleMatch: (matchId: string) => adminRequest('POST', `/admin/fantasy/matches/${matchId}/settle`),
-  cancelMatch: (matchId: string) => adminRequest('POST', `/admin/fantasy/matches/${matchId}/cancel`),
 };
 
 // --- Support Tickets API ---
@@ -243,11 +241,12 @@ export const fantasyAPI = {
   getMatchContests: (id: number) => request('GET', `/fantasy/match/${id}/contests`),
   createTeam: (data: { matchId: number; playerIds: number[]; captainId: number; viceCaptainId: number }) => request('POST', '/fantasy/team', data),
   getMyTeams: (matchId: number) => request('GET', `/fantasy/match/${matchId}/my-teams`),
+  getTeamPlayers: (teamId: number) => request('GET', `/fantasy/team/${teamId}/players`),
   updateTeam: (teamId: number, data: { captainId: number; viceCaptainId: number }) => request('PUT', `/fantasy/team/${teamId}`, data),
   deleteTeam: (teamId: number) => request('DELETE', `/fantasy/team/${teamId}`),
   joinContest: (data: { contestId: number; teamId: number }) => request('POST', '/fantasy/contest/join', data),
   getLeaderboard: (contestId: number) => request('GET', `/fantasy/contest/${contestId}/leaderboard`),
-  getMyEntries: () => request('GET', '/fantasy/my-entries')
+  getMyEntries: (matchId?: number) => request('GET', `/fantasy/my-entries${matchId ? `?matchId=${matchId}` : ''}`)
 };
 
 export const adminAPI = {
