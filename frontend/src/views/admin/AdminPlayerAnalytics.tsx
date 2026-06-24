@@ -36,11 +36,12 @@ export const AdminPlayerAnalytics: React.FC = () => {
     setLoading(true);
     try {
       const res = await adminAPI.getGamePlayersAnalytics(p, 20, s || undefined, g);
-      setPlayers(res.players || []);
-      setPage(res.pagination?.page || 1);
-      setTotalPages(res.pagination?.totalPages || 1);
-      setTotal(res.pagination?.total || 0);
-      setInsights(res.insights || { topWinner: null, topLoser: null, topWhale: null });
+      const rawPlayers = Array.isArray(res?.players) ? res.players : [];
+      setPlayers(rawPlayers);
+      setPage(res?.pagination?.page || 1);
+      setTotalPages(res?.pagination?.totalPages || 1);
+      setTotal(res?.pagination?.total || 0);
+      setInsights(res?.insights || { topWinner: null, topLoser: null, topWhale: null });
     } catch (err) {
       console.error('Failed to fetch players analytics', err);
     } finally {
@@ -85,6 +86,8 @@ export const AdminPlayerAnalytics: React.FC = () => {
     );
   };
 
+  const safePlayers = Array.isArray(players) ? players : [];
+
   // Pagination controls
   const renderPagination = () => {
     if (totalPages <= 1) return null;
@@ -96,7 +99,7 @@ export const AdminPlayerAnalytics: React.FC = () => {
     return (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderTop: '1px solid var(--border-glass)' }}>
         <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-          Showing {players.length} of {total} players
+          Showing {safePlayers.length} of {total} players
         </div>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
           <button
@@ -140,7 +143,7 @@ export const AdminPlayerAnalytics: React.FC = () => {
     );
   };
 
-  if (loading && players.length === 0) {
+  if (loading && safePlayers.length === 0) {
     return <div style={{ padding: '20px', color: 'var(--text-secondary)' }}>Loading analytics...</div>;
   }
 
@@ -279,12 +282,12 @@ export const AdminPlayerAnalytics: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {players.length === 0 ? (
+              {safePlayers.length === 0 ? (
                 <tr>
                   <td colSpan={activeGame === 'all' ? 3 : 4} style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No players found</td>
                 </tr>
               ) : (
-                players.map(p => {
+                safePlayers.map(p => {
                   const sysPnl = Number(p.total_pnl);
                   return (
                     <tr key={p.id} style={{ borderBottom: '1px solid var(--border-glass)' }}>
