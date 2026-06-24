@@ -170,7 +170,9 @@ class FantasyApiService {
       console.log(`⏳ [API Quota] Skipping live scorecard for ${apiMatchId}`);
       // Return cached scorecard if available
       if (this._mockScorecardCache[apiMatchId]) {
-        return this._mockScorecardCache[apiMatchId];
+        const cached = this._mockScorecardCache[apiMatchId];
+        const { _squads, _generatedAt, ...publicScorecard } = cached;
+        return publicScorecard;
       }
       return { status: 'live', players: [] }; // Return empty scorecard structure instead of mock
     }
@@ -183,17 +185,33 @@ class FantasyApiService {
         throw new Error(data.reason || 'Failed to fetch scorecard');
       }
 
-      const players = [];
+      // Fetch squad from database to map names to player IDs for complex fielders/bowlers in dismissal strings
+      let dbPlayersList = [];
+      try {
+        const [rows] = await pool.query(`
+          SELECT p.api_player_id, p.name 
+          FROM fantasy_players p
+          JOIN fantasy_match_players mp ON p.id = mp.player_id
+          JOIN fantasy_matches m ON mp.match_id = m.id
+          WHERE m.api_match_id = ?
+        `, [apiMatchId]);
+        dbPlayersList = rows;
+      } catch (dbErr) {
+        console.error('Failed to query db players for scorecard parsing:', dbErr);
+      }
+
+      const playersMap = new Map();
       const matchStatus = data.data.matchEnded ? 'completed' : (data.data.matchAbandoned ? 'abandoned' : 'live');
       
       if (data.data.scorecard) {
+        // First pass: populate bats and bowls
         data.data.scorecard.forEach(innings => {
           if (innings.batting) {
             innings.batting.forEach(b => {
-              const existingIdx = players.findIndex(p => p.api_player_id === String(b.batsman.id));
-              if (existingIdx === -1) {
-                players.push({
-                  api_player_id: String(b.batsman.id),
+              const batsmanId = String(b.batsman.id);
+              if (!playersMap.has(batsmanId)) {
+                playersMap.set(batsmanId, {
+                  api_player_id: batsmanId,
                   stats: {
                     runs: parseInt(b.r) || 0,
                     boundaries: parseInt(b['4s']) || 0,
@@ -205,7 +223,10 @@ class FantasyApiService {
                     dotBalls: 0,
                     maidenOvers: 0,
                     runOuts: 0,
-                    stumpings: 0
+                    stumpings: 0,
+                    lbwBowleds: 0,
+                    runOutThrowers: 0,
+                    runOutCatchers: 0
                   }
                 });
               }
@@ -213,20 +234,146 @@ class FantasyApiService {
           }
           if (innings.bowling) {
             innings.bowling.forEach(b => {
-              const existing = players.find(p => p.api_player_id === String(b.bowler.id));
-              if (existing) {
-                existing.stats.wickets = parseInt(b.w) || 0;
+              const bowlerId = String(b.bowler.id);
+              const wickets = parseInt(b.w) || 0;
+              const maidenOvers = parseInt(b.m) || 0;
+              if (playersMap.has(bowlerId)) {
+                const existing = playersMap.get(bowlerId);
+                existing.stats.wickets = wickets;
+                existing.stats.maidenOvers = maidenOvers;
               } else {
-                players.push({
-                  api_player_id: String(b.bowler.id),
-                  stats: { runs: 0, boundaries: 0, sixes: 0, is_out: false, is_duck: false, wickets: parseInt(b.w) || 0, catches: 0, dotBalls: 0, maidenOvers: 0, runOuts: 0, stumpings: 0 }
+                playersMap.set(bowlerId, {
+                  api_player_id: bowlerId,
+                  stats: {
+                    runs: 0, boundaries: 0, sixes: 0, is_out: false, is_duck: false,
+                    wickets: wickets, catches: 0, dotBalls: 0, maidenOvers: maidenOvers,
+                    runOuts: 0, stumpings: 0, lbwBowleds: 0, runOutThrowers: 0, runOutCatchers: 0
+                  }
                 });
+              }
+            });
+          }
+        });
+
+        // Second pass: parse dismissal text for fielding/bowling bonuses
+        data.data.scorecard.forEach(innings => {
+          if (innings.batting) {
+            innings.batting.forEach(b => {
+              const dismissalText = b.dismissal || '';
+              if (dismissalText === 'not out' || dismissalText === 'batting' || !dismissalText) {
+                return;
+              }
+
+              const findPlayerByName = (nameFrag) => {
+                if (!nameFrag) return null;
+                const cleanFrag = nameFrag.replace(/^(sub|substitute)\s*\(([^)]+)\)/i, '$2').trim().toLowerCase();
+                if (!cleanFrag) return null;
+                return dbPlayersList.find(p => {
+                  const pName = p.name.toLowerCase();
+                  return pName.includes(cleanFrag) || cleanFrag.includes(pName);
+                });
+              };
+
+              const getOrCreatePlayerStats = (playerObj) => {
+                if (!playerObj) return null;
+                const apiId = String(playerObj.api_player_id);
+                if (!playersMap.has(apiId)) {
+                  playersMap.set(apiId, {
+                    api_player_id: apiId,
+                    stats: {
+                      runs: 0, boundaries: 0, sixes: 0, is_out: false, is_duck: false,
+                      wickets: 0, catches: 0, dotBalls: 0, maidenOvers: 0, runOuts: 0, stumpings: 0,
+                      lbwBowleds: 0, runOutThrowers: 0, runOutCatchers: 0
+                    }
+                  });
+                }
+                return playersMap.get(apiId).stats;
+              };
+
+              // Stumping: "st Fielder b Bowler"
+              const stumpingMatch = dismissalText.match(/^st\s+(.+?)\s+b\s+(.+)$/i);
+              if (stumpingMatch) {
+                const fielder = findPlayerByName(stumpingMatch[1]);
+                if (fielder) {
+                  const stats = getOrCreatePlayerStats(fielder);
+                  if (stats) stats.stumpings = (stats.stumpings || 0) + 1;
+                }
+                return;
+              }
+
+              // Catch: "c Fielder b Bowler" or "c & b Bowler"
+              const catchMatch = dismissalText.match(/^c\s+(.+?)\s+b\s+(.+)$/i);
+              const catchAndBowledMatch = dismissalText.match(/^c\s+&\s+b\s+(.+)$/i);
+              if (catchAndBowledMatch) {
+                const bowler = findPlayerByName(catchAndBowledMatch[1]);
+                if (bowler) {
+                  const stats = getOrCreatePlayerStats(bowler);
+                  if (stats) stats.catches = (stats.catches || 0) + 1;
+                }
+                return;
+              } else if (catchMatch) {
+                const fielder = findPlayerByName(catchMatch[1]);
+                if (fielder) {
+                  const stats = getOrCreatePlayerStats(fielder);
+                  if (stats) stats.catches = (stats.catches || 0) + 1;
+                }
+                return;
+              }
+
+              // LBW: "lbw b Bowler"
+              const lbwMatch = dismissalText.match(/^lbw\s+b\s+(.+)$/i);
+              if (lbwMatch) {
+                const bowler = findPlayerByName(lbwMatch[1]);
+                if (bowler) {
+                  const stats = getOrCreatePlayerStats(bowler);
+                  if (stats) stats.lbwBowleds = (stats.lbwBowleds || 0) + 1;
+                }
+                return;
+              }
+
+              // Bowled: "bowled b Bowler" or "b Bowler"
+              const bowledMatch = dismissalText.match(/^(bowled\s+)?b\s+(.+)$/i);
+              if (bowledMatch) {
+                const bowler = findPlayerByName(bowledMatch[2]);
+                if (bowler) {
+                  const stats = getOrCreatePlayerStats(bowler);
+                  if (stats) stats.lbwBowleds = (stats.lbwBowleds || 0) + 1;
+                }
+                return;
+              }
+
+              // Run Out: "run out (Fielder)" or "run out (Fielder1/Fielder2)"
+              const runOutMatch = dismissalText.match(/^run\s+out\s+\((.+)\)$/i);
+              if (runOutMatch) {
+                const fieldersStr = runOutMatch[1];
+                if (fieldersStr.includes('/')) {
+                  const parts = fieldersStr.split('/');
+                  const thrower = findPlayerByName(parts[0]);
+                  const catcher = findPlayerByName(parts[1]);
+                  if (thrower) {
+                    const stats = getOrCreatePlayerStats(thrower);
+                    if (stats) stats.runOutThrowers = (stats.runOutThrowers || 0) + 1;
+                  }
+                  if (catcher) {
+                    const stats = getOrCreatePlayerStats(catcher);
+                    if (stats) stats.runOutCatchers = (stats.runOutCatchers || 0) + 1;
+                  }
+                } else {
+                  // Direct hit
+                  const fielder = findPlayerByName(fieldersStr);
+                  if (fielder) {
+                    const stats = getOrCreatePlayerStats(fielder);
+                    if (stats) stats.runOuts = (stats.runOuts || 0) + 1;
+                  }
+                }
+                return;
               }
             });
           }
         });
       }
 
+      const players = Array.from(playersMap.values());
       const result = {
         status: matchStatus,
         winning_team: data.data.matchWinner || null,
@@ -239,7 +386,9 @@ class FantasyApiService {
     } catch (error) {
       console.error('API Error:', error);
       if (this._mockScorecardCache[apiMatchId]) {
-        return this._mockScorecardCache[apiMatchId];
+        const cached = this._mockScorecardCache[apiMatchId];
+        const { _squads, _generatedAt, ...publicScorecard } = cached;
+        return publicScorecard;
       }
       return this._getMockScorecard(apiMatchId);
     }
@@ -252,9 +401,9 @@ class FantasyApiService {
     return [
       {
         api_match_id: 'mock_match_1',
-        title: 'Mumbai Indians vs Chennai Super Kings',
-        short_title: 'MI vs CSK',
-        subtitle: 'IPL 2026 - Match 1',
+        title: 'Mumbai Indians vs Chennai Super Kings (Demo)',
+        short_title: 'MI vs CSK (Demo)',
+        subtitle: 'IPL 2026 - Match 1 (Demo)',
         format: 'T20',
         team_a: 'Mumbai Indians',
         team_a_logo: '',
@@ -265,9 +414,9 @@ class FantasyApiService {
       },
       {
         api_match_id: 'mock_match_2',
-        title: 'Royal Challengers Bangalore vs Kolkata Knight Riders',
-        short_title: 'RCB vs KKR',
-        subtitle: 'IPL 2026 - Match 2',
+        title: 'Royal Challengers Bangalore vs Kolkata Knight Riders (Demo)',
+        short_title: 'RCB vs KKR (Demo)',
+        subtitle: 'IPL 2026 - Match 2 (Demo)',
         format: 'T20',
         team_a: 'Royal Challengers Bangalore',
         team_a_logo: '',
@@ -352,7 +501,8 @@ class FantasyApiService {
           cached.winning_team = cached._squads[0]?.team_name || 'MI';
         }
       }
-      return cached;
+      const { _squads, _generatedAt, ...publicScorecard } = cached;
+      return publicScorecard;
     }
 
     // Generate fresh deterministic scorecard (stable for the match duration)
@@ -371,9 +521,12 @@ class FantasyApiService {
           is_out: seed > 25,
           is_duck: seed < 5,
           dotBalls: 0,
-          maidenOvers: 0,
-          runOuts: 0,
-          stumpings: 0
+          maidenOvers: idx % 6 === 0 ? Math.floor(seed / 12) : 0,
+          runOuts: idx % 7 === 0 ? 1 : 0,
+          stumpings: idx % 8 === 0 ? 1 : 0,
+          lbwBowleds: idx % 5 === 0 ? Math.floor(seed / 10) : 0,
+          runOutThrowers: idx % 9 === 0 ? 1 : 0,
+          runOutCatchers: idx % 10 === 0 ? 1 : 0
         }
       };
     });
@@ -387,7 +540,9 @@ class FantasyApiService {
     };
 
     this._mockScorecardCache[apiMatchId] = scorecard;
-    return scorecard;
+    
+    const { _squads, _generatedAt, ...publicScorecard } = scorecard;
+    return publicScorecard;
   }
 
 }

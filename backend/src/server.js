@@ -207,6 +207,7 @@ const registerLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardH
 const otpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many OTP requests. Try again in 15 minutes.' } });
 const spinLimiter = rateLimit({ windowMs: 60 * 1000, max: 1, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many spin requests.' } });
 const adminLoginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many admin login attempts. Try again in 15 minutes.' } });
+const fantasyLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false, store: rateLimitStore, message: { error: 'Too many requests. Please slow down.' } });
 
 // Maintenance Mode Intercept Middleware
 app.use(async (req, res, next) => {
@@ -272,7 +273,7 @@ app.use('/api/admin/fantasy', adminFantasyRoutes);
 app.use('/api/spin/claim', spinLimiter);
 app.use('/api/spin', spinRoutes);
 app.use('/api/activity', activityRoutes);
-app.use('/api/fantasy', require('./middleware/auth'), fantasyRoutes);
+app.use('/api/fantasy', fantasyLimiter, require('./middleware/auth'), fantasyRoutes);
 app.use('/api/admin/ludo', require('./routes/adminLudo'));
 app.use('/api/admin/bots', require('./routes/adminBots'));
 app.use('/api/ludo/tournaments', require('./routes/ludoTournaments'));

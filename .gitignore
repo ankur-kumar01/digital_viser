@@ -5,3 +5,7 @@ build
 .DS_Store
 *.log
 backend/public/uploads/
+backend/scratch_*.js
+backend/temp_*.js
+backend/query_db.js
+backend/update_date.js
