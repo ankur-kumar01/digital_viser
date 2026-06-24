@@ -273,6 +273,7 @@ export const adminAPI = {
     adminRequest('POST', `/admin/users/${userId}/withdraw`, data),
   getUsers: () => adminRequest('GET', '/admin/users'),
   updateUser: (id: number, data: any) => adminRequest('PUT', `/admin/users/${id}`, data),
+  changeUserId: (id: number, new_id: number) => adminRequest('PUT', `/admin/users/${id}/change-id`, { new_id }),
   updateUserReferrer: (id: number, invited_by: number | null) => adminRequest('PUT', `/admin/users/${id}/invited-by`, { invited_by }),
   adjustBalance: (id: number, action: 'add' | 'subtract', amount: number, description: string, wallet_type: 'main' | 'bonus' | 'referral' = 'main') => 
     adminRequest('POST', `/admin/users/${id}/balance`, { action, amount, description, wallet_type }),

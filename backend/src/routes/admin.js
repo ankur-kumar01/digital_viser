@@ -545,6 +545,92 @@ router.put('/users/:id', async (req, res) => {
   }
 });
 
+// PUT /users/:id/change-id - Change user ID with cascade update across all related tables
+router.put('/users/:id/change-id', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const oldId = parseInt(req.params.id, 10);
+    const newId = parseInt(req.body.new_id, 10);
+
+    if (!newId || newId === oldId) {
+      return res.status(400).json({ error: 'New ID must be different from current ID' });
+    }
+    if (newId <= 0) {
+      return res.status(400).json({ error: 'New ID must be a positive number' });
+    }
+
+    // Check new ID doesn't already exist
+    const [existing] = await conn.query('SELECT id FROM users WHERE id = ?', [newId]);
+    if (existing.length > 0) {
+      return res.status(409).json({ error: `User with ID ${newId} already exists` });
+    }
+
+    await conn.beginTransaction();
+
+    // Temporarily disable FK checks to allow ID changes
+    await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+
+    try {
+      // Update all tables referencing user_id
+      const updates = [
+        ['deposits', 'user_id'],
+        ['withdrawals', 'user_id'],
+        ['transactions', 'user_id'],
+        ['fdrs', 'user_id'],
+        ['locked_funds', 'user_id'],
+        ['aviator_bets', 'user_id'],
+        ['ct_bets', 'user_id'],
+        ['fruit_bets', 'user_id'],
+        ['user_spin_history', 'user_id'],
+        ['user_spin_streaks', 'user_id'],
+        ['login_history', 'user_id'],
+        ['user_activity_log', 'user_id'],
+        ['fdr_plan_blocks', 'user_id'],
+        ['ludo_moves', 'user_id'],
+        ['fantasy_user_teams', 'user_id'],
+        ['fantasy_contest_entries', 'user_id'],
+        ['ludo_tournament_participants', 'user_id'],
+        ['support_tickets', 'user_id'],
+        ['user_yield_boosters', 'user_id'],
+        ['daily_task_progress', 'user_id'],
+        ['daily_task_all_done_claims', 'user_id'],
+      ];
+
+      for (const [table, column] of updates) {
+        await conn.query(`UPDATE \`${table}\` SET \`${column}\` = ? WHERE \`${column}\` = ?`, [newId, oldId]);
+      }
+
+      // Ludo rooms has multiple user-referencing columns
+      await conn.query('UPDATE ludo_rooms SET host_id = ? WHERE host_id = ?', [newId, oldId]);
+      await conn.query('UPDATE ludo_rooms SET challenger_id = ? WHERE challenger_id = ?', [newId, oldId]);
+      await conn.query('UPDATE ludo_rooms SET winner_id = ? WHERE winner_id = ?', [newId, oldId]);
+
+      // Support ticket messages (sender_id, only user type)
+      await conn.query("UPDATE support_ticket_messages SET sender_id = ? WHERE sender_id = ? AND sender_type = 'user'", [newId, oldId]);
+
+      // Users self-referential invited_by
+      await conn.query('UPDATE users SET invited_by = ? WHERE invited_by = ?', [newId, oldId]);
+
+      // Finally update the users table primary key itself
+      await conn.query('UPDATE users SET id = ? WHERE id = ?', [newId, oldId]);
+
+      await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+      await conn.commit();
+
+      res.json({ success: true, old_id: oldId, new_id: newId });
+    } catch (err) {
+      await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+      throw err;
+    }
+  } catch (err) {
+    await conn.rollback();
+    console.error('Failed to change user ID:', err);
+    res.status(500).json({ error: err.message || 'Failed to change user ID' });
+  } finally {
+    conn.release();
+  }
+});
+
 // PUT /users/:id/invited-by
 router.put('/users/:id/invited-by', async (req, res) => {
   try {
