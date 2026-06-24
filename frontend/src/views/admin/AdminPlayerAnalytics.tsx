@@ -265,19 +265,11 @@ export const AdminPlayerAnalytics: React.FC = () => {
         </div>
 
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: activeGame === 'all' ? '1400px' : '800px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: activeGame === 'all' ? '600px' : '800px' }}>
             <thead>
               <tr style={{ background: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border-glass)' }}>
                 <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>PLAYER</th>
-                {activeGame === 'all' ? (
-                  <>
-                    <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>AVIATOR (BETS/VOL/PNL)</th>
-                    <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>COLOUR TRADING (BETS/VOL/PNL)</th>
-                    <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>FRUIT SLASHER (BETS/VOL/PNL)</th>
-                    <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>LUDO (MATCHES/VOL/PNL)</th>
-                    <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>FANTASY (ENTRIES/FEES/PNL)</th>
-                  </>
-                ) : (
+                {activeGame !== 'all' && (
                   <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>
                     {GAME_COLUMNS[activeGame]?.label} (BETS/VOL/PNL)
                   </th>
@@ -289,7 +281,7 @@ export const AdminPlayerAnalytics: React.FC = () => {
             <tbody>
               {players.length === 0 ? (
                 <tr>
-                  <td colSpan={activeGame === 'all' ? 8 : 4} style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No players found</td>
+                  <td colSpan={activeGame === 'all' ? 3 : 4} style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No players found</td>
                 </tr>
               ) : (
                 players.map(p => {
@@ -300,17 +292,7 @@ export const AdminPlayerAnalytics: React.FC = () => {
                         <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{p.email}</div>
                       </td>
-                      {activeGame === 'all' ? (
-                        <>
-                          {getGameCell(p, 'aviator')}
-                          {getGameCell(p, 'colourtrading')}
-                          {getGameCell(p, 'fruitslasher')}
-                          {getGameCell(p, 'ludo')}
-                          {getGameCell(p, 'fantasy')}
-                        </>
-                      ) : (
-                        getGameCell(p, activeGame)
-                      )}
+                      {activeGame !== 'all' && getGameCell(p, activeGame)}
                       <td style={{ padding: '16px 20px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>
                         {formatCurrency(Number(p.total_wagered))}
                       </td>
