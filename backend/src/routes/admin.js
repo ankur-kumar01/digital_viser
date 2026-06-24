@@ -1330,37 +1330,153 @@ router.get('/games/analytics', async (req, res) => {
 // GET /games/players
 router.get('/games/players', async (req, res) => {
   try {
-    const query = `
-      SELECT 
-        u.id, 
-        u.name, 
-        u.email,
-        COALESCE(a.total_aviator_bets, 0) as aviator_bets_count,
-        COALESCE(a.total_aviator_wagered, 0) as aviator_wagered,
-        COALESCE(a.total_aviator_won, 0) as aviator_won,
-        (COALESCE(a.total_aviator_wagered, 0) - COALESCE(a.total_aviator_won, 0)) as aviator_pnl,
-        COALESCE(c.total_ct_bets, 0) as ct_bets_count,
-        COALESCE(c.total_ct_wagered, 0) as ct_wagered,
-        COALESCE(c.total_ct_won, 0) as ct_won,
-        (COALESCE(c.total_ct_wagered, 0) - COALESCE(c.total_ct_won, 0)) as ct_pnl,
-        (COALESCE(a.total_aviator_wagered, 0) + COALESCE(c.total_ct_wagered, 0)) as total_wagered,
-        (COALESCE(a.total_aviator_wagered, 0) + COALESCE(c.total_ct_wagered, 0) - COALESCE(a.total_aviator_won, 0) - COALESCE(c.total_ct_won, 0)) as total_pnl
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
+    const search = (req.query.search || '').trim();
+    const game = (req.query.game || 'all').trim().toLowerCase();
+
+    const validGames = ['all', 'aviator', 'colourtrading', 'ludo', 'fantasy'];
+    const gameFilter = validGames.includes(game) ? game : 'all';
+
+    const searchClause = search ? 'AND (u.name LIKE ? OR u.email LIKE ?)' : '';
+    const searchParams = search ? [`%${search}%`, `%${search}%`] : [];
+
+    let gameJoins = '';
+    let gameWhere = '';
+
+    // Aviator subquery
+    const aviatorSub = `LEFT JOIN (
+      SELECT user_id,
+        COUNT(*) AS aviator_bets,
+        COALESCE(SUM(bet_amount),0) AS aviator_wagered,
+        COALESCE(SUM(win_amount),0) AS aviator_won
+      FROM aviator_bets GROUP BY user_id
+    ) a ON u.id = a.user_id`;
+
+    // Colour Trading subquery
+    const ctSub = `LEFT JOIN (
+      SELECT user_id,
+        COUNT(*) AS ct_bets,
+        COALESCE(SUM(bet_amount),0) AS ct_wagered,
+        COALESCE(SUM(win_amount),0) AS ct_won
+      FROM ct_bets GROUP BY user_id
+    ) c ON u.id = c.user_id`;
+
+    // Ludo subquery (player can be host or challenger)
+    const ludoSub = `LEFT JOIN (
+      SELECT user_id,
+        COUNT(*) AS ludo_bets,
+        COALESCE(SUM(entry_fee),0) AS ludo_wagered,
+        COALESCE(SUM(CASE WHEN winner_id = user_id THEN entry_fee * 2 ELSE 0 END),0) AS ludo_won
+      FROM (
+        SELECT host_id AS user_id, entry_fee, winner_id FROM ludo_rooms WHERE status = 'completed'
+        UNION ALL
+        SELECT challenger_id AS user_id, entry_fee, winner_id FROM ludo_rooms WHERE status = 'completed' AND challenger_id IS NOT NULL
+      ) lr GROUP BY user_id
+    ) l ON u.id = l.user_id`;
+
+    // Fantasy subquery
+    const fantasySub = `LEFT JOIN (
+      SELECT user_id,
+        COUNT(*) AS fantasy_bets,
+        COALESCE(SUM(fee_paid),0) AS fantasy_fees,
+        COALESCE(SUM(prize_won),0) AS fantasy_prizes
+      FROM fantasy_contest_entries GROUP BY user_id
+    ) fe ON u.id = fe.user_id`;
+
+    gameJoins = `${aviatorSub} ${ctSub} ${ludoSub} ${fantasySub}`;
+
+    if (gameFilter === 'all') {
+      gameWhere = 'WHERE (COALESCE(a.aviator_bets,0) > 0 OR COALESCE(c.ct_bets,0) > 0 OR COALESCE(l.ludo_bets,0) > 0 OR COALESCE(fe.fantasy_bets,0) > 0)';
+    } else {
+      const gameConditions = {
+        aviator: 'COALESCE(a.aviator_bets,0) > 0',
+        colourtrading: 'COALESCE(c.ct_bets,0) > 0',
+        ludo: 'COALESCE(l.ludo_bets,0) > 0',
+        fantasy: 'COALESCE(fe.fantasy_bets,0) > 0'
+      };
+      gameWhere = `WHERE ${gameConditions[gameFilter] || '1=1'}`;
+    }
+
+    // Count query
+    const countQuery = `
+      SELECT COUNT(*) AS total
       FROM users u
-      LEFT JOIN (
-        SELECT user_id, COUNT(*) as total_aviator_bets, SUM(bet_amount) as total_aviator_wagered, SUM(win_amount) as total_aviator_won
-        FROM aviator_bets
-        GROUP BY user_id
-      ) a ON u.id = a.user_id
-      LEFT JOIN (
-        SELECT user_id, COUNT(*) as total_ct_bets, SUM(bet_amount) as total_ct_wagered, SUM(win_amount) as total_ct_won
-        FROM ct_bets
-        GROUP BY user_id
-      ) c ON u.id = c.user_id
-      WHERE COALESCE(a.total_aviator_bets, 0) > 0 OR COALESCE(c.total_ct_bets, 0) > 0
-      ORDER BY total_pnl DESC
+      ${gameJoins}
+      ${gameWhere}
+      ${searchClause}
     `;
-    const [rows] = await pool.query(query);
-    res.json(rows);
+    const countParams = [...searchParams];
+    const [[{ total }]] = await pool.query(countQuery, countParams);
+
+    // Data query
+    const dataQuery = `
+      SELECT
+        u.id, u.name, u.email,
+        COALESCE(a.aviator_bets,0) AS aviator_bets_count,
+        COALESCE(a.aviator_wagered,0) AS aviator_wagered,
+        COALESCE(a.aviator_won,0) AS aviator_won,
+        (COALESCE(a.aviator_wagered,0) - COALESCE(a.aviator_won,0)) AS aviator_pnl,
+        COALESCE(c.ct_bets,0) AS ct_bets_count,
+        COALESCE(c.ct_wagered,0) AS ct_wagered,
+        COALESCE(c.ct_won,0) AS ct_won,
+        (        COALESCE(c.ct_wagered,0) - COALESCE(c.ct_won,0)) AS ct_pnl,
+        COALESCE(l.ludo_bets,0) AS ludo_bets_count,
+        COALESCE(l.ludo_wagered,0) AS ludo_wagered,
+        COALESCE(l.ludo_won,0) AS ludo_won,
+        (COALESCE(l.ludo_wagered,0) - COALESCE(l.ludo_won,0)) AS ludo_pnl,
+        COALESCE(fe.fantasy_bets,0) AS fantasy_bets_count,
+        COALESCE(fe.fantasy_fees,0) AS fantasy_fees,
+        COALESCE(fe.fantasy_prizes,0) AS fantasy_prizes,
+        (COALESCE(fe.fantasy_fees,0) - COALESCE(fe.fantasy_prizes,0)) AS fantasy_pnl,
+        (COALESCE(a.aviator_wagered,0) + COALESCE(c.ct_wagered,0) + COALESCE(l.ludo_wagered,0) + COALESCE(fe.fantasy_fees,0)) AS total_wagered,
+        (COALESCE(a.aviator_wagered,0) + COALESCE(c.ct_wagered,0) + COALESCE(l.ludo_wagered,0) + COALESCE(fe.fantasy_fees,0) - COALESCE(a.aviator_won,0) - COALESCE(c.ct_won,0) - COALESCE(l.ludo_won,0) - COALESCE(fe.fantasy_prizes,0)) AS total_pnl
+      FROM users u
+      ${gameJoins}
+      ${gameWhere}
+      ${searchClause}
+      ORDER BY total_pnl DESC
+      LIMIT ? OFFSET ?
+    `;
+    const dataParams = [...searchParams, limit, offset];
+    const [rows] = await pool.query(dataQuery, dataParams);
+
+    // Compute insights from the full filtered dataset (game tab applied, search ignored for KPI cards)
+    const insightQuery = `
+      SELECT
+        COALESCE(a.aviator_wagered,0) + COALESCE(c.ct_wagered,0) + COALESCE(l.ludo_wagered,0) + COALESCE(fe.fantasy_fees,0) AS total_wagered,
+        COALESCE(a.aviator_wagered,0) + COALESCE(c.ct_wagered,0) + COALESCE(l.ludo_wagered,0) + COALESCE(fe.fantasy_fees,0) - COALESCE(a.aviator_won,0) - COALESCE(c.ct_won,0) - COALESCE(l.ludo_won,0) - COALESCE(fe.fantasy_prizes,0) AS total_pnl,
+        u.id, u.name, u.email
+      FROM users u
+      ${gameJoins}
+      ${gameWhere}
+      HAVING total_wagered > 0
+    `;
+    const [allRows] = await pool.query(insightQuery);
+
+    let topWinner = null;
+    let topLoser = null;
+    let topWhale = null;
+    if (allRows.length > 0) {
+      const sortedByPnlAsc = [...allRows].sort((a, b) => Number(a.total_pnl) - Number(b.total_pnl));
+      topWinner = sortedByPnlAsc[0];
+      const sortedByPnlDesc = [...allRows].sort((a, b) => Number(b.total_pnl) - Number(a.total_pnl));
+      topLoser = sortedByPnlDesc[0];
+      const sortedByVolume = [...allRows].sort((a, b) => Number(b.total_wagered) - Number(a.total_wagered));
+      topWhale = sortedByVolume[0];
+    }
+
+    res.json({
+      players: rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      },
+      insights: { topWinner, topLoser, topWhale }
+    });
   } catch (err) {
     console.error('Failed to fetch game players analytics:', err);
     res.status(500).json({ error: 'Failed to fetch game players analytics' });
@@ -1617,19 +1733,29 @@ router.get('/transactions', async (req, res) => {
   }
 });
 
-// GET /admin/bets - All bets from all games with user info, paginated
+// GET /admin/bets - All bets from all games with user info, paginated, game filter
 router.get('/bets', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const offset = (page - 1) * limit;
+    const game = (req.query.game || 'all').trim().toLowerCase();
+    const validGames = ['all', 'aviator', 'colour_trading', 'ludo', 'fantasy'];
+    const gameFilter = validGames.includes(game) ? game : 'all';
+
+    const gameClause = gameFilter !== 'all' ? `WHERE game_type = '${gameFilter}'` : '';
 
     const [countResult] = await pool.query(`
       SELECT COUNT(*) as total FROM (
-        SELECT id FROM aviator_bets
+        SELECT id, 'aviator' as game_type FROM aviator_bets
         UNION ALL
-        SELECT id FROM ct_bets
+        SELECT id, 'colour_trading' as game_type FROM ct_bets
+        UNION ALL
+        SELECT id, 'ludo' as game_type FROM ludo_rooms WHERE status IN ('completed','cancelled')
+        UNION ALL
+        SELECT id, 'fantasy' as game_type FROM fantasy_contest_entries
       ) combined
+      ${gameClause}
     `);
     const total = countResult[0].total;
 
@@ -1650,7 +1776,46 @@ router.get('/bets', async (req, res) => {
           b.round_id, NULL as cashout_multiplier, b.color
         FROM ct_bets b
         JOIN users u ON b.user_id = u.id
+        UNION ALL
+        SELECT 
+          lr.id + 1000000000 as id, lr.host_id as user_id, u.name as user_name, u.email as user_email,
+          lr.entry_fee as bet_amount,
+          CASE WHEN lr.winner_id = lr.host_id THEN lr.entry_fee * 2 ELSE 0 END as win_amount,
+          CASE WHEN lr.status = 'completed' AND lr.winner_id = lr.host_id THEN 'won'
+               WHEN lr.status = 'completed' AND lr.winner_id != lr.host_id THEN 'lost'
+               ELSE lr.status END as status,
+          lr.created_at,
+          'ludo' as game_type,
+          NULL as round_id, NULL as cashout_multiplier, NULL as color
+        FROM ludo_rooms lr
+        JOIN users u ON lr.host_id = u.id
+        WHERE lr.status IN ('completed','cancelled')
+        UNION ALL
+        SELECT 
+          lr.id + 2000000000 as id, lr.challenger_id as user_id, u.name as user_name, u.email as user_email,
+          lr.entry_fee as bet_amount,
+          CASE WHEN lr.winner_id = lr.challenger_id THEN lr.entry_fee * 2 ELSE 0 END as win_amount,
+          CASE WHEN lr.status = 'completed' AND lr.winner_id = lr.challenger_id THEN 'won'
+               WHEN lr.status = 'completed' AND lr.winner_id != lr.challenger_id THEN 'lost'
+               ELSE lr.status END as status,
+          lr.created_at,
+          'ludo' as game_type,
+          NULL as round_id, NULL as cashout_multiplier, NULL as color
+        FROM ludo_rooms lr
+        JOIN users u ON lr.challenger_id = u.id
+        WHERE lr.status IN ('completed','cancelled') AND lr.challenger_id IS NOT NULL
+        UNION ALL
+        SELECT 
+          ce.id + 3000000000 as id, ce.user_id, u.name as user_name, u.email as user_email,
+          ce.fee_paid as bet_amount, ce.prize_won as win_amount, 
+          CASE WHEN ce.prize_won > 0 THEN 'won' ELSE 'lost' END as status,
+          ce.created_at,
+          'fantasy' as game_type,
+          NULL as round_id, NULL as cashout_multiplier, NULL as color
+        FROM fantasy_contest_entries ce
+        JOIN users u ON ce.user_id = u.id
       ) all_bets
+      ${gameClause}
       ORDER BY created_at DESC
       LIMIT ? OFFSET ?
     `, [limit, offset]);
@@ -1664,6 +1829,7 @@ router.get('/bets', async (req, res) => {
 
     res.json({ bets: parsed, total, page, limit });
   } catch (err) {
+    console.error('Failed to fetch bets:', err);
     res.status(500).json({ error: 'Failed to fetch bets' });
   }
 });

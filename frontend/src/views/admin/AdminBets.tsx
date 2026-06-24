@@ -1,7 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { adminAPI } from '../../api';
 import { Gamepad2, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatGlobalDate } from '../../utils/dateFormatter';
+
+const GAME_TABS = [
+  { key: 'all', label: 'All Games' },
+  { key: 'aviator', label: 'Aviator' },
+  { key: 'colour_trading', label: 'Colour Trading' },
+  { key: 'ludo', label: 'Ludo' },
+  { key: 'fantasy', label: 'Cricket Fantasy' },
+];
+
+const GAME_BADGE_COLORS: Record<string, string> = {
+  aviator: '#8B5CF6',
+  colour_trading: '#F59E0B',
+  ludo: '#EF4444',
+  fantasy: '#3B82F6',
+};
+
+const GAME_BADGE_LABELS: Record<string, string> = {
+  aviator: 'Aviator',
+  colour_trading: 'Colour Trading',
+  ludo: 'Ludo',
+  fantasy: 'Cricket Fantasy',
+};
 
 export const AdminBets: React.FC = () => {
   const [bets, setBets] = useState<any[]>([]);
@@ -14,10 +36,10 @@ export const AdminBets: React.FC = () => {
 
   const totalPages = Math.ceil(total / limit);
 
-  const fetchBets = async () => {
+  const fetchBets = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await adminAPI.getBets(currentPage, limit);
+      const data = await adminAPI.getBets(currentPage, limit, gameFilter === 'all' ? undefined : gameFilter);
       setBets(data.bets);
       setTotal(data.total);
     } catch (err) {
@@ -25,13 +47,16 @@ export const AdminBets: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, limit, gameFilter]);
 
   useEffect(() => {
     fetchBets();
-  }, [currentPage, limit]);
+  }, [fetchBets]);
 
-  const filteredBets = gameFilter === 'all' ? bets : bets.filter(b => b.game_type === gameFilter);
+  const handleTabChange = (key: string) => {
+    setGameFilter(key);
+    setCurrentPage(1);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -43,29 +68,16 @@ export const AdminBets: React.FC = () => {
     }
   };
 
-  const getGameBadge = (game_type: string) => {
-    const colors: Record<string, string> = {
-      aviator: '#8B5CF6',
-      colour_trading: '#F59E0B'
-    };
-    const labels: Record<string, string> = {
-      aviator: 'Aviator',
-      colour_trading: 'Colour Trading'
-    };
-    return (
-      <span style={{
-        display: 'inline-block',
-        padding: '2px 10px',
-        borderRadius: '20px',
-        fontSize: '0.75rem',
-        fontWeight: 600,
-        background: `${colors[game_type]}20`,
-        color: colors[game_type]
-      }}>
-        {labels[game_type] || game_type}
-      </span>
-    );
-  };
+  const getGameBadge = (game_type: string) => (
+    <span style={{
+      display: 'inline-block', padding: '2px 10px', borderRadius: '20px',
+      fontSize: '0.75rem', fontWeight: 600,
+      background: `${GAME_BADGE_COLORS[game_type] || '#666'}20`,
+      color: GAME_BADGE_COLORS[game_type] || '#666'
+    }}>
+      {GAME_BADGE_LABELS[game_type] || game_type}
+    </span>
+  );
 
   if (isLoading) return <div style={{ padding: '32px' }}>Loading bets...</div>;
 
@@ -79,25 +91,21 @@ export const AdminBets: React.FC = () => {
         <p style={{ color: 'var(--text-secondary)' }}>View all bets placed across all games, sorted by most recent.</p>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-        {['all', 'aviator', 'colour_trading'].map(game => (
+      {/* Game Tabs */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        {GAME_TABS.map(tab => (
           <button
-            key={game}
-            onClick={() => setGameFilter(game)}
+            key={tab.key}
+            onClick={() => handleTabChange(tab.key)}
             style={{
-              padding: '6px 16px',
-              background: gameFilter === game ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-              color: gameFilter === game ? 'var(--bg-primary)' : 'var(--text-secondary)',
-              border: 'none',
-              borderRadius: '20px',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              textTransform: 'capitalize'
+              padding: '8px 18px', border: 'none', borderRadius: '10px', cursor: 'pointer',
+              background: gameFilter === tab.key ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+              color: gameFilter === tab.key ? '#fff' : 'var(--text-primary)',
+              fontWeight: gameFilter === tab.key ? 600 : 400,
+              fontSize: '0.9rem', transition: 'all 0.2s'
             }}
           >
-            {game === 'all' ? 'All Games' : game.replace('_', ' ')}
+            {tab.label}
           </button>
         ))}
       </div>
@@ -113,16 +121,16 @@ export const AdminBets: React.FC = () => {
               <th>Win Amount</th>
               <th>Multiplier</th>
               <th>Status</th>
-              {filteredBets.some(b => b.color) && <th>Color</th>}
+              {(gameFilter === 'all' || gameFilter === 'colour_trading') && <th>Color</th>}
             </tr>
           </thead>
           <tbody>
-            {filteredBets.length === 0 ? (
+            {bets.length === 0 ? (
               <tr>
                 <td colSpan={8} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>No bets found.</td>
               </tr>
             ) : (
-              filteredBets.map((bet) => (
+              bets.map((bet) => (
                 <tr key={`${bet.game_type}-${bet.id}`}>
                   <td style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{formatGlobalDate(bet.created_at)}</td>
                   <td>
@@ -131,27 +139,22 @@ export const AdminBets: React.FC = () => {
                   </td>
                   <td>{getGameBadge(bet.game_type)}</td>
                   <td style={{ fontWeight: 600 }}>₹{parseFloat(bet.bet_amount).toFixed(2)}</td>
-                  <td style={{ fontWeight: 700, color: bet.win_amount ? 'var(--accent-secondary)' : 'var(--text-muted)' }}>
-                    {bet.win_amount ? `₹${parseFloat(bet.win_amount).toFixed(2)}` : '-'}
+                  <td style={{ fontWeight: 700, color: Number(bet.win_amount) > 0 ? 'var(--accent-secondary)' : 'var(--text-muted)' }}>
+                    {Number(bet.win_amount) > 0 ? `₹${parseFloat(bet.win_amount).toFixed(2)}` : '-'}
                   </td>
                   <td style={{ color: 'var(--text-secondary)' }}>
                     {bet.cashout_multiplier ? `${parseFloat(bet.cashout_multiplier).toFixed(2)}x` : '-'}
                   </td>
                   <td>
                     <span style={{
-                      display: 'inline-block',
-                      padding: '3px 10px',
-                      borderRadius: '20px',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      textTransform: 'capitalize',
-                      background: `${getStatusColor(bet.status)}20`,
-                      color: getStatusColor(bet.status)
+                      display: 'inline-block', padding: '3px 10px', borderRadius: '20px',
+                      fontSize: '0.78rem', fontWeight: 600, textTransform: 'capitalize',
+                      background: `${getStatusColor(bet.status)}20`, color: getStatusColor(bet.status)
                     }}>
                       {bet.status.replace('_', ' ')}
                     </span>
                   </td>
-                  {filteredBets.some(b => b.color) && (
+                  {(gameFilter === 'all' || gameFilter === 'colour_trading') && (
                     <td style={{ textTransform: 'capitalize' }}>{bet.color || '-'}</td>
                   )}
                 </tr>

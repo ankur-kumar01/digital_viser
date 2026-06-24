@@ -292,7 +292,14 @@ export const adminAPI = {
   deleteUser: (id: number) => adminRequest('DELETE', `/admin/users/${id}`),
   getGames: () => adminRequest('GET', '/admin/games'),
   getGameAnalytics: () => adminRequest('GET', '/admin/games/analytics'),
-  getGamePlayersAnalytics: () => adminRequest('GET', '/admin/games/players'),
+  getGamePlayersAnalytics: (page: number = 1, limit: number = 20, search?: string, game?: string) => {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('limit', limit.toString());
+    if (search) params.append('search', search);
+    if (game) params.append('game', game);
+    return adminRequest('GET', `/admin/games/players?${params.toString()}`);
+  },
   updateGameStatus: (id: number, is_active: boolean) => adminRequest('PUT', `/admin/games/${id}`, { is_active }),
   updateGameLimits: (id: number, limits: { min_bet: number; max_bet: number }) => adminRequest('PUT', `/admin/games/${id}/limits`, limits),
   getSettings: () => adminRequest('GET', '/admin/settings'),
@@ -327,7 +334,13 @@ export const adminAPI = {
   getReferralStats: () => adminRequest('GET', '/admin/referrals/stats'),
   releaseLockedReferral: () => adminRequest('POST', '/admin/referrals/release-locked'),
   getTransactions: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/transactions?page=${page}&limit=${limit}`),
-  getBets: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/bets?page=${page}&limit=${limit}`),
+  getBets: (page: number = 1, limit: number = 50, game?: string) => {
+    const params = new URLSearchParams();
+    params.append('page', page.toString());
+    params.append('limit', limit.toString());
+    if (game) params.append('game', game);
+    return adminRequest('GET', `/admin/bets?${params.toString()}`);
+  },
   getLoginHistory: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/login-history?page=${page}&limit=${limit}`),
   getActivityLog: (page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/activity-log?page=${page}&limit=${limit}`),
   getActiveUsers: (period: string = '24h', page: number = 1, limit: number = 50) => adminRequest('GET', `/admin/active-users?period=${period}&page=${page}&limit=${limit}`),
