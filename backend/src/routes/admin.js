@@ -1537,7 +1537,6 @@ router.get('/games/players', async (req, res) => {
       FROM users u
       ${gameJoins}
       ${gameWhere}
-      HAVING total_wagered > 0
     `;
     const [allRows] = await pool.query(insightQuery);
 
