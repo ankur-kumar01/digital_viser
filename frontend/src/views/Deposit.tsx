@@ -3,6 +3,7 @@ import { walletAPI, uploadFile } from '../api';
 import { CheckCircle2, Clock, XCircle, Ban } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { getAppName } from '../utils/appName';
 
 interface DepositProps {
   user: {
@@ -239,12 +240,12 @@ export const Deposit: React.FC<DepositProps> = ({ refreshUser }) => {
                   <div style={{ background: 'var(--bg-tertiary)', padding: '24px', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', border: '1px solid var(--accent-primary-glow)' }}>
                     <h4 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>Scan to Pay</h4>
                     <div style={{ background: '#fff', padding: '16px', borderRadius: '8px' }}>
-                      <QRCodeSVG value={`upi://pay?pa=${adminUpiId}&pn=Digital_Viser&am=${parseFloat(amount)}&cu=INR`} size={200} level="H" />
+                      <QRCodeSVG value={`upi://pay?pa=${adminUpiId}&pn=${encodeURIComponent(getAppName())}&am=${parseFloat(amount)}&cu=INR`} size={200} level="H" />
                     </div>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textAlign: 'center' }}>
                       Scan this QR code using any UPI app (GPay, PhonePe, Paytm, etc.) to pay exactly <strong style={{ color: 'var(--accent-primary)' }}>₹{parseFloat(amount).toLocaleString()}</strong>.
                     </p>
-                    <a href={`upi://pay?pa=${adminUpiId}&pn=Digital_Viser&am=${parseFloat(amount)}&cu=INR`} className="btn" style={{ width: '100%', textAlign: 'center', display: 'block', padding: '12px', background: 'var(--accent-primary)', color: 'var(--bg-primary)', fontWeight: 600, textDecoration: 'none', borderRadius: 'var(--radius-sm)' }}>
+                    <a href={`upi://pay?pa=${adminUpiId}&pn=${encodeURIComponent(getAppName())}&am=${parseFloat(amount)}&cu=INR`} className="btn" style={{ width: '100%', textAlign: 'center', display: 'block', padding: '12px', background: 'var(--accent-primary)', color: 'var(--bg-primary)', fontWeight: 600, textDecoration: 'none', borderRadius: 'var(--radius-sm)' }}>
                       Pay via UPI App (Mobile)
                     </a>
                   </div>

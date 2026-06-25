@@ -19,6 +19,10 @@ export const AdminUsers: React.FC<Props> = ({ onNavigate, onSelectUser }) => {
     name: '', email: '', phone_number: '', address: '', city: '', state: '', pin_code: ''
   });
 
+  // Change ID state
+  const [newUserId, setNewUserId] = useState<string>('');
+  const [changingId, setChangingId] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredUsers = users.filter(u =>
@@ -77,6 +81,30 @@ export const AdminUsers: React.FC<Props> = ({ onNavigate, onSelectUser }) => {
       state: user.state || '',
       pin_code: user.pin_code || ''
     });
+    setNewUserId('');
+  };
+
+  const handleChangeId = async () => {
+    if (!editingUser || !newUserId) return;
+    const parsed = parseInt(newUserId, 10);
+    if (isNaN(parsed) || parsed <= 0) {
+      alert('Please enter a valid positive user ID');
+      return;
+    }
+    const confirmed = window.confirm(
+      `Are you sure you want to change user ID from ${editingUser.id} to ${parsed}?\n\nThis will update ALL related records across the database (deposits, withdrawals, bets, etc.). This action cannot be easily undone.`
+    );
+    if (!confirmed) return;
+    setChangingId(true);
+    try {
+      await adminAPI.changeUserId(editingUser.id, parsed);
+      setEditingUser(null);
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.message || 'Failed to change user ID');
+    } finally {
+      setChangingId(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -352,7 +380,47 @@ export const AdminUsers: React.FC<Props> = ({ onNavigate, onSelectUser }) => {
             <h3 style={{ fontSize: '1.25rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Edit2 size={20} /> Edit User Profile
             </h3>
-            
+
+            {/* Change User ID Section */}
+            <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: 'var(--radius-md)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--accent-danger)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Change User ID</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--accent-danger)', background: 'rgba(239, 68, 68, 0.15)', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>DANGER ZONE</span>
+              </div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: 1.5 }}>
+                Current ID: <strong style={{ color: 'var(--accent-danger)' }}>#{editingUser.id}</strong>
+                &nbsp;&mdash; Changing the ID will cascade-update every related record
+                (bets, deposits, withdrawals, transactions, and more) across the entire database.
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="number"
+                  className="input-field"
+                  placeholder="Enter new user ID..."
+                  value={newUserId}
+                  onChange={(e) => setNewUserId(e.target.value)}
+                  style={{ flex: 1, minWidth: 0 }}
+                  min="1"
+                />
+                <button
+                  type="button"
+                  onClick={handleChangeId}
+                  disabled={changingId || !newUserId}
+                  className="btn btn-primary"
+                  style={{
+                    background: 'var(--accent-danger)',
+                    color: '#fff',
+                    border: 'none',
+                    whiteSpace: 'nowrap',
+                    opacity: !newUserId || changingId ? 0.6 : 1,
+                    cursor: !newUserId || changingId ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {changingId ? 'Updating...' : 'Change ID'}
+                </button>
+              </div>
+            </div>
+
             <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label className="input-label">Full Name</label>

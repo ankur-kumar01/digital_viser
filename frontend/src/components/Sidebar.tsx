@@ -1,5 +1,6 @@
 import React from 'react';
 import { LayoutDashboard, Wallet, PlusCircle, BarChart3, Receipt, X, Users, User, ArrowUpRight, Gift, Gamepad2, Cpu, Disc, FileText, List, History, Activity, Bot, MessageSquare, Percent } from 'lucide-react';
+import { getAppName } from '../utils/appName';
 
 interface SidebarProps {
   currentView: string;
@@ -103,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
               color: 'var(--text-primary)'
             }}
           >
-            Digital_Viser
+            {getAppName()}
           </span>
         </div>
 
@@ -191,7 +192,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
 
       {/* Muted Platform Info footer */}
       <div style={{ padding: '0 8px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-        Digital_Viser v1.0.0
+        {getAppName()} v1.0.0
       </div>
     </div>
   );

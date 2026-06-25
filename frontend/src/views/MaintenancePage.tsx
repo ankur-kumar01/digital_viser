@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { globalConfigAPI } from '../api';
+import { getAppName } from '../utils/appName';
+
 
 interface TimeLeft {
   hours: number;
@@ -120,7 +122,7 @@ export const MaintenancePage: React.FC = () => {
             Scheduled Maintenance
           </h1>
           <p style={{ color: 'rgba(156,163,175,0.9)', fontSize: '0.95rem', margin: 0, lineHeight: 1.6 }}>
-            Digital Viser is currently undergoing planned system upgrades.<br />
+            {getAppName()} is currently undergoing planned system upgrades.<br />
             We apologise for the temporary inconvenience.
           </p>
         </div>
@@ -246,7 +248,7 @@ export const MaintenancePage: React.FC = () => {
 
         {/* Footer */}
         <p style={{ color: 'rgba(107,114,128,0.7)', fontSize: '0.78rem', textAlign: 'center', margin: 0 }}>
-          Digital Viser © {new Date().getFullYear()} &nbsp;·&nbsp; Status auto-refreshes every 30 seconds
+          {getAppName()} © {new Date().getFullYear()} &nbsp;·&nbsp; Status auto-refreshes every 30 seconds
         </p>
       </div>
 

@@ -206,12 +206,6 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
                 {!isCompleted && (
                   <>
                     <div className="scan-line" />
-                    <div className="money-particle particle-1">+₹</div>
-                    <div className="money-particle particle-2"><Coins size={14} /></div>
-                    <div className="money-particle particle-3"><Banknote size={16} /></div>
-                    <div className="money-particle particle-4">$</div>
-                    <div className="money-particle particle-5"><Coins size={14} /></div>
-                    <div className="money-particle particle-6">+₹</div>
                   </>
                 )}
                 {/* Header row */}

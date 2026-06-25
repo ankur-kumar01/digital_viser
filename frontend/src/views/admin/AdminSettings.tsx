@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../../api';
 import { Save, CheckCircle2, Mail, AlertTriangle } from 'lucide-react';
+import { getAppName } from '../../utils/appName';
+
 
 export const AdminSettings: React.FC = () => {
   const [upiId, setUpiId] = useState('');
@@ -20,7 +22,7 @@ export const AdminSettings: React.FC = () => {
   const [smtpUser, setSmtpUser] = useState('');
   const [smtpPass, setSmtpPass] = useState('');
   const [smtpFromEmail, setSmtpFromEmail] = useState('');
-  const [smtpFromName, setSmtpFromName] = useState('Digital Viser');
+  const [smtpFromName, setSmtpFromName] = useState(getAppName());
   const [smtpConfigured, setSmtpConfigured] = useState(false);
 
   useEffect(() => {
@@ -58,7 +60,7 @@ export const AdminSettings: React.FC = () => {
       setSmtpPort(res.smtp_port || '587');
       setSmtpUser(res.smtp_user || '');
       setSmtpFromEmail(res.smtp_from_email || '');
-      setSmtpFromName(res.smtp_from_name || 'Digital Viser');
+      setSmtpFromName(res.smtp_from_name || getAppName());
       if (res.smtp_pass) {
         setSmtpConfigured(true);
         setSmtpPass('••••••••');
@@ -399,7 +401,7 @@ export const AdminSettings: React.FC = () => {
             </div>
             <div style={{ flex: '1 1 200px' }}>
               <label className="input-label">From Name</label>
-              <input type="text" className="input-field" placeholder="Digital Viser" value={smtpFromName} onChange={e => setSmtpFromName(e.target.value)} />
+              <input type="text" className="input-field" placeholder={getAppName()} value={smtpFromName} onChange={e => setSmtpFromName(e.target.value)} />
             </div>
           </div>
           <button type="submit" className="btn btn-primary" disabled={saving}>
