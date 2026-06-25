@@ -150,7 +150,7 @@ router.post('/forgot-password', [
         'INSERT INTO password_resets (email, otp_code, expires_at) VALUES (?, ?, ?)',
         [email, otp, expiresAt]
       );
-      await sendOtpEmail(email, otp);
+      await sendOtpEmail(email, otp, req);
     }
 
     res.json({ success: true });

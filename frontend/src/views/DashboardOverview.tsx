@@ -4,6 +4,8 @@ import { Award, ArrowRight, ArrowUpRight, ArrowDownLeft, Gift, Users, PlusCircle
 import { PortfolioHero } from '../components/PortfolioHero';
 import { AviatorChatWidget } from '../components/AviatorChatWidget';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { getAppName } from '../utils/appName';
+
 
 interface DashboardOverviewProps {
   user: {
@@ -582,7 +584,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 className="btn promo-offer-card-btn" 
                 onClick={() => {
                   const link = `${window.location.origin}/register?ref=${(user as any)?.referral_code || ''}`;
-                  const text = encodeURIComponent(`Join Digital_Viser and start earning! Use my referral link: ${link}`);
+                  const text = encodeURIComponent(`Join ${getAppName()} and start earning! Use my referral link: ${link}`);
                   window.open(`https://wa.me/?text=${text}`, '_blank');
                 }}
                 style={{ background: '#25D366', color: '#fff' }}

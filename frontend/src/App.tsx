@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
 import { LayoutDashboard, Wallet, ArrowUpRight, BarChart3, User, Gamepad2, Receipt } from 'lucide-react';
+import { getAppName } from './utils/appName';
 import { Auth } from './views/Auth';
 import { ForgotPassword } from './views/ForgotPassword';
 import { DashboardOverview } from './views/DashboardOverview';
@@ -91,6 +92,10 @@ export const App: React.FC = () => {
   const [isMaintenance, setIsMaintenance] = useState(false);
 
   const isGameView = !isAdmin && currentView.startsWith('game-');
+
+  useEffect(() => {
+    document.title = `${getAppName()} — Premium FDR Investment Platform`;
+  }, []);
 
   const handleInitialize = async () => {
     try {

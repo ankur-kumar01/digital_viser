@@ -22,7 +22,7 @@ function buildTransporter(config) {
   });
 }
 
-async function sendOtpEmail(to, otp) {
+async function sendOtpEmail(to, otp, req = null) {
   const config = await getSmtpConfig();
   const transporter = buildTransporter(config);
   if (!transporter) {
@@ -30,7 +30,17 @@ async function sendOtpEmail(to, otp) {
     return false;
   }
 
-  const fromName = config.smtp_from_name || 'Digital Viser';
+  let appName = 'Viser Digital';
+  if (req) {
+    const origin = (req.headers.origin || req.headers.referer || req.headers.host || '').toLowerCase();
+    if (origin.includes('finzox.live')) {
+      appName = 'Finzo X';
+    }
+  }
+
+  const fromName = (config.smtp_from_name && config.smtp_from_name !== 'Digital Viser')
+    ? config.smtp_from_name
+    : appName;
   const fromEmail = config.smtp_from_email || config.smtp_user;
 
   const html = `
@@ -57,7 +67,7 @@ async function sendOtpEmail(to, otp) {
     await transporter.sendMail({
       from: `"${fromName}" <${fromEmail}>`,
       to,
-      subject: 'Your Password Reset OTP — Digital Viser',
+      subject: `Your Password Reset OTP — ${appName}`,
       html,
     });
     console.log('[Email] OTP sent to', to);

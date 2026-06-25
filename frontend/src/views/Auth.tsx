@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authAPI, saveToken } from '../api';
 import { KeyRound, Mail, User, Phone, AlertCircle, Loader2, Gift } from 'lucide-react';
+import { getAppName } from '../utils/appName';
 
 interface AuthProps {
   onLogin: (token: string, user: any, isRegistration?: boolean) => void;
@@ -126,9 +127,9 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onNavigateForgot }) => {
           >
             <KeyRound size={24} color="var(--text-primary)" />
           </div>
-          <h2 style={{ fontSize: '1.75rem', color: 'var(--text-primary)', marginBottom: '6px' }}>Digital_Viser</h2>
+          <h2 style={{ fontSize: '1.75rem', color: 'var(--text-primary)', marginBottom: '6px' }}>{getAppName()}</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Secured Wealth & FDR Investment Platform
+            Secured Wealth & {getAppName()} Investment Platform
           </p>
         </div>
 
