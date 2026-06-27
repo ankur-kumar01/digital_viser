@@ -160,6 +160,54 @@ router.delete('/methods/:id', async (req, res) => {
   }
 });
 
+// GET /fdr-closure-charges
+router.get('/fdr-closure-charges', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM fdr_closure_charges ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch FDR closure charges' });
+  }
+});
+
+// POST /fdr-closure-charges
+router.post('/fdr-closure-charges', async (req, res) => {
+  try {
+    const { name, closure_type, charge_type, value, is_active } = req.body;
+    const [result] = await pool.query(
+      'INSERT INTO fdr_closure_charges (name, closure_type, charge_type, value, is_active) VALUES (?, ?, ?, ?, ?)',
+      [name, closure_type, charge_type, parseFloat(value) || 0, is_active !== false]
+    );
+    res.json({ id: result.insertId, name, closure_type, charge_type, value, is_active });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create FDR closure charge' });
+  }
+});
+
+// PUT /fdr-closure-charges/:id
+router.put('/fdr-closure-charges/:id', async (req, res) => {
+  try {
+    const { name, closure_type, charge_type, value, is_active } = req.body;
+    await pool.query(
+      'UPDATE fdr_closure_charges SET name = ?, closure_type = ?, charge_type = ?, value = ?, is_active = ? WHERE id = ?',
+      [name, closure_type, charge_type, parseFloat(value) || 0, is_active, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update FDR closure charge' });
+  }
+});
+
+// DELETE /fdr-closure-charges/:id
+router.delete('/fdr-closure-charges/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM fdr_closure_charges WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete FDR closure charge' });
+  }
+});
+
 // GET /fdr-plans
 router.get('/fdr-plans', async (req, res) => {
   try {

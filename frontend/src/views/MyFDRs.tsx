@@ -14,6 +14,7 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
   const [error, setError] = useState('');
   const [fdrToClose, setFdrToClose] = useState<number | null>(null);
   const [isClosing, setIsClosing] = useState(false);
+  const [closureCharges, setClosureCharges] = useState<{ force_close: any[], normal_close: any[] }>({ force_close: [], normal_close: [] });
 
   // Live yield simulator for active FDRs
   const LiveYieldDisplay: React.FC<{
@@ -66,6 +67,8 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
     try {
       const data = await fdrAPI.getMyFDRs();
       setFdrs(data);
+      const charges = await fdrAPI.getClosureCharges();
+      setClosureCharges(charges);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch FDR portfolio.');
     } finally {
@@ -412,17 +415,56 @@ export const MyFDRs: React.FC<MyFDRsProps> = ({ onNavigate }) => {
               <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
                 Force Close FDR
               </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '24px' }}>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '24px' }}>
                 Are you sure you want to prematurely terminate this FDR? 
-                <br /><br />
-                <strong style={{ color: 'var(--text-primary)' }}>What happens next:</strong>
-                <ul style={{ paddingLeft: '20px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <li>Your full principal will be instantly returned to your main wallet.</li>
+                
+                {(() => {
+                  const targetFdr = fdrs.find(f => f.id === fdrToClose);
+                  if (!targetFdr) return null;
+                  
+                  const principal = targetFdr.amount;
+                  let totalCharges = 0;
+                  const itemized: any[] = [];
+                  
+                  closureCharges.force_close.forEach(c => {
+                    let amt = c.charge_type === 'percent' ? principal * (parseFloat(c.value) / 100) : parseFloat(c.value);
+                    amt = Math.min(amt, Math.max(0, principal - totalCharges));
+                    if (amt > 0) {
+                      totalCharges += amt;
+                      itemized.push({ name: c.name, amt, val: c.value, type: c.charge_type });
+                    }
+                  });
+                  
+                  const net = principal - totalCharges;
+                  
+                  return (
+                    <div style={{ marginTop: '16px', background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span>Principal Amount:</span>
+                        <span style={{ color: 'var(--text-primary)' }}>₹{principal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      
+                      {itemized.map((item, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', color: 'var(--accent-danger)' }}>
+                          <span>- {item.name} {item.type === 'percent' ? `(${item.val}%)` : ''}</span>
+                          <span>-₹{item.amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      ))}
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', fontWeight: 'bold' }}>
+                        <span style={{ color: 'var(--text-primary)' }}>Net Refund to Wallet:</span>
+                        <span style={{ color: 'var(--accent-primary)' }}>₹{net.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <ul style={{ paddingLeft: '20px', marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <li>You keep all previously deposited interest.</li>
                   <li>You will <span style={{ color: 'var(--accent-danger)' }}>forfeit</span> the live unaccrued yield for the current cycle.</li>
                   <li>Any linked locked bonus funds will be <span style={{ color: 'var(--accent-danger)' }}>destroyed</span>.</li>
                 </ul>
-              </p>
+              </div>
               
               <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
                 <button 

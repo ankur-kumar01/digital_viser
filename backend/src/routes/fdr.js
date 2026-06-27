@@ -307,6 +307,19 @@ router.get('/pnl', async (req, res) => {
   }
 });
 
+// GET /closure-charges
+router.get('/closure-charges', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM fdr_closure_charges WHERE is_active = TRUE');
+    const force_close = rows.filter(r => r.closure_type === 'force_close');
+    const normal_close = rows.filter(r => r.closure_type === 'normal_close');
+    res.json({ force_close, normal_close });
+  } catch (err) {
+    console.error('Fetch closure charges error:', err);
+    res.status(500).json({ error: 'Server error fetching closure charges.' });
+  }
+});
+
 // POST /force-close
 router.post('/force-close', async (req, res) => {
   const conn = await pool.getConnection();
@@ -337,16 +350,40 @@ router.post('/force-close', async (req, res) => {
     // 1. Update FDR status to force_closed
     await conn.query("UPDATE fdrs SET status = 'force_closed' WHERE id = ?", [id]);
 
-    // 2. Return principal to user's wallet
-    await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [principal, userId]);
+    // 2. Fetch force close charges
+    const [charges] = await conn.query("SELECT * FROM fdr_closure_charges WHERE closure_type = 'force_close' AND is_active = TRUE");
+    let totalCharges = 0;
+    const chargeLogs = [];
+    
+    for (const charge of charges) {
+      let amt = charge.charge_type === 'percent' ? principal * (parseFloat(charge.value) / 100) : parseFloat(charge.value);
+      // Cap individual charge so it doesn't exceed remaining principal
+      amt = Math.min(amt, Math.max(0, principal - totalCharges));
+      if (amt > 0) {
+        totalCharges += amt;
+        chargeLogs.push({ name: charge.name, amount: amt, desc: `FDR #${fdr.id} Force Close Charge: ${charge.name}` });
+      }
+    }
+    
+    const netPrincipal = principal - totalCharges;
 
-    // 3. Log the transaction
+    // 3. Return net principal to user's wallet
+    await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [netPrincipal, userId]);
+
+    // 4. Log the transactions
     await conn.query(
       'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
       [userId, 'fdr_force_closed', principal, `FDR #${fdr.id} Force Closed - Principal Returned`]
     );
+    
+    for (const log of chargeLogs) {
+      await conn.query(
+        'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+        [userId, 'fdr_closure_charge', -log.amount, log.desc]
+      );
+    }
 
-    // 4. Destroy any locked bonus funds tied to this FDR
+    // 5. Destroy any locked bonus funds tied to this FDR
     const [lockedFunds] = await conn.query(
       "SELECT * FROM locked_funds WHERE linked_entity_type = 'fdr' AND linked_entity_id = ? AND user_id = ? AND status = 'locked'",
       [id, userId]

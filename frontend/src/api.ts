@@ -181,6 +181,7 @@ export const fdrAPI = {
   getPnL: () => request('GET', '/fdr/pnl'),
   forceCloseFDR: (id: number) => request('POST', '/fdr/force-close', { id }),
   getActiveOffers: () => request('GET', '/fdr/offers'),
+  getClosureCharges: () => request('GET', '/fdr/closure-charges'),
 };
 
 export const gamesAPI = {
@@ -264,6 +265,10 @@ export const adminAPI = {
   createFdrPlan: (data: any) => adminRequest('POST', '/admin/fdr-plans', data),
   updateFdrPlan: (id: number, data: any) => adminRequest('PUT', `/admin/fdr-plans/${id}`, data),
   deleteFdrPlan: (id: number) => adminRequest('DELETE', `/admin/fdr-plans/${id}`),
+  getFdrClosureCharges: () => adminRequest('GET', '/admin/fdr-closure-charges'),
+  createFdrClosureCharge: (data: any) => adminRequest('POST', '/admin/fdr-closure-charges', data),
+  updateFdrClosureCharge: (id: number, data: any) => adminRequest('PUT', `/admin/fdr-closure-charges/${id}`, data),
+  deleteFdrClosureCharge: (id: number) => adminRequest('DELETE', `/admin/fdr-closure-charges/${id}`),
   getRequests: () => adminRequest('GET', '/admin/requests'),
   approveDeposit: (id: number) => adminRequest('POST', `/admin/deposits/${id}/approve`),
   rejectDeposit: (id: number) => adminRequest('POST', `/admin/deposits/${id}/reject`),

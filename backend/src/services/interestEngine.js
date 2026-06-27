@@ -152,11 +152,35 @@ async function processDailyFinancials(triggeredBy = 'system') {
           const [checkFdr] = await conn.query("SELECT status FROM fdrs WHERE id = ? FOR UPDATE", [fdr.id]);
           if (checkFdr.length > 0 && checkFdr[0].status === 'active') {
             await conn.query("UPDATE fdrs SET status = 'completed' WHERE id = ? AND status = 'active'", [fdr.id]);
-            await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [fdrAmount, userId]);
+            
+            // Apply normal close charges
+            const [charges] = await conn.query("SELECT * FROM fdr_closure_charges WHERE closure_type = 'normal_close' AND is_active = TRUE");
+            let totalCharges = 0;
+            const chargeLogs = [];
+            
+            for (const charge of charges) {
+              let amt = charge.charge_type === 'percent' ? fdrAmount * (parseFloat(charge.value) / 100) : parseFloat(charge.value);
+              amt = Math.min(amt, Math.max(0, fdrAmount - totalCharges));
+              if (amt > 0) {
+                totalCharges += amt;
+                chargeLogs.push({ name: charge.name, amount: amt, desc: `FDR #${fdr.id} Normal Close Charge: ${charge.name}` });
+              }
+            }
+            
+            const netPrincipal = fdrAmount - totalCharges;
+
+            await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [netPrincipal, userId]);
             await conn.query(
               'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
               [userId, 'fdr_maturity', fdrAmount, `FDR #${fdr.id} matured - principal returned`]
             );
+            
+            for (const log of chargeLogs) {
+              await conn.query(
+                'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+                [userId, 'fdr_closure_charge', -log.amount, log.desc]
+              );
+            }
 
             // Unlock linked bonus funds if any
             const [lockedBonuses] = await conn.query("SELECT * FROM locked_funds WHERE linked_entity_type = 'fdr' AND linked_entity_id = ? AND status = 'locked'", [fdr.id]);

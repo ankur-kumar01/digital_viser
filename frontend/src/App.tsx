@@ -37,6 +37,7 @@ import { AdminDepositRequests } from './views/admin/AdminDepositRequests';
 import { AdminWithdrawalRequests } from './views/admin/AdminWithdrawalRequests';
 import { AdminPaymentMethods } from './views/admin/AdminPaymentMethods';
 import { AdminFdrPlans } from './views/admin/AdminFdrPlans';
+import { AdminFdrSettings } from './views/admin/AdminFdrSettings';
 import { AdminSchemes } from './views/admin/AdminSchemes';
 import { AdminUserProfileDetails } from './views/admin/AdminUserProfileDetails';
 import { AdminSettings } from './views/admin/AdminSettings';
@@ -372,6 +373,7 @@ export const App: React.FC = () => {
             {currentView === 'admin-withdrawal-requests' && <AdminWithdrawalRequests />}
             {currentView === 'admin-methods' && <AdminPaymentMethods />}
             {currentView === 'admin-fdr-plans' && <AdminFdrPlans />}
+            {currentView === 'admin-fdr-settings' && <AdminFdrSettings />}
             {currentView === 'admin-fdrs' && <AdminFdrs />}
             {currentView === 'admin-yield-boosters' && <AdminYieldBoosters />}
             {currentView === 'admin-daily-tasks' && <AdminDailyTasks />}
