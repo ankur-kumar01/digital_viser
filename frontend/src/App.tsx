@@ -39,6 +39,7 @@ import { AdminPaymentMethods } from './views/admin/AdminPaymentMethods';
 import { AdminFdrPlans } from './views/admin/AdminFdrPlans';
 import { AdminFdrSettings } from './views/admin/AdminFdrSettings';
 import { AdminSchemes } from './views/admin/AdminSchemes';
+import { AdminWithdrawalLimits } from './views/admin/AdminWithdrawalLimits';
 import { AdminUserProfileDetails } from './views/admin/AdminUserProfileDetails';
 import { AdminSettings } from './views/admin/AdminSettings';
 import { AdminProfile } from './views/admin/AdminProfile';
@@ -369,8 +370,9 @@ export const App: React.FC = () => {
                 onSelectUser={setSelectedUserId} 
               />
             )}
-            {currentView === 'admin-deposit-requests' && <AdminDepositRequests />}
+            { currentView === 'admin-deposit-requests' && <AdminDepositRequests />}
             {currentView === 'admin-withdrawal-requests' && <AdminWithdrawalRequests />}
+            {currentView === 'admin-withdrawal-limits' && <AdminWithdrawalLimits />}
             {currentView === 'admin-methods' && <AdminPaymentMethods />}
             {currentView === 'admin-fdr-plans' && <AdminFdrPlans />}
             {currentView === 'admin-fdr-settings' && <AdminFdrSettings />}

@@ -208,6 +208,87 @@ router.delete('/fdr-closure-charges/:id', async (req, res) => {
   }
 });
 
+// ==========================================
+// WITHDRAWAL LIMITS ADMIN ROUTES
+// ==========================================
+
+// GET /withdrawal-limits
+router.get('/withdrawal-limits', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT w.*, u.email as user_email FROM withdrawal_limits w LEFT JOIN users u ON w.user_id = u.id ORDER BY w.created_at DESC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch withdrawal limits' });
+  }
+});
+
+// POST /withdrawal-limits
+router.post('/withdrawal-limits', async (req, res) => {
+  try {
+    const { user_id, wallet_type, limit_type, limit_value, time_window, is_active } = req.body;
+    const [result] = await pool.query(
+      'INSERT INTO withdrawal_limits (user_id, wallet_type, limit_type, limit_value, time_window, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+      [user_id || null, wallet_type, limit_type, parseFloat(limit_value) || 0, time_window || 'per_transaction', is_active !== false]
+    );
+    res.json({ id: result.insertId, success: true });
+  } catch (err) {
+    console.error('Create withdrawal limit error:', err);
+    res.status(500).json({ error: 'Failed to create withdrawal limit' });
+  }
+});
+
+// PUT /withdrawal-limits/:id
+router.put('/withdrawal-limits/:id', async (req, res) => {
+  try {
+    const { user_id, wallet_type, limit_type, limit_value, time_window, is_active } = req.body;
+    await pool.query(
+      'UPDATE withdrawal_limits SET user_id = ?, wallet_type = ?, limit_type = ?, limit_value = ?, time_window = ?, is_active = ? WHERE id = ?',
+      [user_id || null, wallet_type, limit_type, parseFloat(limit_value) || 0, time_window || 'per_transaction', is_active, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Update withdrawal limit error:', err);
+    res.status(500).json({ error: 'Failed to update withdrawal limit' });
+  }
+});
+
+// DELETE /withdrawal-limits/:id
+router.delete('/withdrawal-limits/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM withdrawal_limits WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete withdrawal limit' });
+  }
+});
+
+// POST /withdrawal-limits/bulk
+router.post('/withdrawal-limits/bulk', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const { user_ids, wallet_type, limit_type, limit_value, time_window, is_active } = req.body;
+    if (!Array.isArray(user_ids) || user_ids.length === 0) {
+      return res.status(400).json({ error: 'user_ids must be a non-empty array' });
+    }
+
+    await conn.beginTransaction();
+    for (const uid of user_ids) {
+      await conn.query(
+        'INSERT INTO withdrawal_limits (user_id, wallet_type, limit_type, limit_value, time_window, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+        [uid, wallet_type, limit_type, parseFloat(limit_value) || 0, time_window || 'per_transaction', is_active !== false]
+      );
+    }
+    await conn.commit();
+    res.json({ success: true, count: user_ids.length });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Bulk create withdrawal limit error:', err);
+    res.status(500).json({ error: 'Failed to create bulk withdrawal limits' });
+  } finally {
+    conn.release();
+  }
+});
+
 // GET /fdr-plans
 router.get('/fdr-plans', async (req, res) => {
   try {

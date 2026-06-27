@@ -34,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'admin-users', name: 'Manage Users', icon: <Users size={20} /> },
     { id: 'admin-deposit-requests', name: 'Deposit Requests', icon: <Receipt size={20} /> },
     { id: 'admin-withdrawal-requests', name: 'Withdrawal Requests', icon: <Receipt size={20} /> },
+    { id: 'admin-withdrawal-limits', name: 'Withdrawal Limits', icon: <Receipt size={20} /> },
     { id: 'admin-methods', name: 'Payment Channels', icon: <Wallet size={20} /> },
     { id: 'admin-transactions', name: 'Transactions', icon: <FileText size={20} /> },
     { id: 'admin-bets', name: 'Bets', icon: <List size={20} /> },

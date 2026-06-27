@@ -171,6 +171,7 @@ export const walletAPI = {
   getMyWithdrawals: () => request('GET', '/wallet/withdrawals'),
   cancelDeposit: (id: number) => request('POST', `/wallet/deposits/${id}/cancel`),
   cancelWithdrawal: (id: number) => request('POST', `/wallet/withdrawals/${id}/cancel`),
+  getWithdrawalLimits: () => request('GET', '/wallet/withdrawal-limits'),
 };
 
 export const fdrAPI = {
@@ -269,6 +270,14 @@ export const adminAPI = {
   createFdrClosureCharge: (data: any) => adminRequest('POST', '/admin/fdr-closure-charges', data),
   updateFdrClosureCharge: (id: number, data: any) => adminRequest('PUT', `/admin/fdr-closure-charges/${id}`, data),
   deleteFdrClosureCharge: (id: number) => adminRequest('DELETE', `/admin/fdr-closure-charges/${id}`),
+
+  // Withdrawal Limits Admin API
+  getWithdrawalLimits: () => adminRequest('GET', '/admin/withdrawal-limits'),
+  createWithdrawalLimit: (data: any) => adminRequest('POST', '/admin/withdrawal-limits', data),
+  updateWithdrawalLimit: (id: number, data: any) => adminRequest('PUT', `/admin/withdrawal-limits/${id}`, data),
+  deleteWithdrawalLimit: (id: number) => adminRequest('DELETE', `/admin/withdrawal-limits/${id}`),
+  bulkCreateWithdrawalLimits: (data: any) => adminRequest('POST', '/admin/withdrawal-limits/bulk', data),
+
   getRequests: () => adminRequest('GET', '/admin/requests'),
   approveDeposit: (id: number) => adminRequest('POST', `/admin/deposits/${id}/approve`),
   rejectDeposit: (id: number) => adminRequest('POST', `/admin/deposits/${id}/reject`),

@@ -141,6 +141,46 @@ router.post('/withdraw', [
       return res.status(400).json({ error: 'Insufficient balance.' });
     }
 
+    // INTELLIGENT WITHDRAWAL LIMITS ENFORCEMENT
+    const [limits] = await conn.query(
+      'SELECT * FROM withdrawal_limits WHERE (user_id = ? OR user_id IS NULL) AND (wallet_type = ? OR wallet_type = "overall") AND is_active = TRUE',
+      [userId, source_wallet || 'main']
+    );
+
+    if (limits.length > 0) {
+      let todayWithdrawals = 0;
+      const needsDaily = limits.some(l => l.time_window === 'daily');
+      if (needsDaily) {
+        // Need to query withdrawals table
+        const [dailyRows] = await conn.query(
+          'SELECT SUM(amount) as sum FROM withdrawals WHERE user_id = ? AND status != "rejected" AND DATE(created_at) = CURDATE()',
+          [userId]
+        );
+        todayWithdrawals = parseFloat(dailyRows[0].sum) || 0;
+      }
+
+      for (const limit of limits) {
+        let maxAllowed = Infinity;
+        if (limit.limit_type === 'percent_of_balance') {
+          maxAllowed = currentBalance * (parseFloat(limit.limit_value) / 100);
+        } else if (limit.limit_type === 'fixed') {
+          if (limit.time_window === 'per_transaction') {
+            maxAllowed = parseFloat(limit.limit_value);
+          } else if (limit.time_window === 'daily') {
+            maxAllowed = Math.max(0, parseFloat(limit.limit_value) - todayWithdrawals);
+          }
+        }
+
+        if (withdrawAmount > maxAllowed) {
+          await conn.rollback();
+          const reason = limit.limit_type === 'percent_of_balance' 
+            ? `${limit.limit_value}% of balance` 
+            : (limit.time_window === 'daily' ? `₹${limit.limit_value} daily` : `₹${limit.limit_value} per transaction`);
+          return res.status(400).json({ error: `Withdrawal limit exceeded. Maximum allowed is ₹${maxAllowed.toFixed(2)} based on the ${reason} limit.` });
+        }
+      }
+    }
+
     let totalChargeAmount = 0;
     let chargeDetails = [];
 
@@ -263,6 +303,29 @@ router.get('/active-methods', async (req, res) => {
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Server error fetching payment methods.' });
+  }
+});
+
+// GET /withdrawal-limits (For user to see active limits)
+router.get('/withdrawal-limits', async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const [rows] = await pool.query(
+      'SELECT * FROM withdrawal_limits WHERE (user_id = ? OR user_id IS NULL) AND is_active = TRUE',
+      [userId]
+    );
+    // Also fetch today's total withdrawal for this user in case daily limits exist
+    const [dailyRows] = await pool.query(
+      'SELECT SUM(amount) as sum FROM withdrawals WHERE user_id = ? AND status != "rejected" AND DATE(created_at) = CURDATE()',
+      [userId]
+    );
+    res.json({
+      limits: rows,
+      today_withdrawals: parseFloat(dailyRows[0].sum) || 0
+    });
+  } catch (err) {
+    console.error('Fetch withdrawal limits error:', err);
+    res.status(500).json({ error: 'Server error fetching withdrawal limits.' });
   }
 });
 
