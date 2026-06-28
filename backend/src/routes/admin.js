@@ -849,6 +849,27 @@ router.post('/users/:id/balance', async (req, res) => {
   }
 });
 
+// POST /users/:id/withdrawal-lock
+router.post('/users/:id/withdrawal-lock', async (req, res) => {
+  try {
+    const { locked_until } = req.body;
+    let lockDate = null;
+    if (locked_until) {
+      lockDate = new Date(locked_until);
+      if (isNaN(lockDate.getTime())) {
+        return res.status(400).json({ error: 'Invalid date provided' });
+      }
+    }
+    await pool.query(
+      'UPDATE users SET withdrawals_disabled_until = ? WHERE id = ?',
+      [lockDate ? lockDate.toISOString().slice(0, 19).replace('T', ' ') : null, req.params.id]
+    );
+    res.json({ success: true, locked_until: lockDate });
+  } catch (err) {
+    console.error('Failed to set withdrawal lock:', err);
+    res.status(500).json({ error: 'Failed to update withdrawal lock' });
+  }
+});
 // GET /schemes
 router.get('/schemes', async (req, res) => {
   try {
@@ -906,7 +927,7 @@ router.get('/users/:id/details', async (req, res) => {
     const [userRows] = await pool.query(
       `SELECT u.id, u.name, u.email, u.balance, u.bonus_balance, u.referral_balance, u.gaming_bonus_balance, 
               u.locked_balance, u.locked_bonus_balance, u.locked_referral_balance, u.phone_number, u.address, 
-              u.city, u.state, u.pin_code, u.created_at, u.invited_by, i.name as invited_by_name 
+              u.city, u.state, u.pin_code, u.created_at, u.invited_by, i.name as invited_by_name, u.withdrawals_disabled_until 
        FROM users u 
        LEFT JOIN users i ON u.invited_by = i.id 
        WHERE u.id = ?`, 

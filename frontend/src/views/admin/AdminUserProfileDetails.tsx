@@ -439,9 +439,91 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
       )}
 
       {activeTab === 'locking' && (
-        <div className="glass-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0 }}>Fund Locking Controls</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Withdrawal Locking Card */}
+          <div className="glass-card" style={{ borderTop: '3px solid var(--accent-secondary)' }}>
+            <h3 style={{ marginBottom: '8px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Lock size={18} color="var(--accent-secondary)" />
+              Withdrawal Privileges
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+              Prevent this user from withdrawing any funds. You can lock their withdrawals indefinitely or until a specific date.
+            </p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {data.user.withdrawals_disabled_until && new Date(data.user.withdrawals_disabled_until) > new Date() ? (
+                <div style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', padding: '16px', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <Lock size={16} color="var(--accent-danger)" />
+                    <span style={{ fontWeight: 600, color: 'var(--accent-danger)' }}>Withdrawals Locked</span>
+                  </div>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '16px' }}>
+                    This user's withdrawal functionality is disabled until:{' '}
+                    <strong>{new Date(data.user.withdrawals_disabled_until).getFullYear() === 2099 ? 'Indefinitely' : new Date(data.user.withdrawals_disabled_until).toLocaleString()}</strong>
+                  </p>
+                  <button 
+                    className="btn btn-secondary"
+                    onClick={async () => {
+                      if (!window.confirm("Unlock withdrawals for this user?")) return;
+                      try {
+                        await adminAPI.lockUserWithdrawal(userId, null);
+                        alert("Withdrawals restored successfully.");
+                        fetchDetails();
+                      } catch (err: any) {
+                        alert(err.message || "Failed to restore withdrawals.");
+                      }
+                    }}
+                  >
+                    Restore Withdrawal Access
+                  </button>
+                </div>
+              ) : (
+                <div style={{ background: 'rgba(0,245,160,0.05)', border: '1px solid rgba(0,245,160,0.1)', padding: '16px', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <Check size={16} color="var(--accent-secondary)" />
+                    <span style={{ fontWeight: 600, color: 'var(--accent-secondary)' }}>Withdrawals Active</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <button 
+                      className="btn btn-danger"
+                      onClick={async () => {
+                        if (!window.confirm("Disable withdrawals indefinitely for this user?")) return;
+                        try {
+                          await adminAPI.lockUserWithdrawal(userId, new Date('2099-12-31T23:59:59Z').toISOString());
+                          alert("Withdrawals disabled indefinitely.");
+                          fetchDetails();
+                        } catch (err: any) {
+                          alert(err.message || "Failed to lock withdrawals.");
+                        }
+                      }}
+                    >
+                      Lock Indefinitely
+                    </button>
+                    <button 
+                      className="btn btn-secondary"
+                      onClick={async () => {
+                        const dateInput = window.prompt("Enter date to lock withdrawals until (YYYY-MM-DD):", new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0]);
+                        if (!dateInput) return;
+                        try {
+                          await adminAPI.lockUserWithdrawal(userId, new Date(`${dateInput}T23:59:59Z`).toISOString());
+                          alert("Withdrawals disabled until " + dateInput);
+                          fetchDetails();
+                        } catch (err: any) {
+                          alert(err.message || "Failed to lock withdrawals.");
+                        }
+                      }}
+                    >
+                      Lock Until Date...
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="glass-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0 }}>Specific Fund Locking</h3>
             <button onClick={() => setShowLockModal(true)} className="btn btn-primary" style={{ padding: '8px 16px', background: 'var(--accent-warning)' }}>
               <Lock size={16} /> Lock Funds
             </button>
@@ -469,6 +551,7 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       )}
 

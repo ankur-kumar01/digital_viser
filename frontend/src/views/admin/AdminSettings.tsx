@@ -17,6 +17,11 @@ export const AdminSettings: React.FC = () => {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceEndTime, setMaintenanceEndTime] = useState('');
 
+  // Global Withdrawal Lock State
+  const [globalWithdrawalDisabled, setGlobalWithdrawalDisabled] = useState(false);
+  const [globalWithdrawalDisabledUntil, setGlobalWithdrawalDisabledUntil] = useState('');
+  const [globalWithdrawalDisabledMessage, setGlobalWithdrawalDisabledMessage] = useState('Withdrawals are currently disabled by the administrator.');
+
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState('587');
   const [smtpUser, setSmtpUser] = useState('');
@@ -55,6 +60,29 @@ export const AdminSettings: React.FC = () => {
         }
       } else {
         setMaintenanceEndTime('');
+      }
+
+      // Check global withdrawal locks
+      if (res.global_withdrawals_disabled_until) {
+        setGlobalWithdrawalDisabled(true);
+        try {
+          const d = new Date(res.global_withdrawals_disabled_until);
+          if (!isNaN(d.getTime())) {
+            const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+            setGlobalWithdrawalDisabledUntil(local);
+          } else {
+            setGlobalWithdrawalDisabledUntil('');
+          }
+        } catch {
+          setGlobalWithdrawalDisabledUntil('');
+        }
+      } else {
+        setGlobalWithdrawalDisabled(false);
+        setGlobalWithdrawalDisabledUntil('');
+      }
+
+      if (res.global_withdrawals_disabled_message) {
+        setGlobalWithdrawalDisabledMessage(res.global_withdrawals_disabled_message);
       }
       setSmtpHost(res.smtp_host || '');
       setSmtpPort(res.smtp_port || '587');
@@ -146,6 +174,36 @@ export const AdminSettings: React.FC = () => {
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       setError(err.message || 'Failed to update maintenance settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleGlobalWithdrawalLockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      let endTimeValue = '';
+      if (globalWithdrawalDisabled && globalWithdrawalDisabledUntil) {
+        const d = new Date(globalWithdrawalDisabledUntil);
+        if (!isNaN(d.getTime())) {
+          endTimeValue = d.toISOString();
+        }
+      } else if (globalWithdrawalDisabled) {
+        // If they checked disabled but didn't provide a date, push it to year 2099
+        endTimeValue = new Date('2099-12-31T23:59:59Z').toISOString();
+      }
+
+      await adminAPI.updateSettings({
+        global_withdrawals_disabled_until: endTimeValue,
+        global_withdrawals_disabled_message: globalWithdrawalDisabled ? globalWithdrawalDisabledMessage : ''
+      });
+      setSuccess('Global withdrawal lock settings updated successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update withdrawal lock settings');
     } finally {
       setSaving(false);
     }
@@ -311,6 +369,74 @@ export const AdminSettings: React.FC = () => {
           <button type="submit" className="btn btn-primary" disabled={saving}>
             <Save size={18} />
             {saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </form>
+      </div>
+
+      {/* ===== GLOBAL WITHDRAWAL LOCK CARD ===== */}
+      <div className="glass-card" style={{ borderTop: '3px solid var(--accent-secondary)' }}>
+        <h3 style={{ marginBottom: '8px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertTriangle size={18} color="var(--accent-secondary)" />
+          Global Withdrawal Lock
+        </h3>
+        <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>
+          Pause all withdrawals globally across the platform. Users will see a prominent message and will not be able to submit any withdrawal requests until the specified date.
+        </p>
+        <form onSubmit={handleGlobalWithdrawalLockSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <label className="input-label">Withdrawal Functionality</label>
+            <select
+              className="input-field"
+              value={globalWithdrawalDisabled ? 'true' : 'false'}
+              onChange={e => setGlobalWithdrawalDisabled(e.target.value === 'true')}
+              style={globalWithdrawalDisabled ? { borderColor: 'var(--accent-secondary)', background: 'rgba(0,245,160,0.06)' } : {}}
+            >
+              <option value="false">🟢 Enabled — Normal Operation</option>
+              <option value="true">🔴 Disabled — Block All Withdrawals</option>
+            </select>
+          </div>
+
+          {globalWithdrawalDisabled && (
+            <>
+              <div>
+                <label className="input-label">Disabled Until Date &amp; Time (Optional)</label>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                  If left blank, withdrawals will be locked indefinitely until you manually enable them again.
+                </p>
+                <input
+                  type="datetime-local"
+                  className="input-field"
+                  value={globalWithdrawalDisabledUntil}
+                  onChange={e => setGlobalWithdrawalDisabledUntil(e.target.value)}
+                />
+              </div>
+              
+              <div>
+                <label className="input-label">User Facing Message</label>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                  The message users will see on the withdrawal page explaining why withdrawals are disabled.
+                </p>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={globalWithdrawalDisabledMessage}
+                  onChange={e => setGlobalWithdrawalDisabledMessage(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div style={{ background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.25)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <AlertTriangle size={16} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: '0.86rem', color: 'var(--accent-primary)', fontWeight: 500 }}>
+                  Global Withdrawal Lock is set to be <strong>ACTIVE</strong>. Users will be blocked from withdrawing.
+                </span>
+              </div>
+            </>
+          )}
+
+          <button type="submit" className="btn btn-secondary" disabled={saving}>
+            <Save size={18} />
+            {saving ? 'Saving...' : 'Save Withdrawal Settings'}
           </button>
         </form>
       </div>

@@ -132,9 +132,36 @@ router.post('/withdraw', [
 
     await conn.beginTransaction();
 
-    // Fetch current balance and account creation date
-    const [userRows] = await conn.query(`SELECT ${walletColumn} as current_balance, created_at FROM users WHERE id = ? FOR UPDATE`, [userId]);
+    // Fetch current balance, account creation date, and individual withdrawal lock status
+    const [userRows] = await conn.query(`SELECT ${walletColumn} as current_balance, created_at, withdrawals_disabled_until FROM users WHERE id = ? FOR UPDATE`, [userId]);
     const currentBalance = parseFloat(userRows[0].current_balance);
+    const userLockDate = userRows[0].withdrawals_disabled_until;
+
+    // Check Global Withdrawal Lock
+    const [settingRows] = await conn.query(`SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('global_withdrawals_disabled_until', 'global_withdrawals_disabled_message')`);
+    let globalLockDate = null;
+    let globalLockMessage = 'Withdrawals are currently disabled by the administrator.';
+    
+    settingRows.forEach(row => {
+      if (row.setting_key === 'global_withdrawals_disabled_until' && row.setting_value) {
+        globalLockDate = row.setting_value;
+      }
+      if (row.setting_key === 'global_withdrawals_disabled_message' && row.setting_value) {
+        globalLockMessage = row.setting_value;
+      }
+    });
+
+    const now = new Date();
+
+    if (globalLockDate && new Date(globalLockDate) > now) {
+      await conn.rollback();
+      return res.status(403).json({ error: globalLockMessage });
+    }
+
+    if (userLockDate && new Date(userLockDate) > now) {
+      await conn.rollback();
+      return res.status(403).json({ error: `Your withdrawal functionality is locked until ${new Date(userLockDate).toLocaleString()}. Please contact support.` });
+    }
 
     if (currentBalance < withdrawAmount) {
       await conn.rollback();
@@ -306,10 +333,41 @@ router.get('/active-methods', async (req, res) => {
   }
 });
 
-// GET /withdrawal-limits (For user to see active limits)
+// GET /withdrawal-limits (For user to see active limits and lock status)
 router.get('/withdrawal-limits', async (req, res) => {
   try {
     const userId = req.user.userId;
+    
+    // Check locks
+    const [userRows] = await pool.query('SELECT withdrawals_disabled_until FROM users WHERE id = ?', [userId]);
+    const userLockDate = userRows[0]?.withdrawals_disabled_until;
+
+    const [settingRows] = await pool.query(`SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('global_withdrawals_disabled_until', 'global_withdrawals_disabled_message')`);
+    let globalLockDate = null;
+    let globalLockMessage = 'Withdrawals are currently disabled by the administrator.';
+    
+    settingRows.forEach(row => {
+      if (row.setting_key === 'global_withdrawals_disabled_until' && row.setting_value) {
+        globalLockDate = row.setting_value;
+      }
+      if (row.setting_key === 'global_withdrawals_disabled_message' && row.setting_value) {
+        globalLockMessage = row.setting_value;
+      }
+    });
+
+    let lockStatus = {
+      is_locked: false,
+      locked_until: null,
+      message: ''
+    };
+
+    const now = new Date();
+    if (globalLockDate && new Date(globalLockDate) > now) {
+      lockStatus = { is_locked: true, locked_until: globalLockDate, message: globalLockMessage };
+    } else if (userLockDate && new Date(userLockDate) > now) {
+      lockStatus = { is_locked: true, locked_until: userLockDate, message: `Your withdrawal functionality is locked until ${new Date(userLockDate).toLocaleString()}. Please contact support.` };
+    }
+
     const [rows] = await pool.query(
       'SELECT * FROM withdrawal_limits WHERE (user_id = ? OR user_id IS NULL) AND is_active = TRUE',
       [userId]
@@ -321,7 +379,8 @@ router.get('/withdrawal-limits', async (req, res) => {
     );
     res.json({
       limits: rows,
-      today_withdrawals: parseFloat(dailyRows[0].sum) || 0
+      today_withdrawals: parseFloat(dailyRows[0].sum) || 0,
+      lock_status: lockStatus
     });
   } catch (err) {
     console.error('Fetch withdrawal limits error:', err);

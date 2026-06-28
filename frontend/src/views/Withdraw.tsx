@@ -25,6 +25,7 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
   // Withdrawal Limits State
   const [activeLimits, setActiveLimits] = useState<any[]>([]);
   const [todayWithdrawals, setTodayWithdrawals] = useState(0);
+  const [lockStatus, setLockStatus] = useState<{ is_locked: boolean; locked_until: string | null; message: string }>({ is_locked: false, locked_until: null, message: '' });
 
   // Dynamic Form State
   const [customData, setCustomData] = useState<Record<string, any>>({});
@@ -53,6 +54,9 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
         const data = await walletAPI.getWithdrawalLimits();
         setActiveLimits(data.limits || []);
         setTodayWithdrawals(data.today_withdrawals || 0);
+        if (data.lock_status) {
+          setLockStatus(data.lock_status);
+        }
       } catch (err) {
         console.error('Failed to fetch withdrawal limits');
       }
@@ -238,7 +242,25 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
         </p>
       </div>
 
-      {successData ? (
+      {lockStatus.is_locked ? (
+        <div className="glass-card glow-card" style={{ textAlign: 'center', padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', border: '1px solid rgba(239, 68, 68, 0.35)', boxShadow: '0 0 40px rgba(239, 68, 68, 0.15)' }}>
+          <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+            <Ban size={36} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: '1.4rem', color: 'var(--accent-danger)', marginBottom: '8px' }}>Withdrawals Locked</h3>
+            <p style={{ color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 500, marginBottom: '8px' }}>
+              {lockStatus.message}
+            </p>
+            {lockStatus.locked_until && new Date(lockStatus.locked_until).getFullYear() !== 2099 && (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                Your functionality will be automatically restored on:<br/>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{new Date(lockStatus.locked_until).toLocaleString()}</span>
+              </p>
+            )}
+          </div>
+        </div>
+      ) : successData ? (
         <div className="glass-card glow-card" style={{ textAlign: 'center', padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', border: '1px solid rgba(0, 245, 160, 0.35)', boxShadow: '0 0 40px rgba(0, 245, 160, 0.15)' }}>
           <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(0, 245, 160, 0.1)', color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(0, 245, 160, 0.3)' }}>
             <CheckCircle2 size={36} />
