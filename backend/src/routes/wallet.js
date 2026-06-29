@@ -132,13 +132,80 @@ router.post('/withdraw', [
 
     await conn.beginTransaction();
 
-    // Fetch current balance and account creation date
-    const [userRows] = await conn.query(`SELECT ${walletColumn} as current_balance, created_at FROM users WHERE id = ? FOR UPDATE`, [userId]);
+    // Fetch current balance, account creation date, and individual withdrawal lock status
+    const [userRows] = await conn.query(`SELECT ${walletColumn} as current_balance, created_at, withdrawals_disabled_until FROM users WHERE id = ? FOR UPDATE`, [userId]);
     const currentBalance = parseFloat(userRows[0].current_balance);
+    const userLockDate = userRows[0].withdrawals_disabled_until;
+
+    // Check Global Withdrawal Lock
+    const [settingRows] = await conn.query(`SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('global_withdrawals_disabled_until', 'global_withdrawals_disabled_message')`);
+    let globalLockDate = null;
+    let globalLockMessage = 'Withdrawals are currently disabled by the administrator.';
+    
+    settingRows.forEach(row => {
+      if (row.setting_key === 'global_withdrawals_disabled_until' && row.setting_value) {
+        globalLockDate = row.setting_value;
+      }
+      if (row.setting_key === 'global_withdrawals_disabled_message' && row.setting_value) {
+        globalLockMessage = row.setting_value;
+      }
+    });
+
+    const now = new Date();
+
+    if (globalLockDate && new Date(globalLockDate) > now) {
+      await conn.rollback();
+      return res.status(403).json({ error: globalLockMessage });
+    }
+
+    if (userLockDate && new Date(userLockDate) > now) {
+      await conn.rollback();
+      return res.status(403).json({ error: `Your withdrawal functionality is locked until ${new Date(userLockDate).toLocaleString()}. Please contact support.` });
+    }
 
     if (currentBalance < withdrawAmount) {
       await conn.rollback();
       return res.status(400).json({ error: 'Insufficient balance.' });
+    }
+
+    // INTELLIGENT WITHDRAWAL LIMITS ENFORCEMENT
+    const [limits] = await conn.query(
+      'SELECT * FROM withdrawal_limits WHERE (user_id = ? OR user_id IS NULL) AND (wallet_type = ? OR wallet_type = "overall") AND is_active = TRUE',
+      [userId, source_wallet || 'main']
+    );
+
+    if (limits.length > 0) {
+      let todayWithdrawals = 0;
+      const needsDaily = limits.some(l => l.time_window === 'daily');
+      if (needsDaily) {
+        // Need to query withdrawals table
+        const [dailyRows] = await conn.query(
+          'SELECT SUM(amount) as sum FROM withdrawals WHERE user_id = ? AND status != "rejected" AND DATE(created_at) = CURDATE()',
+          [userId]
+        );
+        todayWithdrawals = parseFloat(dailyRows[0].sum) || 0;
+      }
+
+      for (const limit of limits) {
+        let maxAllowed = Infinity;
+        if (limit.limit_type === 'percent_of_balance') {
+          maxAllowed = currentBalance * (parseFloat(limit.limit_value) / 100);
+        } else if (limit.limit_type === 'fixed') {
+          if (limit.time_window === 'per_transaction') {
+            maxAllowed = parseFloat(limit.limit_value);
+          } else if (limit.time_window === 'daily') {
+            maxAllowed = Math.max(0, parseFloat(limit.limit_value) - todayWithdrawals);
+          }
+        }
+
+        if (withdrawAmount > maxAllowed) {
+          await conn.rollback();
+          const reason = limit.limit_type === 'percent_of_balance' 
+            ? `${limit.limit_value}% of balance` 
+            : (limit.time_window === 'daily' ? `₹${limit.limit_value} daily` : `₹${limit.limit_value} per transaction`);
+          return res.status(400).json({ error: `Withdrawal limit exceeded. Maximum allowed is ₹${maxAllowed.toFixed(2)} based on the ${reason} limit.` });
+        }
+      }
     }
 
     let totalChargeAmount = 0;
@@ -263,6 +330,61 @@ router.get('/active-methods', async (req, res) => {
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Server error fetching payment methods.' });
+  }
+});
+
+// GET /withdrawal-limits (For user to see active limits and lock status)
+router.get('/withdrawal-limits', async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    // Check locks
+    const [userRows] = await pool.query('SELECT withdrawals_disabled_until FROM users WHERE id = ?', [userId]);
+    const userLockDate = userRows[0]?.withdrawals_disabled_until;
+
+    const [settingRows] = await pool.query(`SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('global_withdrawals_disabled_until', 'global_withdrawals_disabled_message')`);
+    let globalLockDate = null;
+    let globalLockMessage = 'Withdrawals are currently disabled by the administrator.';
+    
+    settingRows.forEach(row => {
+      if (row.setting_key === 'global_withdrawals_disabled_until' && row.setting_value) {
+        globalLockDate = row.setting_value;
+      }
+      if (row.setting_key === 'global_withdrawals_disabled_message' && row.setting_value) {
+        globalLockMessage = row.setting_value;
+      }
+    });
+
+    let lockStatus = {
+      is_locked: false,
+      locked_until: null,
+      message: ''
+    };
+
+    const now = new Date();
+    if (globalLockDate && new Date(globalLockDate) > now) {
+      lockStatus = { is_locked: true, locked_until: globalLockDate, message: globalLockMessage };
+    } else if (userLockDate && new Date(userLockDate) > now) {
+      lockStatus = { is_locked: true, locked_until: userLockDate, message: `Your withdrawal functionality is locked until ${new Date(userLockDate).toLocaleString()}. Please contact support.` };
+    }
+
+    const [rows] = await pool.query(
+      'SELECT * FROM withdrawal_limits WHERE (user_id = ? OR user_id IS NULL) AND is_active = TRUE',
+      [userId]
+    );
+    // Also fetch today's total withdrawal for this user in case daily limits exist
+    const [dailyRows] = await pool.query(
+      'SELECT SUM(amount) as sum FROM withdrawals WHERE user_id = ? AND status != "rejected" AND DATE(created_at) = CURDATE()',
+      [userId]
+    );
+    res.json({
+      limits: rows,
+      today_withdrawals: parseFloat(dailyRows[0].sum) || 0,
+      lock_status: lockStatus
+    });
+  } catch (err) {
+    console.error('Fetch withdrawal limits error:', err);
+    res.status(500).json({ error: 'Server error fetching withdrawal limits.' });
   }
 });
 

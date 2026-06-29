@@ -22,6 +22,11 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
   const [successData, setSuccessData] = useState<any>(null);
   const [error, setError] = useState('');
 
+  // Withdrawal Limits State
+  const [activeLimits, setActiveLimits] = useState<any[]>([]);
+  const [todayWithdrawals, setTodayWithdrawals] = useState(0);
+  const [lockStatus, setLockStatus] = useState<{ is_locked: boolean; locked_until: string | null; message: string }>({ is_locked: false, locked_until: null, message: '' });
+
   // Dynamic Form State
   const [customData, setCustomData] = useState<Record<string, any>>({});
 
@@ -41,12 +46,25 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
         }
       } catch (err) {
         console.error('Failed to fetch withdraw methods');
-      } finally {
-        setIsFetching(false);
       }
     };
-    fetchMethods();
-    fetchWithdrawals();
+    
+    const fetchLimits = async () => {
+      try {
+        const data = await walletAPI.getWithdrawalLimits();
+        setActiveLimits(data.limits || []);
+        setTodayWithdrawals(data.today_withdrawals || 0);
+        if (data.lock_status) {
+          setLockStatus(data.lock_status);
+        }
+      } catch (err) {
+        console.error('Failed to fetch withdrawal limits');
+      }
+    };
+
+    Promise.all([fetchMethods(), fetchWithdrawals(), fetchLimits()]).finally(() => {
+      setIsFetching(false);
+    });
   }, []);
 
   const fetchWithdrawals = async () => {
@@ -136,9 +154,39 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
       referral: user ? parseFloat((user as any).referral_balance || '0') : 0
     };
 
-    const maxAllowed = walletBalances[sourceWallet] || 0;
+    let maxAllowed = walletBalances[sourceWallet] || 0;
+    
+    // Evaluate Intelligent Limits
+    const applicableLimits = activeLimits.filter(l => l.wallet_type === sourceWallet || l.wallet_type === 'overall');
+    let limitExceededError = '';
+    
+    for (const limit of applicableLimits) {
+      let allowedByLimit = Infinity;
+      if (limit.limit_type === 'percent_of_balance') {
+        allowedByLimit = maxAllowed * (parseFloat(limit.limit_value) / 100);
+      } else if (limit.limit_type === 'fixed') {
+        if (limit.time_window === 'per_transaction') {
+          allowedByLimit = parseFloat(limit.limit_value);
+        } else if (limit.time_window === 'daily') {
+          allowedByLimit = Math.max(0, parseFloat(limit.limit_value) - todayWithdrawals);
+        }
+      }
+      
+      if (numericAmount > allowedByLimit) {
+        const reason = limit.limit_type === 'percent_of_balance' 
+          ? `${limit.limit_value}% of balance` 
+          : (limit.time_window === 'daily' ? `₹${limit.limit_value} daily` : `₹${limit.limit_value} per transaction`);
+        limitExceededError = `Withdrawal limit exceeded. Maximum allowed is ₹${allowedByLimit.toFixed(2)} based on the ${reason} limit.`;
+      }
+      maxAllowed = Math.min(maxAllowed, allowedByLimit);
+    }
 
-    if (numericAmount > maxAllowed) {
+    if (limitExceededError) {
+      setError(limitExceededError);
+      return;
+    }
+
+    if (numericAmount > (walletBalances[sourceWallet] || 0)) {
       setError(`Insufficient balance in selected wallet.`);
       return;
     }
@@ -194,7 +242,25 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
         </p>
       </div>
 
-      {successData ? (
+      {lockStatus.is_locked ? (
+        <div className="glass-card glow-card" style={{ textAlign: 'center', padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', border: '1px solid rgba(239, 68, 68, 0.35)', boxShadow: '0 0 40px rgba(239, 68, 68, 0.15)' }}>
+          <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+            <Ban size={36} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: '1.4rem', color: 'var(--accent-danger)', marginBottom: '8px' }}>Withdrawals Locked</h3>
+            <p style={{ color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 500, marginBottom: '8px' }}>
+              {lockStatus.message}
+            </p>
+            {lockStatus.locked_until && new Date(lockStatus.locked_until).getFullYear() !== 2099 && (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                Your functionality will be automatically restored on:<br/>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{new Date(lockStatus.locked_until).toLocaleString()}</span>
+              </p>
+            )}
+          </div>
+        </div>
+      ) : successData ? (
         <div className="glass-card glow-card" style={{ textAlign: 'center', padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', border: '1px solid rgba(0, 245, 160, 0.35)', boxShadow: '0 0 40px rgba(0, 245, 160, 0.15)' }}>
           <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(0, 245, 160, 0.1)', color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(0, 245, 160, 0.3)' }}>
             <CheckCircle2 size={36} />
@@ -224,6 +290,21 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
                 ₹{user ? parseFloat(((user as any)[sourceWallet === 'main' ? 'balance' : `${sourceWallet}_balance`] || '0')).toLocaleString() : '0.00'}
               </span>
             </div>
+            
+            {/* Active Constraints Information */}
+            {activeLimits.filter(l => l.wallet_type === sourceWallet || l.wallet_type === 'overall').length > 0 && (
+              <div style={{ background: 'rgba(234, 179, 8, 0.05)', border: '1px solid rgba(234, 179, 8, 0.2)', padding: '12px', borderRadius: 'var(--radius-sm)', marginBottom: '24px' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: 600 }}>Active Withdrawal Constraints:</p>
+                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  {activeLimits.filter(l => l.wallet_type === sourceWallet || l.wallet_type === 'overall').map((limit, idx) => (
+                    <li key={idx}>
+                      Maximum {limit.limit_type === 'percent_of_balance' ? `${limit.limit_value}% of balance` : `₹${limit.limit_value}`} 
+                      {limit.time_window === 'daily' ? ` (Daily Limit. Used today: ₹${todayWithdrawals.toFixed(2)})` : ' (Per Transaction)'}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Withdrawal Charges Summary */}
             {chargeDetails.length > 0 && numericAmount > 0 && (

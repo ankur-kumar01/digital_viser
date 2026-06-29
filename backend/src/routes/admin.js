@@ -160,6 +160,135 @@ router.delete('/methods/:id', async (req, res) => {
   }
 });
 
+// GET /fdr-closure-charges
+router.get('/fdr-closure-charges', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM fdr_closure_charges ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch FDR closure charges' });
+  }
+});
+
+// POST /fdr-closure-charges
+router.post('/fdr-closure-charges', async (req, res) => {
+  try {
+    const { name, closure_type, charge_type, value, is_active } = req.body;
+    const [result] = await pool.query(
+      'INSERT INTO fdr_closure_charges (name, closure_type, charge_type, value, is_active) VALUES (?, ?, ?, ?, ?)',
+      [name, closure_type, charge_type, parseFloat(value) || 0, is_active !== false]
+    );
+    res.json({ id: result.insertId, name, closure_type, charge_type, value, is_active });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create FDR closure charge' });
+  }
+});
+
+// PUT /fdr-closure-charges/:id
+router.put('/fdr-closure-charges/:id', async (req, res) => {
+  try {
+    const { name, closure_type, charge_type, value, is_active } = req.body;
+    await pool.query(
+      'UPDATE fdr_closure_charges SET name = ?, closure_type = ?, charge_type = ?, value = ?, is_active = ? WHERE id = ?',
+      [name, closure_type, charge_type, parseFloat(value) || 0, is_active, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update FDR closure charge' });
+  }
+});
+
+// DELETE /fdr-closure-charges/:id
+router.delete('/fdr-closure-charges/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM fdr_closure_charges WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete FDR closure charge' });
+  }
+});
+
+// ==========================================
+// WITHDRAWAL LIMITS ADMIN ROUTES
+// ==========================================
+
+// GET /withdrawal-limits
+router.get('/withdrawal-limits', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT w.*, u.email as user_email FROM withdrawal_limits w LEFT JOIN users u ON w.user_id = u.id ORDER BY w.created_at DESC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch withdrawal limits' });
+  }
+});
+
+// POST /withdrawal-limits
+router.post('/withdrawal-limits', async (req, res) => {
+  try {
+    const { user_id, wallet_type, limit_type, limit_value, time_window, is_active } = req.body;
+    const [result] = await pool.query(
+      'INSERT INTO withdrawal_limits (user_id, wallet_type, limit_type, limit_value, time_window, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+      [user_id || null, wallet_type, limit_type, parseFloat(limit_value) || 0, time_window || 'per_transaction', is_active !== false]
+    );
+    res.json({ id: result.insertId, success: true });
+  } catch (err) {
+    console.error('Create withdrawal limit error:', err);
+    res.status(500).json({ error: 'Failed to create withdrawal limit' });
+  }
+});
+
+// PUT /withdrawal-limits/:id
+router.put('/withdrawal-limits/:id', async (req, res) => {
+  try {
+    const { user_id, wallet_type, limit_type, limit_value, time_window, is_active } = req.body;
+    await pool.query(
+      'UPDATE withdrawal_limits SET user_id = ?, wallet_type = ?, limit_type = ?, limit_value = ?, time_window = ?, is_active = ? WHERE id = ?',
+      [user_id || null, wallet_type, limit_type, parseFloat(limit_value) || 0, time_window || 'per_transaction', is_active, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Update withdrawal limit error:', err);
+    res.status(500).json({ error: 'Failed to update withdrawal limit' });
+  }
+});
+
+// DELETE /withdrawal-limits/:id
+router.delete('/withdrawal-limits/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM withdrawal_limits WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete withdrawal limit' });
+  }
+});
+
+// POST /withdrawal-limits/bulk
+router.post('/withdrawal-limits/bulk', async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const { user_ids, wallet_type, limit_type, limit_value, time_window, is_active } = req.body;
+    if (!Array.isArray(user_ids) || user_ids.length === 0) {
+      return res.status(400).json({ error: 'user_ids must be a non-empty array' });
+    }
+
+    await conn.beginTransaction();
+    for (const uid of user_ids) {
+      await conn.query(
+        'INSERT INTO withdrawal_limits (user_id, wallet_type, limit_type, limit_value, time_window, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+        [uid, wallet_type, limit_type, parseFloat(limit_value) || 0, time_window || 'per_transaction', is_active !== false]
+      );
+    }
+    await conn.commit();
+    res.json({ success: true, count: user_ids.length });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Bulk create withdrawal limit error:', err);
+    res.status(500).json({ error: 'Failed to create bulk withdrawal limits' });
+  } finally {
+    conn.release();
+  }
+});
+
 // GET /fdr-plans
 router.get('/fdr-plans', async (req, res) => {
   try {
@@ -720,6 +849,27 @@ router.post('/users/:id/balance', async (req, res) => {
   }
 });
 
+// POST /users/:id/withdrawal-lock
+router.post('/users/:id/withdrawal-lock', async (req, res) => {
+  try {
+    const { locked_until } = req.body;
+    let lockDate = null;
+    if (locked_until) {
+      lockDate = new Date(locked_until);
+      if (isNaN(lockDate.getTime())) {
+        return res.status(400).json({ error: 'Invalid date provided' });
+      }
+    }
+    await pool.query(
+      'UPDATE users SET withdrawals_disabled_until = ? WHERE id = ?',
+      [lockDate ? lockDate.toISOString().slice(0, 19).replace('T', ' ') : null, req.params.id]
+    );
+    res.json({ success: true, locked_until: lockDate });
+  } catch (err) {
+    console.error('Failed to set withdrawal lock:', err);
+    res.status(500).json({ error: 'Failed to update withdrawal lock' });
+  }
+});
 // GET /schemes
 router.get('/schemes', async (req, res) => {
   try {
@@ -777,7 +927,7 @@ router.get('/users/:id/details', async (req, res) => {
     const [userRows] = await pool.query(
       `SELECT u.id, u.name, u.email, u.balance, u.bonus_balance, u.referral_balance, u.gaming_bonus_balance, 
               u.locked_balance, u.locked_bonus_balance, u.locked_referral_balance, u.phone_number, u.address, 
-              u.city, u.state, u.pin_code, u.created_at, u.invited_by, i.name as invited_by_name 
+              u.city, u.state, u.pin_code, u.created_at, u.invited_by, i.name as invited_by_name, u.withdrawals_disabled_until 
        FROM users u 
        LEFT JOIN users i ON u.invited_by = i.id 
        WHERE u.id = ?`, 

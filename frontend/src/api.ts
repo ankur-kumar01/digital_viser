@@ -171,6 +171,7 @@ export const walletAPI = {
   getMyWithdrawals: () => request('GET', '/wallet/withdrawals'),
   cancelDeposit: (id: number) => request('POST', `/wallet/deposits/${id}/cancel`),
   cancelWithdrawal: (id: number) => request('POST', `/wallet/withdrawals/${id}/cancel`),
+  getWithdrawalLimits: () => request('GET', '/wallet/withdrawal-limits'),
 };
 
 export const fdrAPI = {
@@ -181,6 +182,7 @@ export const fdrAPI = {
   getPnL: () => request('GET', '/fdr/pnl'),
   forceCloseFDR: (id: number) => request('POST', '/fdr/force-close', { id }),
   getActiveOffers: () => request('GET', '/fdr/offers'),
+  getClosureCharges: () => request('GET', '/fdr/closure-charges'),
 };
 
 export const gamesAPI = {
@@ -264,6 +266,18 @@ export const adminAPI = {
   createFdrPlan: (data: any) => adminRequest('POST', '/admin/fdr-plans', data),
   updateFdrPlan: (id: number, data: any) => adminRequest('PUT', `/admin/fdr-plans/${id}`, data),
   deleteFdrPlan: (id: number) => adminRequest('DELETE', `/admin/fdr-plans/${id}`),
+  getFdrClosureCharges: () => adminRequest('GET', '/admin/fdr-closure-charges'),
+  createFdrClosureCharge: (data: any) => adminRequest('POST', '/admin/fdr-closure-charges', data),
+  updateFdrClosureCharge: (id: number, data: any) => adminRequest('PUT', `/admin/fdr-closure-charges/${id}`, data),
+  deleteFdrClosureCharge: (id: number) => adminRequest('DELETE', `/admin/fdr-closure-charges/${id}`),
+
+  // Withdrawal Limits Admin API
+  getWithdrawalLimits: () => adminRequest('GET', '/admin/withdrawal-limits'),
+  createWithdrawalLimit: (data: any) => adminRequest('POST', '/admin/withdrawal-limits', data),
+  updateWithdrawalLimit: (id: number, data: any) => adminRequest('PUT', `/admin/withdrawal-limits/${id}`, data),
+  deleteWithdrawalLimit: (id: number) => adminRequest('DELETE', `/admin/withdrawal-limits/${id}`),
+  bulkCreateWithdrawalLimits: (data: any) => adminRequest('POST', '/admin/withdrawal-limits/bulk', data),
+
   getRequests: () => adminRequest('GET', '/admin/requests'),
   approveDeposit: (id: number) => adminRequest('POST', `/admin/deposits/${id}/approve`),
   rejectDeposit: (id: number) => adminRequest('POST', `/admin/deposits/${id}/reject`),
@@ -286,6 +300,7 @@ export const adminAPI = {
   changeUserPassword: (id: number, password: string) => adminRequest('PUT', `/admin/users/${id}/password`, { password }),
   lockUserFunds: (id: number, data: any) => adminRequest('POST', `/admin/users/${id}/lock-funds`, data),
   unlockUserFunds: (id: number, lockId: number) => adminRequest('POST', `/admin/users/${id}/unlock-funds/${lockId}`),
+  lockUserWithdrawal: (id: number, locked_until: string | null) => adminRequest('POST', `/admin/users/${id}/withdrawal-lock`, { locked_until }),
   updateUpiSettings: (upi_id: string) => adminRequest('POST', '/admin/settings/upi', { upi_id }),
   deleteScheme: (id: number) => adminRequest('DELETE', `/admin/schemes/${id}`),
   getProfile: () => adminRequest('GET', '/admin/profile'),
