@@ -65,7 +65,10 @@ import { Offers } from './views/Offers';
 import { AdminYieldBoosters } from './views/admin/AdminYieldBoosters';
 import { AdminDailyTasks } from './views/admin/AdminDailyTasks';
 import { AdminCron } from './views/admin/AdminCron';
+import { AdminLiveChat } from './views/admin/AdminLiveChat';
+import { MaintenanceGuard } from './components/MaintenanceGuard';
 import { MaintenancePage } from './views/MaintenancePage';
+import { LiveChat } from './views/LiveChat';
 
 interface User {
   id?: number;
@@ -280,6 +283,7 @@ export const App: React.FC = () => {
           user={user} 
           onLogout={handleLogout} 
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          onNavigate={setCurrentView}
           isAdmin={isAdmin}
         />
       )}
@@ -352,6 +356,9 @@ export const App: React.FC = () => {
             {currentView === 'support' && (
               <SupportTickets />
             )}
+            {currentView === 'live-chat' && (
+              <LiveChat />
+            )}
             {currentView.startsWith('support/') && (
               <SupportTicketDetail 
                 ticketId={currentView.split('/')[1]} 
@@ -407,6 +414,7 @@ export const App: React.FC = () => {
             {currentView === 'admin-active-users' && <AdminActiveUsers />}
             {currentView === 'admin-referrals' && <AdminReferrals />}
             {currentView === 'admin-support' && <AdminSupportTickets />}
+            {currentView === 'admin-live-chat' && <AdminLiveChat />}
             {currentView.startsWith('admin/support/') && (
               <AdminSupportTicketDetail 
                 ticketId={currentView.split('/')[2]} 

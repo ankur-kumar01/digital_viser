@@ -26,6 +26,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'games', name: 'Gaming Zone', icon: <Gamepad2 size={20} /> },
     { id: 'transactions', name: 'Transactions', icon: <Receipt size={20} /> },
     { id: 'support', name: 'Support', icon: <MessageSquare size={20} /> },
+    { id: 'live-chat', name: 'Live Chat', icon: <MessageSquare size={20} /> },
   ];
 
   const adminMenuItems = [
@@ -59,6 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
     { id: 'admin-player-analytics', name: 'Player Analytics', icon: <BarChart3 size={20} /> },
     { id: 'admin-settings', name: 'System Settings', icon: <Wallet size={20} /> },
     { id: 'admin-support', name: 'Support Tickets', icon: <MessageSquare size={20} /> },
+    { id: 'admin-live-chat', name: 'Live Chat Support', icon: <MessageSquare size={20} /> },
     { id: 'admin-profile', name: 'Admin Profile', icon: <User size={20} /> },
   ];
 

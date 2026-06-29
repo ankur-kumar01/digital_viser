@@ -251,6 +251,11 @@ export const fantasyAPI = {
   getMyEntries: (matchId?: number) => request('GET', `/fantasy/my-entries${matchId ? `?matchId=${matchId}` : ''}`)
 };
 
+export const liveChatAPI = {
+  getLiveChatSession: () => request('GET', '/live-chat'),
+  sendLiveChatMessage: (data: FormData) => request('POST', '/live-chat/message', data, true)
+};
+
 export const adminAPI = {
   login: (credentials: any) => adminRequest('POST', '/admin/auth/login', credentials),
   getStats: () => adminRequest('GET', '/admin/stats'),
@@ -301,6 +306,11 @@ export const adminAPI = {
   lockUserFunds: (id: number, data: any) => adminRequest('POST', `/admin/users/${id}/lock-funds`, data),
   unlockUserFunds: (id: number, lockId: number) => adminRequest('POST', `/admin/users/${id}/unlock-funds/${lockId}`),
   lockUserWithdrawal: (id: number, locked_until: string | null) => adminRequest('POST', `/admin/users/${id}/withdrawal-lock`, { locked_until }),
+  // Admin Live Chat API
+  getLiveChatSessions: () => adminRequest('GET', '/admin/live-chat/sessions'),
+  getLiveChatMessages: (sessionId: number) => adminRequest('GET', `/admin/live-chat/sessions/${sessionId}/messages`),
+  sendLiveChatMessage: (sessionId: number, data: FormData) => adminRequest('POST', `/admin/live-chat/sessions/${sessionId}/message`, data, true),
+
   updateUpiSettings: (upi_id: string) => adminRequest('POST', '/admin/settings/upi', { upi_id }),
   deleteScheme: (id: number) => adminRequest('DELETE', `/admin/schemes/${id}`),
   getProfile: () => adminRequest('GET', '/admin/profile'),
