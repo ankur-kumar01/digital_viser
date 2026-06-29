@@ -283,6 +283,7 @@ export const App: React.FC = () => {
           user={user} 
           onLogout={handleLogout} 
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          onNavigate={setCurrentView}
           isAdmin={isAdmin}
         />
       )}

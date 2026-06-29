@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, LogOut, Menu } from 'lucide-react';
+import { Wallet, LogOut, Menu, MessageSquare } from 'lucide-react';
 import { fdrAPI } from '../api';
 
 interface NavbarProps {
   user: any;
   onLogout: () => void;
   onToggleSidebar: () => void;
+  onNavigate?: (view: string) => void;
   isAdmin?: boolean;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar, isAdmin = false }) => {
+export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar, onNavigate, isAdmin = false }) => {
   const formatBalance = (bal: number | string) => {
     const numeric = typeof bal === 'string' ? parseFloat(bal) : bal;
     return new Intl.NumberFormat('en-IN', {
@@ -101,16 +102,6 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar,
         >
           <Menu size={22} />
         </button>
-        <h4 style={{ 
-          color: 'var(--text-primary)', 
-          fontSize: '0.95rem', 
-          fontWeight: 500, 
-          whiteSpace: 'nowrap', 
-          overflow: 'hidden', 
-          textOverflow: 'ellipsis' 
-        }}>
-          Welcome, <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{user?.name || 'User'}</span>
-        </h4>
       </div>
 
       {/* Right: Balance + Logout — always in one row */}
@@ -141,6 +132,38 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onToggleSidebar,
             </span>
           </div>
         )}
+
+        {/* Live Chat */}
+        <button
+          onClick={() => onNavigate && onNavigate(isAdmin ? 'admin-live-chat' : 'live-chat')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '36px',
+            height: '36px',
+            borderRadius: '8px',
+            background: 'transparent',
+            border: '1px solid var(--border-card)',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            transition: 'var(--transition)',
+            flexShrink: 0,
+          }}
+          title="Live Support Chat"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--accent-primary)';
+            e.currentTarget.style.color = 'var(--accent-primary)';
+            e.currentTarget.style.background = 'var(--accent-primary-glow)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border-card)';
+            e.currentTarget.style.color = 'var(--text-secondary)';
+            e.currentTarget.style.background = 'transparent';
+          }}
+        >
+          <MessageSquare size={15} />
+        </button>
 
         {/* Logout */}
         <button
