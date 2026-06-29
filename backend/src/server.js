@@ -32,6 +32,8 @@ const fantasyRoutes = require('./routes/fantasy');
 const supportRoutes = require('./routes/support');
 const adminSupportRoutes = require('./routes/adminSupport');
 const adminAnalyticsRoutes = require('./routes/adminAnalytics');
+const liveChatRoutes = require('./routes/liveChat');
+const adminLiveChatRoutes = require('./routes/adminLiveChat');
 
 // ISSUE-014 FIX: Hard fail if JWT_SECRET is missing — don't allow server to start broken
 if (!process.env.JWT_SECRET) {
@@ -142,6 +144,49 @@ io.on('connection', (socket) => {
       if (typeof callback === 'function') callback({ success: true, newBalance: res.newBalance });
     } catch (err) {
       if (typeof callback === 'function') callback({ error: err.message });
+    }
+  });
+
+  // --- Live Chat Sockets ---
+  socket.on('join_live_chat', (data) => {
+    if (socket.user.role === 'admin') {
+      socket.join('admin_live_chat');
+      if (data && data.userId) {
+        socket.join(`live_chat_${data.userId}`);
+      }
+    } else {
+      socket.join(`live_chat_${socket.user.userId}`);
+    }
+  });
+
+  socket.on('live_chat_message', async (data) => {
+    // Expected data: { message: string, sessionId: number, targetUserId?: number }
+    // If admin, they emit to a specific targetUserId. If user, they emit to admin_live_chat.
+    try {
+      if (socket.user.role === 'admin') {
+        io.to(`live_chat_${data.targetUserId}`).emit('new_live_chat_message', {
+          sender_type: 'admin',
+          message: data.message,
+          created_at: new Date().toISOString()
+        });
+      } else {
+        io.to('admin_live_chat').emit('new_live_chat_message', {
+          sender_type: 'user',
+          user_id: socket.user.userId, // Send user_id so admin knows who it is from
+          message: data.message,
+          created_at: new Date().toISOString()
+        });
+      }
+    } catch (err) {
+      console.error('Socket Live Chat Error:', err);
+    }
+  });
+
+  socket.on('live_chat_typing', (data) => {
+    if (socket.user.role === 'admin') {
+      io.to(`live_chat_${data.targetUserId}`).emit('live_chat_typing', { sender_type: 'admin', isTyping: data.isTyping });
+    } else {
+      io.to('admin_live_chat').emit('live_chat_typing', { sender_type: 'user', user_id: socket.user.userId, isTyping: data.isTyping });
     }
   });
 
@@ -285,6 +330,8 @@ app.use('/api/daily-tasks', require('./routes/dailyTasks'));
 app.use('/api/admin/daily-tasks', require('./routes/adminDailyTasks'));
 app.use('/api/admin/cron', require('./routes/adminCron'));
 app.use('/api/admin/analytics', adminAnalyticsRoutes);
+app.use('/api/live-chat', liveChatRoutes);
+app.use('/api/admin/live-chat', adminLiveChatRoutes);
 
 // Public Config Endpoint
 app.get('/api/config', async (req, res) => {
