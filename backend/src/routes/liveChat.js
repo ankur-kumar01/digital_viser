@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const auth = require('../middleware/auth');
+const multer = require('multer');
+const upload = multer();
 
 // Get or Create user's chat session, and fetch history
 router.get('/', auth, async (req, res) => {
@@ -37,10 +39,11 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Used primarily for file uploads - text messages are handled via socket.io
-router.post('/message', auth, async (req, res) => {
+router.post('/message', auth, upload.any(), async (req, res) => {
   try {
     const userId = req.user.userId;
     const { message, attachment_url } = req.body;
+    console.log('Incoming live chat message:', req.body);
 
     const [sessions] = await pool.query('SELECT id FROM live_chat_sessions WHERE user_id = ?', [userId]);
     if (sessions.length === 0) return res.status(404).json({ error: 'Session not found' });
