@@ -164,8 +164,8 @@ export const walletAPI = {
   deposit: (amount: number, paymentMethod: string, customData?: any) => 
     request('POST', '/wallet/deposit', { amount, payment_method: paymentMethod, custom_data: customData }),
   // ISSUE-020/030 FIX: Default to 'main' (consistent with backend validator) not 'normal'
-  withdraw: (amount: number, paymentMethod: string, sourceWallet: string = 'main', customData?: any) => 
-    request('POST', '/wallet/withdraw', { amount, payment_method: paymentMethod, source_wallet: sourceWallet, custom_data: customData }),
+  withdraw: (amount: number, paymentMethod: string, sourceWallet: string = 'main', customData?: any, pay_charges_with_coins: boolean = false) => 
+    request('POST', '/wallet/withdraw', { amount, payment_method: paymentMethod, source_wallet: sourceWallet, custom_data: customData, pay_charges_with_coins }),
   getTransactions: (page: number = 1) => request('GET', `/wallet/transactions?page=${page}`),
   getActiveMethods: () => request('GET', '/wallet/active-methods'),
   getConfig: () => request('GET', '/wallet/config'),

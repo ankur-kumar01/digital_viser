@@ -356,7 +356,9 @@ app.get('/api/config', async (req, res) => {
       referral_percent: referralPercent ? parseFloat(referralPercent.reward_amount) : 10,
       fdr_referral_percent: fdrReferralPercent ? parseFloat(fdrReferralPercent.reward_amount) : 5,
       maintenance_mode: settings.maintenance_mode === 'true',
-      maintenance_end_time: settings.maintenance_end_time || null
+      maintenance_end_time: settings.maintenance_end_time || null,
+      allow_coin_withdrawal_charges: settings.allow_coin_withdrawal_charges !== 'false',
+      coin_to_inr_charge_rate: parseFloat(settings.coin_to_inr_charge_rate || '1')
     };
     cache.set(cacheKey, configData, 30000);
     res.json(configData);
