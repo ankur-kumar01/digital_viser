@@ -30,7 +30,7 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
   const [lockLoading, setLockLoading] = useState(false);
 
   const [showAdjustModal, setShowAdjustModal] = useState(false);
-  const [adjustWalletType, setAdjustWalletType] = useState<'main' | 'bonus' | 'referral' | 'gaming_bonus'>('main');
+  const [adjustWalletType, setAdjustWalletType] = useState<'main' | 'bonus' | 'referral' | 'gaming_bonus' | 'coin'>('main');
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -323,6 +323,18 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
                 <div style={{ color: 'var(--accent-danger)', fontSize: '0.8rem' }}><Lock size={12} style={{display:'inline'}}/> Locked: ₹0.00</div>
                 <button 
                   onClick={() => { setAdjustWalletType('gaming_bonus'); setShowAdjustModal(true); }}
+                  className="btn btn-secondary" 
+                  style={{ position: 'absolute', top: '16px', right: '16px', padding: '6px 12px', fontSize: '0.8rem', borderRadius: 'var(--radius-full)' }}
+                >
+                  ± Adjust
+                </button>
+              </div>
+              <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: 'var(--radius-sm)', position: 'relative' }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Coin Balance</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', margin: '8px 0' }}>{parseFloat(data.user.coin_balance || 0).toLocaleString('en-IN')} 🪙</div>
+                <div style={{ color: 'var(--accent-danger)', fontSize: '0.8rem' }}><Lock size={12} style={{display:'inline'}}/> Locked: ₹0.00</div>
+                <button 
+                  onClick={() => { setAdjustWalletType('coin'); setShowAdjustModal(true); }}
                   className="btn btn-secondary" 
                   style={{ position: 'absolute', top: '16px', right: '16px', padding: '6px 12px', fontSize: '0.8rem', borderRadius: 'var(--radius-full)' }}
                 >
@@ -639,6 +651,7 @@ export const AdminUserProfileDetails: React.FC<Props> = ({ userId, onBack }) => 
                   <option value="bonus">Deposit Bonus</option>
                   <option value="referral">Referral Balance</option>
                   <option value="gaming_bonus">Gaming Bonus</option>
+                  <option value="coin">Coin Wallet</option>
                 </select>
               </div>
               <button type="submit" className="btn btn-primary" disabled={adjustLoading} style={{ marginTop: '10px' }}>

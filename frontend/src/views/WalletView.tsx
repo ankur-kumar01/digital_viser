@@ -14,6 +14,7 @@ interface WalletViewProps {
     referral_balance: number | string;
     locked_referral_balance: number | string;
     gaming_bonus_balance?: number | string;
+    coin_balance?: number | string;
   } | null;
   onNavigate: (view: string) => void;
 }
@@ -112,6 +113,12 @@ export const WalletView: React.FC<WalletViewProps> = ({ user, onNavigate }) => {
           label={`Bonus Wallet (Locked: ${formatCurrency(parseFloat(user?.locked_bonus_balance?.toString() || '0'))})`}
           value={formatCurrency(parseFloat(user?.bonus_balance?.toString() || '0'))}
           variant="primary"
+        />
+        <MetricCard
+          icon={<Wallet size={20} />}
+          label="Coin Wallet"
+          value={parseFloat(user?.coin_balance?.toString() || '0').toLocaleString('en-IN') + ' 🪙'}
+          variant="secondary"
         />
         <MetricCard
           icon={<Zap size={20} />}

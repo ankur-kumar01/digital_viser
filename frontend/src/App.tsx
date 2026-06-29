@@ -76,6 +76,7 @@ interface User {
   email: string;
   phone_number?: string;
   balance?: number;
+  coin_balance?: number;
   gaming_bonus_balance?: number;
   referral_balance?: number;
   locked_referral_balance?: number;
