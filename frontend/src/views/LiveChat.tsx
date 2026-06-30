@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { liveChatAPI } from '../api';
 import { io, Socket } from 'socket.io-client';
-import { Send, Image as ImageIcon, Loader2, HelpCircle } from 'lucide-react';
+import { Send, Image as ImageIcon, Loader2, Phone, Video, MoreVertical, ShieldCheck, User, ArrowLeft } from 'lucide-react';
+import { formatGlobalDate } from '../utils/dateFormatter';
 
 export const LiveChat: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -59,7 +60,6 @@ export const LiveChat: React.FC = () => {
     if (!socket) return;
 
     const handleNewMessage = (data: any) => {
-      // Data looks like: { sender_type: 'admin', message: '...', created_at: '...' }
       setMessages(prev => [...prev, data]);
     };
 
@@ -176,77 +176,78 @@ export const LiveChat: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-        <Loader2 className="spin" size={32} style={{ margin: '0 auto' }} />
-        <p style={{ marginTop: '16px' }}>Connecting to Live Support...</p>
+      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Loader2 className="spin" size={32} color="var(--accent-primary)" />
       </div>
     );
   }
 
   return (
-    <div className="animate-fade-in live-chat-container">
-      
-      <div className="live-chat-header-title">
-        <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            Live Support <span className="badge badge-active" style={{ fontSize: '0.8rem' }}>Online</span>
-          </h2>
-          <p style={{ color: 'var(--text-secondary)' }}>Chat directly with our support team</p>
+    <div className="animate-fade-in chat-app-container">
+      {/* App-like Header */}
+      <div className="chat-app-header">
+        <div className="chat-app-header-left">
+          <button onClick={() => window.history.back()} className="chat-back-btn">
+            <ArrowLeft size={24} />
+          </button>
+          <div className="chat-avatar">
+            <User size={24} color="#fff" />
+            <span className="online-indicator"></span>
+          </div>
+          <div className="chat-user-info">
+            <h3>Support Team</h3>
+            <span className="chat-status-text">Live • Online</span>
+          </div>
+        </div>
+        <div className="chat-app-header-right">
+          <button className="chat-icon-btn"><MoreVertical size={20} /></button>
         </div>
       </div>
 
-      <div className="glass-card glow-card live-chat-window">
-        
-        {/* Chat Header */}
-        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-glass)', background: 'rgba(0, 245, 160, 0.05)', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>
-            <HelpCircle size={20} />
-          </div>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--accent-primary)' }}>Digital Viser Support</h3>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Typically replies in a few minutes</div>
-          </div>
+      <div className="chat-app-body">
+        {/* End-to-end encryption notice */}
+        <div className="encryption-notice">
+          <ShieldCheck size={14} /> Messages are secured. No one outside of this chat, not even third parties, can read them.
         </div>
 
         {/* Chat Messages */}
-        <div className="live-chat-messages hide-scrollbar">
-          
-          <div style={{ alignSelf: 'center', background: 'var(--bg-tertiary)', padding: '8px 16px', borderRadius: '20px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            Chat started. A support agent will be with you shortly.
+        <div className="chat-messages-container hide-scrollbar">
+          <div className="chat-date-divider">
+            <span>Chat started. A support agent will be with you shortly.</span>
           </div>
 
-          {messages.map((msg, idx) => {
+          {messages.map((msg, index) => {
             const isUser = msg.sender_type === 'user';
+            const showDate = index === 0 || new Date(msg.created_at).getDate() !== new Date(messages[index - 1].created_at).getDate();
+
             return (
-              <div key={idx} style={{ alignSelf: isUser ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
-                <div style={{
-                  background: isUser ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
-                  color: isUser ? '#000' : 'var(--text-primary)',
-                  padding: '12px 16px',
-                  borderRadius: '16px',
-                  borderBottomRightRadius: isUser ? '4px' : '16px',
-                  borderBottomLeftRadius: isUser ? '16px' : '4px',
-                  boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-                }}>
-                  {msg.attachment_url && (
-                    <div style={{ marginBottom: '8px' }}>
-                      <img src={`${import.meta.env.VITE_API_URL}${msg.attachment_url}`} alt="Attachment" style={{ maxWidth: '100%', borderRadius: '8px' }} />
-                    </div>
-                  )}
-                  <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.95rem' }}>
-                    {msg.message}
+              <React.Fragment key={index}>
+                {showDate && (
+                  <div className="chat-date-divider">
+                    <span>{formatGlobalDate(msg.created_at, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: isUser ? 'rgba(0,0,0,0.6)' : 'var(--text-muted)', marginTop: '4px', textAlign: isUser ? 'right' : 'left' }}>
-                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                )}
+                
+                <div className={`chat-bubble-wrapper ${isUser ? 'is-user' : 'is-agent'}`}>
+                  <div className="chat-bubble">
+                    {msg.attachment_url && (
+                      <div style={{ marginBottom: '8px' }}>
+                        <img src={`${import.meta.env.VITE_API_URL}${msg.attachment_url}`} alt="Attachment" style={{ maxWidth: '100%', borderRadius: '8px' }} />
+                      </div>
+                    )}
+                    <div className="chat-bubble-text">{msg.message}</div>
+                    <div className="chat-bubble-time">
+                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </React.Fragment>
             );
           })}
           
           {isTyping && (
-            <div style={{ alignSelf: 'flex-start', maxWidth: '75%' }}>
-              <div style={{ background: 'var(--bg-tertiary)', padding: '12px 16px', borderRadius: '16px', borderBottomLeftRadius: '4px', display: 'flex', gap: '4px' }}>
+            <div className="chat-bubble-wrapper is-agent">
+              <div className="chat-bubble typing-bubble">
                 <span className="typing-dot"></span>
                 <span className="typing-dot" style={{ animationDelay: '0.2s' }}></span>
                 <span className="typing-dot" style={{ animationDelay: '0.4s' }}></span>
@@ -257,124 +258,351 @@ export const LiveChat: React.FC = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Chat Input */}
-        <div className="live-chat-input-area">
-          <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
-            {/* Temporarily disabled image upload
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="btn btn-secondary" style={{ padding: '12px', borderRadius: '50%' }}>
-              <ImageIcon size={20} />
-            </button>
-            <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" />
-            */}
-            
+        {/* Chat Input Area */}
+        <div className="chat-input-container">
+          <form onSubmit={handleSendMessage} className="chat-input-form">
             <textarea 
               ref={textareaRef}
-              className="input-field"
-              placeholder="Type your message here..."
+              className="chat-textarea"
+              placeholder="Message Support Team..."
               value={messageInput}
               onChange={handleTypingChange}
               onKeyDown={handleKeyDown}
               rows={1}
-              style={{ 
-                flex: 1, 
-                borderRadius: '16px', 
-                padding: '12px 16px', 
-                background: 'var(--bg-secondary)',
-                resize: 'none',
-                maxHeight: '120px',
-                overflowY: 'auto',
-                lineHeight: '1.4'
-              }}
             />
-            
-            <button type="submit" className="btn btn-primary send-btn" disabled={sending || !messageInput.trim()}>
-              {sending ? <Loader2 size={20} className="spin" /> : <Send size={20} />}
+            <button 
+              type="submit" 
+              className={`chat-send-btn ${messageInput.trim() ? 'active' : ''}`} 
+              disabled={sending || !messageInput.trim()}
+            >
+              {sending ? <Loader2 size={20} className="spin" /> : <Send size={20} style={{ transform: 'translateX(2px)' }} />}
             </button>
           </form>
         </div>
-
       </div>
 
       <style>{`
-        .live-chat-container {
+        .chat-app-container {
+          display: flex;
+          flex-direction: column;
           height: calc(100vh - 120px);
-          display: flex;
-          flex-direction: column;
-        }
-        .live-chat-header-title {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 20px;
-        }
-        .live-chat-window {
-          flex: 1;
-          padding: 0;
-          display: flex;
-          flex-direction: column;
+          max-width: 1000px;
+          margin: 0 auto;
+          background: #ffffff;
+          border-radius: 20px;
           overflow: hidden;
-          border: 1px solid var(--accent-primary);
+          box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+          border: 1px solid #e5e7eb;
+          position: relative;
         }
-        .live-chat-messages {
+
+        .chat-app-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px 24px;
+          background: #ffffff;
+          border-bottom: 1px solid #e5e7eb;
+          z-index: 10;
+        }
+
+        .chat-app-header-left {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .chat-back-btn {
+          background: transparent;
+          border: none;
+          color: #6b7280;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 8px;
+          border-radius: 50%;
+          transition: 0.2s ease;
+        }
+        
+        .chat-back-btn:hover {
+          background: #f3f4f6;
+          color: #111827;
+        }
+
+        .chat-avatar {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          background: #9ca3af;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+        }
+
+        .online-indicator {
+          position: absolute;
+          bottom: 2px;
+          right: 2px;
+          width: 12px;
+          height: 12px;
+          background: #22c55e;
+          border: 2px solid #ffffff;
+          border-radius: 50%;
+        }
+
+        .chat-user-info h3 {
+          margin: 0 0 4px 0;
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #111827;
+        }
+
+        .chat-status-text {
+          font-size: 0.85rem;
+          color: #6b7280;
+          display: block;
+        }
+
+        .chat-app-header-right {
+          display: flex;
+          gap: 8px;
+        }
+
+        .chat-icon-btn {
+          background: transparent;
+          border: none;
+          color: #6b7280;
+          cursor: pointer;
+          padding: 10px;
+          border-radius: 50%;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .chat-icon-btn:hover {
+          background: #f3f4f6;
+          color: var(--accent-primary, #3b82f6);
+        }
+
+        .chat-app-body {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          background: #f0f2f5; /* Light app-like background */
+          position: relative;
+          overflow: hidden;
+        }
+
+        .encryption-notice {
+          text-align: center;
+          font-size: 0.75rem;
+          color: #6b7280;
+          padding: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          background: rgba(0,0,0,0.02);
+        }
+
+        .chat-messages-container {
           flex: 1;
           overflow-y: auto;
           padding: 24px;
           display: flex;
           flex-direction: column;
-          gap: 16px;
-          background: var(--bg-secondary);
+          gap: 12px;
         }
-        .live-chat-input-area {
+
+        .chat-date-divider {
+          text-align: center;
+          margin: 16px 0;
+        }
+        
+        .chat-date-divider span {
+          background: #e5e7eb;
+          padding: 6px 14px;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          color: #4b5563;
+        }
+
+        .chat-bubble-wrapper {
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+        }
+
+        .chat-bubble-wrapper.is-user {
+          align-items: flex-end;
+        }
+
+        .chat-bubble-wrapper.is-agent {
+          align-items: flex-start;
+        }
+
+        .chat-bubble {
+          max-width: 75%;
+          padding: 12px 16px;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .is-user .chat-bubble {
+          background: #dcf8c6;
+          color: #111827;
+          border-radius: 20px 20px 4px 20px;
+        }
+
+        .is-agent .chat-bubble {
+          background: #ffffff;
+          color: #111827;
+          border-radius: 20px 20px 20px 4px;
+          border: 1px solid #e5e7eb;
+        }
+        
+        .typing-bubble {
+          display: flex;
+          flex-direction: row !important;
+          align-items: center;
+          gap: 4px !important;
+          padding: 16px !important;
+        }
+
+        .chat-bubble-text {
+          font-size: 0.95rem;
+          line-height: 1.5;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+
+        .chat-bubble-time {
+          font-size: 0.7rem;
+          align-self: flex-end;
+          opacity: 0.7;
+          margin-top: 2px;
+        }
+
+        .is-user .chat-bubble-time {
+          color: #6b7280;
+        }
+        
+        .is-agent .chat-bubble-time {
+          color: #6b7280;
+        }
+
+        .chat-input-container {
           padding: 16px 24px;
-          border-top: 1px solid var(--border-glass);
-          background: var(--bg-tertiary);
+          background: #ffffff;
+          border-top: 1px solid #e5e7eb;
         }
-        .send-btn {
-          padding: 12px;
+
+        .chat-input-form {
+          display: flex;
+          align-items: flex-end;
+          gap: 12px;
+          background: #f3f4f6;
+          border-radius: 24px;
+          padding: 8px 12px;
+          border: 1px solid transparent;
+          transition: all 0.3s;
+        }
+        
+        .chat-input-form:focus-within {
+          border-color: var(--accent-primary, #3b82f6);
+          background: #ffffff;
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        .chat-textarea {
+          flex: 1;
+          background: transparent;
+          border: none;
+          color: #111827;
+          padding: 10px 12px;
+          font-size: 0.95rem;
+          resize: none;
+          max-height: 120px;
+          min-height: 24px;
+          outline: none;
+          font-family: inherit;
+        }
+
+        .chat-textarea::placeholder {
+          color: #9ca3af;
+        }
+
+        .chat-send-btn {
+          width: 44px;
+          height: 44px;
           border-radius: 50%;
+          background: #e5e7eb;
+          border: none;
+          color: #9ca3af;
           display: flex;
           align-items: center;
           justify-content: center;
+          cursor: pointer;
+          transition: all 0.3s;
           flex-shrink: 0;
-          height: 46px;
-          width: 46px;
         }
 
-        @media (max-width: 768px) {
-          .live-chat-container {
-            height: calc(100vh - 70px); /* Taller on mobile */
-          }
-          .live-chat-header-title {
-            margin-bottom: 12px;
-          }
-          .live-chat-header-title h2 {
-            font-size: 1.4rem !important;
-          }
-          .live-chat-window {
-            border-radius: 0; /* Full width edge-to-edge on mobile */
-            border-left: none;
-            border-right: none;
-            border-bottom: none;
-          }
-          .live-chat-messages {
-            padding: 16px 12px;
-            gap: 12px;
-          }
-          .live-chat-input-area {
-            padding: 12px;
-          }
+        .chat-send-btn.active {
+          background: var(--accent-primary, #3b82f6);
+          color: #ffffff;
+          box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
         }
 
         .typing-dot {
           width: 6px;
           height: 6px;
-          background: var(--text-secondary);
+          background: #9ca3af;
           border-radius: 50%;
           animation: typing 1s infinite alternate;
         }
+        
         @keyframes typing {
           0% { transform: translateY(0); opacity: 0.5; }
           100% { transform: translateY(-4px); opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+          .chat-app-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            z-index: 9999;
+            border-radius: 0;
+            border: none;
+            margin: 0;
+          }
+          
+          .chat-app-header {
+            padding: 12px 16px;
+          }
+          
+          .chat-messages-container {
+            padding: 16px;
+          }
+          
+          .chat-input-container {
+            padding: 12px;
+          }
+          
+          .chat-avatar {
+            width: 40px;
+            height: 40px;
+          }
         }
       `}</style>
     </div>
