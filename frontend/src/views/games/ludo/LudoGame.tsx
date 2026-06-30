@@ -596,6 +596,11 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
   };
 
   // Check if a piece can move
+  // Board Rotation Logic to ensure user is always playing from the bottom-left.
+  // Host (Green) naturally starts Top-Left. Rotate -90deg to move to Bottom-Left.
+  // Challenger (Yellow) naturally starts Bottom-Right. Rotate 90deg to move to Bottom-Left.
+  const boardRotation = isHostUser ? -90 : 90;
+
   const isValidPieceMove = (isHost: boolean, position: number, dice: number) => {
     if (position === 0) {
       return dice === 6;
@@ -725,13 +730,13 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
               <div key="home-center" className="ludo-home-center" style={{ gridRow: '7 / 10', gridColumn: '7 / 10' }}>
                 <svg viewBox="0 0 100 100" className="home-center-svg">
                   {/* Left Triangle (Host/Green Home) */}
-                  <polygon points="0,0 50,50 0,100" fill="#4caf50" />
+                  <polygon points="0,0 50,50 0,100" fill="#5db751" />
                   {/* Right Triangle (Challenger/Yellow Home) */}
-                  <polygon points="100,0 50,50 100,100" fill="#ffeb3b" />
+                  <polygon points="100,0 50,50 100,100" fill="#fce43a" />
                   {/* Top Triangle (Blue) */}
-                  <polygon points="0,0 50,50 100,0" fill="#2196f3" />
+                  <polygon points="0,0 50,50 100,0" fill="#359df3" />
                   {/* Bottom Triangle (Red) */}
-                  <polygon points="0,100 50,50 100,100" fill="#f44336" />
+                  <polygon points="0,100 50,50 100,100" fill="#f14e41" />
                   
                   {/* Inner divider lines */}
                   <line x1="0" y1="0" x2="100" y2="100" stroke="#1d2026" strokeWidth="2" />
@@ -782,8 +787,8 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
             className={cellClass}
             style={{ gridRow: `${r + 1}`, gridColumn: `${c + 1}` }}
           >
-            {isSafe && <Star size={14} className="safe-star-icon" fill="currentColor" />}
-            {cellLabel && <span className="cell-arrow-label">{cellLabel}</span>}
+            {isSafe && <Star size={14} className="safe-star-icon" fill="currentColor" style={{ transform: `rotate(${-boardRotation}deg)` }} />}
+            {cellLabel && <span className="cell-arrow-label" style={{ transform: `rotate(${-boardRotation}deg)` }}>{cellLabel}</span>}
           </div>
         );
       }
@@ -877,7 +882,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
             }}
             disabled={!canMoveThisPiece}
           >
-            <div className="piece-3d-wrapper">
+            <div className="piece-3d-wrapper" style={{ transform: `rotate(${-boardRotation}deg)` }}>
               <div className="piece-head" />
               <div className="piece-body" />
               <div className="piece-base" />
@@ -1143,86 +1148,16 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
         </div>
       ) : (
         /* Gameplay board arena */
-        <div className="ludo-arena">
-          <div className="arena-header">
-            <div className="arena-wager-info">
-              <span className="entry-tag">Wager: ₹{currentRoom.entryFee}</span>
-              <span className="pool-tag">Win Pool: ₹{(currentRoom.entryFee * 2 * 0.95).toFixed(0)}</span>
-            </div>
-            
-            {currentRoom.boardState.status === 'waiting' ? (
-              <div className="waiting-room-controls flex flex-col items-center mt-2">
-                <div className="loader-dots my-2">Waiting for opponent to connect...</div>
-                <button className="cancel-room-btn" onClick={handleCancelRoom}>
-                  Cancel Room & Refund
-                </button>
-              </div>
-            ) : null}
-          </div>
-
+        <div className="ludo-arena scattered-arena">
           {currentRoom.boardState.status !== 'waiting' && (
-            <div className="players-vs-panel">
-              <div className={`player-card host-card ${currentRoom.boardState.turn === 'host' ? 'active-turn' : ''}`}>
-                <div className="player-avatar-circle">
-                  <Users size={14} />
-                </div>
-                <div className="player-info-col">
-                  <span className="p-name" title={maskName(currentRoom.hostName)}>{maskName(currentRoom.hostName)}</span>
-                  <span className="p-score">Score: {currentRoom.boardState.hostPieces.reduce((a:number,b:number)=>a+(b===58?100:b),0)}</span>
-                </div>
-                <div className="player-indicator green-indicator" />
-                {currentRoom.boardState.turn === 'host' && (
-                  <span className="turn-timer">{turnTimeLeft}s</span>
-                )}
+            <div className="arena-top-row">
+              <div className="arena-wager-info">
+                <span className="entry-tag">Wager: ₹{currentRoom.entryFee}</span>
+                <span className="pool-tag">Win Pool: ₹{(currentRoom.entryFee * 2 * 0.95).toFixed(0)}</span>
               </div>
-
-              <div className="vs-badge">VS</div>
-
-              <div className={`player-card challenger-card ${currentRoom.boardState.turn === 'challenger' ? 'active-turn' : ''}`}>
-                <div className="player-indicator yellow-indicator" />
-                <div className="player-info-col">
-                  <span className="p-name" title={maskName(currentRoom.challengerName)}>{maskName(currentRoom.challengerName)}</span>
-                  <span className="p-score">Score: {currentRoom.boardState.challengerPieces.reduce((a:number,b:number)=>a+(b===58?100:b),0)}</span>
-                </div>
-                <div className="player-avatar-circle">
-                  <Users size={14} />
-                </div>
-                {currentRoom.boardState.turn === 'challenger' && (
-                  <span className="turn-timer">{turnTimeLeft}s</span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Core Ludo Board */}
-          <div className="ludo-board-frame">
-            <div className="ludo-board-grid">
-              {renderBoardCells()}
-              {renderPieces()}
-            </div>
-          </div>
-
-          {/* Interactive Dice controls */}
-          {currentRoom.boardState.status !== 'waiting' && (
-            <div className="dice-controls-panel">
-              <div className="roll-action-layout">
-                {isPlayerTurn && currentRoom.boardState.phase === 'roll' ? (
-                  <button 
-                    className="giant-roll-btn animate-bounce"
-                    onClick={handleRollDice}
-                    disabled={diceRolling}
-                  >
-                    <Dices size={20} style={{ marginRight: '6px' }} />
-                    ROLL DICE
-                  </button>
-                ) : (
-                  <div className="waiting-turn-note">
-                    {isPlayerTurn ? 'Select a pawn to move' : "Waiting for opponent's turn..."}
-                  </div>
-                )}
-
-                {/* 3D Dice Display Box */}
-                <div className={`dice-cube-container ${diceRolling ? 'rolling' : ''} ${renderDiceRingClass()}`}>
+              
+              <div className="opponent-profile-area">
+                <div className={`dice-cube-container static-dice ${!isPlayerTurn && currentRoom.boardState.phase === 'roll' ? 'can-roll' : ''}`}>
                   <div className={`dice-cube face-${currentRoom.boardState.dice}`}>
                     {currentRoom.boardState.dice > 0 ? (
                       <div className="dice-face">
@@ -1232,9 +1167,90 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
                       </div>
                     ) : (
                       <div className="dice-face empty-face">
-                        <Dices size={24} className="opacity-40" />
+                        <Dices size={20} className="opacity-60" />
                       </div>
                     )}
+                  </div>
+                </div>
+                <div className={`square-avatar opponent-avatar-card ${!isPlayerTurn ? 'active-turn' : ''}`}>
+                  <div className="avatar-placeholder opponent-avatar">
+                    <Users size={32} />
+                  </div>
+                  <span className="name-badge">{maskName(isHostUser ? currentRoom.challengerName : currentRoom.hostName)}</span>
+                  {!isPlayerTurn && <span className="turn-timer-badge">{turnTimeLeft}s</span>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentRoom.boardState.status === 'waiting' && (
+            <div className="arena-header">
+              <div className="arena-wager-info" style={{ justifyContent: 'center', width: '100%', marginBottom: '15px' }}>
+                <span className="entry-tag">Wager: ₹{currentRoom.entryFee}</span>
+                <span className="pool-tag">Win Pool: ₹{(currentRoom.entryFee * 2 * 0.95).toFixed(0)}</span>
+              </div>
+              <div className="waiting-room-controls flex flex-col items-center">
+                <div className="loader-dots my-2">Waiting for opponent to connect...</div>
+                <button className="cancel-room-btn" onClick={handleCancelRoom}>
+                  Cancel Room & Refund
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Core Ludo Board */}
+          <div className="ludo-board-frame">
+            <div className="ludo-board-grid" style={{ transform: `rotate(${boardRotation}deg)`, transition: 'transform 0.5s ease' }}>
+              {renderBoardCells()}
+              {renderPieces()}
+            </div>
+          </div>
+
+          {/* Bottom Current Player Profile */}
+          {currentRoom.boardState.status !== 'waiting' && (
+            <div className="arena-bottom-row">
+              <div className="player-profile-area">
+                <div className={`square-avatar ${isPlayerTurn ? 'active-turn' : ''}`}>
+                  <div className="avatar-placeholder my-avatar">
+                    <Users size={32} />
+                  </div>
+                  <span className="name-badge">{maskName(isHostUser ? currentRoom.hostName : currentRoom.challengerName)}</span>
+                  {isPlayerTurn && <span className="turn-timer-badge">{turnTimeLeft}s</span>}
+                </div>
+
+                <div className="player-controls-col">
+                  {/* Chat Bubble Icon removed to avoid visual confusion with the dice */}
+
+                  <div 
+                    className={`dice-cube-container interactive-dice ${diceRolling ? 'rolling' : ''} ${renderDiceRingClass()} ${isPlayerTurn && currentRoom.boardState.phase === 'roll' ? 'can-roll' : ''}`}
+                    onClick={() => {
+                      if (isPlayerTurn && currentRoom.boardState.phase === 'roll' && !diceRolling) {
+                        handleRollDice();
+                      }
+                    }}
+                    title={isPlayerTurn && currentRoom.boardState.phase === 'roll' ? "Click to Roll Dice!" : ""}
+                  >
+                    <div className={`dice-cube face-${currentRoom.boardState.dice}`}>
+                      {currentRoom.boardState.dice > 0 ? (
+                        <div className="dice-face">
+                          {Array.from({ length: currentRoom.boardState.dice }).map((_, i) => (
+                            <div key={i} className="dice-dot" />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="dice-face empty-face">
+                          <Dices size={28} className="opacity-60" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="auto-mode-toggle">
+                    <div className="toggle-switch">
+                      <span className="toggle-text">ON</span>
+                      <div className="toggle-thumb"></div>
+                    </div>
+                    <span className="auto-text">Auto Mode</span>
                   </div>
                 </div>
               </div>
@@ -1243,85 +1259,7 @@ export const LudoGame: React.FC<Props> = ({ user, refreshUser, onNavigate }) => 
         </div>
       )}
 
-      {/* Bets statistics lists */}
-      <div className="ludo-history-section">
-        <div className="history-tabs-bar">
-          <button 
-            className={`hist-tab-btn ${historyTab === 'all' ? 'active' : ''}`}
-            onClick={() => setHistoryTab('all')}
-          >
-            All Bets
-          </button>
-          <button 
-            className={`hist-tab-btn ${historyTab === 'my' ? 'active' : ''}`}
-            onClick={() => setHistoryTab('my')}
-          >
-            My Bets
-          </button>
-          <button 
-            className={`hist-tab-btn ${historyTab === 'top' ? 'active' : ''}`}
-            onClick={() => setHistoryTab('top')}
-          >
-            Top Wins
-          </button>
-        </div>
-
-        <div className="history-table-container">
-          <table className="ludo-bets-table">
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left' }}>User / Opponent</th>
-                <th style={{ textAlign: 'left' }}>Bet Entry</th>
-                <th style={{ textAlign: 'left' }}>Payout</th>
-                <th style={{ textAlign: 'left' }}>Multiplier</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(() => {
-                const list = historyTab === 'all' ? recentBets : (historyTab === 'my' ? myBets : topBets);
-                const safeList = Array.isArray(list) ? list : [];
-                const displayLimit = 10;
-                
-                return safeList.slice(0, displayLimit).map((b, i) => {
-                  if (!b) return null;
-                  const bBet = typeof b.bet === 'number' ? b.bet : (parseFloat(b.bet) || 0);
-                  const bWin = typeof b.winAmount === 'number' ? b.winAmount : (parseFloat(b.winAmount) || 0);
-                  const bMult = typeof b.targetMult === 'number' ? b.targetMult : (parseFloat(b.targetMult) || 0);
-                  
-                  return (
-                    <tr key={i}>
-                      <td>
-                        <div className="ludo-user-cell">
-                          <div className="ludo-user-avatar">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                          </div>
-                          <span className="ludo-user-name">{maskName(b.name)}</span>
-                        </div>
-                      </td>
-                      <td>₹{bBet.toFixed(2)}</td>
-                      <td className="ludo-val-payout">{b.cashedOut ? `₹${bWin.toFixed(2)}` : '-'}</td>
-                      <td className="ludo-val-mult">
-                        {b.cashedOut ? (
-                          <span className={`ludo-mult-chip ${bMult >= 1.9 ? 'winner' : ''}`}>
-                            {bMult.toFixed(2)}x
-                          </span>
-                        ) : '-'}
-                      </td>
-                    </tr>
-                  );
-                });
-              })()}
-              {(historyTab === 'all' ? recentBets : (historyTab === 'my' ? myBets : topBets)).length === 0 && (
-                <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                    No Ludo bets recorded
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* History section removed per user request */}
 
       {/* Win overlay */}
       {showWinOverlay && (
