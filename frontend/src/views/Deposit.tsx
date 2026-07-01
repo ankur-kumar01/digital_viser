@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { walletAPI, uploadFile } from '../api';
-import { CheckCircle2, Clock, XCircle, Ban } from 'lucide-react';
+import { CheckCircle2, Clock, XCircle, Ban, ChevronLeft, ChevronRight } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { getAppName } from '../utils/appName';
@@ -31,6 +31,9 @@ export const Deposit: React.FC<DepositProps> = ({ refreshUser }) => {
   const [deposits, setDeposits] = useState<any[]>([]);
   const [depositsLoading, setDepositsLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     const fetchMethods = async () => {
@@ -55,27 +58,46 @@ export const Deposit: React.FC<DepositProps> = ({ refreshUser }) => {
       }
     };
     fetchMethods();
-    fetchDeposits();
+    fetchDeposits(1, true);
   }, []);
 
-  const fetchDeposits = async () => {
-    setDepositsLoading(true);
+  const fetchDeposits = async (p: number = 1, showLoading: boolean = true) => {
+    if (showLoading) setDepositsLoading(true);
     try {
-      const data = await walletAPI.getMyDeposits();
-      setDeposits(data);
+      const response = await walletAPI.getMyDeposits(p, 10);
+      if (Array.isArray(response)) {
+        setDeposits(response);
+      } else if (response && response.data) {
+        setDeposits(response.data);
+        if (response.pagination) {
+          setPage(response.pagination.page);
+          setTotalPages(response.pagination.totalPages || 1);
+          setTotalCount(response.pagination.total || 0);
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch deposits');
     } finally {
-      setDepositsLoading(false);
+      if (showLoading) setDepositsLoading(false);
     }
   };
+
+  // Real-time live auto-update every 10 seconds for deposit history and balance
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchDeposits(page, false);
+      refreshUser();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [page]);
 
   const handleCancelDeposit = async (id: number) => {
     if (!window.confirm('Cancel this deposit request?')) return;
     setCancellingId(id);
     try {
       await walletAPI.cancelDeposit(id);
-      fetchDeposits();
+      fetchDeposits(page, false);
+      await refreshUser();
     } catch (err: any) {
       alert(err?.error || 'Failed to cancel deposit');
     } finally {
@@ -147,6 +169,8 @@ export const Deposit: React.FC<DepositProps> = ({ refreshUser }) => {
       setSuccessData(result.deposit || { amount: numericAmount, payment_method: paymentMethod, transaction_id: 'pending-approval' });
       setAmount('');
       setCustomData({});
+      await refreshUser();
+      await fetchDeposits(1, false);
     } catch (err: any) {
       setError(err.message || 'Deposit transaction failed.');
     } finally {
@@ -333,43 +357,115 @@ export const Deposit: React.FC<DepositProps> = ({ refreshUser }) => {
         ) : deposits.length === 0 ? (
           <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '20px', fontSize: '0.9rem' }}>No recent deposits</p>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Amount</th>
-                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Method</th>
-                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Date</th>
-                  <th style={{ textAlign: 'right', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {deposits.map((d: any) => (
-                  <tr key={d.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <td style={{ padding: '12px', fontWeight: 600 }}>₹{parseFloat(d.amount || '0').toFixed(2)}</td>
-                    <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{d.payment_method || '-'}</td>
-                    <td style={{ padding: '12px' }}><span style={statusStyle(d.status)}>{statusIcon(d.status)}{d.status}</span></td>
-                    <td style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{new Date(d.created_at).toLocaleString()}</td>
-                    <td style={{ padding: '12px', textAlign: 'right' }}>
-                      {d.status === 'pending' && (
-                        <button
-                          onClick={() => handleCancelDeposit(d.id)}
-                          disabled={cancellingId === d.id}
-                          style={{
-                            background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)',
-                            padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
-                            display: 'inline-flex', alignItems: 'center', gap: '4px',
-                          }}
-                        >
-                          <Ban size={12} /> {cancellingId === d.id ? '...' : 'Cancel'}
-                        </button>
-                      )}
-                    </td>
+          <div>
+            {/* Desktop Table View */}
+            <div className="withdrawal-desktop-table">
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Amount</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Method</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Status</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Date</th>
+                    <th style={{ textAlign: 'right', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {deposits.map((d: any) => (
+                    <tr key={d.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '12px', fontWeight: 600 }}>₹{parseFloat(d.amount || '0').toFixed(2)}</td>
+                      <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{d.payment_method || '-'}</td>
+                      <td style={{ padding: '12px' }}><span style={statusStyle(d.status)}>{statusIcon(d.status)}{d.status}</span></td>
+                      <td style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{new Date(d.created_at).toLocaleString()}</td>
+                      <td style={{ padding: '12px', textAlign: 'right' }}>
+                        {d.status === 'pending' && (
+                          <button
+                            onClick={() => handleCancelDeposit(d.id)}
+                            disabled={cancellingId === d.id}
+                            style={{
+                              background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)',
+                              padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
+                              display: 'inline-flex', alignItems: 'center', gap: '4px',
+                            }}
+                          >
+                            <Ban size={12} /> {cancellingId === d.id ? '...' : 'Cancel'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Responsive Cards View */}
+            <div className="withdrawal-mobile-cards">
+              {deposits.map((d: any) => (
+                <div key={d.id} className="withdrawal-mobile-card-item">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '8px' }}>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#10b981' }}>
+                      ₹{parseFloat(d.amount || '0').toLocaleString()}
+                    </div>
+                    <span style={statusStyle(d.status)}>
+                      {statusIcon(d.status)} {d.status}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                    <div>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Method: </span> {d.payment_method || '-'}
+                    </div>
+                    {d.transaction_id && (
+                      <div>
+                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Txn ID: </span> {d.transaction_id}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
+                    <span>{new Date(d.created_at).toLocaleString()}</span>
+                    {d.status === 'pending' && (
+                      <button
+                        onClick={() => handleCancelDeposit(d.id)}
+                        disabled={cancellingId === d.id}
+                        style={{
+                          background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)',
+                          padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+                          display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        }}
+                      >
+                        <Ban size={12} /> {cancellingId === d.id ? '...' : 'Cancel'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', padding: '16px 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '16px' }}>
+                <button
+                  className="btn btn-secondary"
+                  disabled={page <= 1}
+                  onClick={() => fetchDeposits(page - 1)}
+                  style={{ display: 'flex', gap: '6px', padding: '8px 16px', fontSize: '0.85rem' }}
+                >
+                  <ChevronLeft size={16} /> Previous
+                </button>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+                  Page {page} of {totalPages} ({totalCount} total)
+                </span>
+                <button
+                  className="btn btn-secondary"
+                  disabled={page >= totalPages}
+                  onClick={() => fetchDeposits(page + 1)}
+                  style={{ display: 'flex', gap: '6px', padding: '8px 16px', fontSize: '0.85rem' }}
+                >
+                  Next <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
