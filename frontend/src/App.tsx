@@ -27,6 +27,7 @@ import { authAPI, clearToken, getToken, adminAPI, getAdminToken, clearAdminToken
 import { setGlobalTimeZone } from './utils/dateFormatter';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { DomainMigrationModal } from './components/DomainMigrationModal';
 
 // Admin Views
 import { AdminAuth } from './views/admin/AdminAuth';
@@ -242,27 +243,51 @@ export const App: React.FC = () => {
 
   if (isInitializing) {
     return (
-      <LoadingSpinner message="Checking secure gateway credentials..." fullPage />
+      <>
+        <DomainMigrationModal />
+        <LoadingSpinner message="Checking secure gateway credentials..." fullPage />
+      </>
     );
   }
 
   // Show maintenance page for non-admin users when maintenance mode is active
   if (isMaintenance && !isAdmin) {
-    return <MaintenancePage />;
+    return (
+      <>
+        <DomainMigrationModal />
+        <MaintenancePage />
+      </>
+    );
   }
 
   if (!isAuthenticated) {
     if (showAdminAuth) {
-      return <AdminAuth onLogin={handleAdminLoginSuccess} />;
+      return (
+        <>
+          <DomainMigrationModal />
+          <AdminAuth onLogin={handleAdminLoginSuccess} />
+        </>
+      );
     }
     if (showForgotPassword) {
-      return <ForgotPassword onBackToLogin={() => setShowForgotPassword(false)} />;
+      return (
+        <>
+          <DomainMigrationModal />
+          <ForgotPassword onBackToLogin={() => setShowForgotPassword(false)} />
+        </>
+      );
     }
-    return <Auth onLogin={handleLoginSuccess} onNavigateForgot={() => setShowForgotPassword(true)} />;
+    return (
+      <>
+        <DomainMigrationModal />
+        <Auth onLogin={handleLoginSuccess} onNavigateForgot={() => setShowForgotPassword(true)} />
+      </>
+    );
   }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
+      <DomainMigrationModal />
       {/* Sidebar - fixed left */}
       {!isGameView && (
         <Sidebar 
