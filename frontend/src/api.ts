@@ -170,7 +170,7 @@ export const walletAPI = {
   getActiveMethods: () => request('GET', '/wallet/active-methods'),
   getConfig: () => request('GET', '/wallet/config'),
   getMyDeposits: () => request('GET', '/wallet/deposits'),
-  getMyWithdrawals: () => request('GET', '/wallet/withdrawals'),
+  getMyWithdrawals: (page: number = 1, limit: number = 10) => request('GET', `/wallet/withdrawals?page=${page}&limit=${limit}`),
   cancelDeposit: (id: number) => request('POST', `/wallet/deposits/${id}/cancel`),
   cancelWithdrawal: (id: number) => request('POST', `/wallet/withdrawals/${id}/cancel`),
   getWithdrawalLimits: () => request('GET', '/wallet/withdrawal-limits'),

@@ -938,7 +938,7 @@ router.delete('/schemes/:id', async (req, res) => {
 router.get('/users/:id/details', async (req, res) => {
   try {
     const [userRows] = await pool.query(
-      `SELECT u.id, u.name, u.email, u.balance, u.bonus_balance, u.referral_balance, u.gaming_bonus_balance, 
+      `SELECT u.id, u.name, u.email, u.balance, u.bonus_balance, u.referral_balance, u.gaming_bonus_balance, u.coin_balance,
               u.locked_balance, u.locked_bonus_balance, u.locked_referral_balance, u.phone_number, u.address, 
               u.city, u.state, u.pin_code, u.created_at, u.invited_by, i.name as invited_by_name, u.withdrawals_disabled_until 
        FROM users u 

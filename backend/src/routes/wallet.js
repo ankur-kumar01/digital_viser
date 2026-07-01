@@ -448,15 +448,28 @@ router.get('/deposits', async (req, res) => {
   }
 });
 
-// GET /withdrawals — list user's withdrawals (last 10)
+// GET /withdrawals — list user's withdrawals with pagination
 router.get('/withdrawals', async (req, res) => {
   try {
     const userId = req.user.userId;
-    const [rows] = await pool.query(
-      'SELECT id, user_id, amount, payment_method, transaction_id, status, custom_data, created_at FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const offset = (page - 1) * limit;
+
+    const [[{ total }]] = await pool.query(
+      'SELECT COUNT(*) AS total FROM withdrawals WHERE user_id = ?',
       [userId]
     );
-    res.json(rows.map(r => ({ ...r, amount: parseFloat(r.amount) })));
+
+    const [rows] = await pool.query(
+      'SELECT id, user_id, amount, payment_method, transaction_id, status, custom_data, created_at FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+      [userId, limit, offset]
+    );
+
+    res.json({
+      data: rows.map(r => ({ ...r, amount: parseFloat(r.amount) })),
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+    });
   } catch (err) {
     console.error('Fetch withdrawals error:', err);
     res.status(500).json({ error: 'Server error fetching withdrawals.' });
