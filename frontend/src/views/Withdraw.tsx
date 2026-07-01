@@ -12,6 +12,49 @@ interface WithdrawProps {
   refreshUser: () => Promise<void>;
 }
 
+const WithdrawalTimer: React.FC<{ createdAt: string }> = ({ createdAt }) => {
+  const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number; isLate: boolean }>({ hours: 0, minutes: 0, seconds: 0, isLate: false });
+
+  useEffect(() => {
+    const calculateTime = () => {
+      const createdTime = new Date(createdAt).getTime();
+      const targetTime = createdTime + 24 * 60 * 60 * 1000;
+      const diff = targetTime - Date.now();
+
+      if (diff <= 0) {
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0, isLate: true });
+      } else {
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        setTimeLeft({ hours, minutes, seconds, isLate: false });
+      }
+    };
+
+    calculateTime();
+    const timer = setInterval(calculateTime, 1000);
+    return () => clearInterval(timer);
+  }, [createdAt]);
+
+  if (timeLeft.isLate) {
+    return (
+      <div style={{ marginTop: '6px', display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', color: '#f59e0b', fontWeight: 600, background: 'rgba(245, 158, 11, 0.1)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+        <Clock size={12} />
+        <span>Late (High Priority Processing)</span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: '6px', display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', color: '#10b981', fontWeight: 600, background: 'rgba(16, 185, 129, 0.1)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+      <Clock size={12} />
+      <span>
+        Est. Approval: {String(timeLeft.hours).padStart(2, '0')}h {String(timeLeft.minutes).padStart(2, '0')}m {String(timeLeft.seconds).padStart(2, '0')}s
+      </span>
+    </div>
+  );
+};
+
 export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
@@ -573,7 +616,10 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
                       <td style={{ padding: '12px', fontWeight: 600 }}>₹{parseFloat(w.amount || '0').toFixed(2)}</td>
                       <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{w.payment_method || '-'}</td>
                       <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{wd.source_wallet || 'normal'}</td>
-                      <td style={{ padding: '12px' }}><span style={statusStyle(w.status)}>{statusIcon(w.status)}{w.status}</span></td>
+                      <td style={{ padding: '12px' }}>
+                        <div><span style={statusStyle(w.status)}>{statusIcon(w.status)}{w.status}</span></div>
+                        {w.status === 'pending' && <WithdrawalTimer createdAt={w.created_at} />}
+                      </td>
                       <td style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{new Date(w.created_at).toLocaleString()}</td>
                       <td style={{ padding: '12px', textAlign: 'right' }}>
                         {w.status === 'pending' && (
