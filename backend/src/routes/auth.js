@@ -71,7 +71,7 @@ router.post('/register', [
 
     res.status(201).json({
       token,
-      user: { id: userId, name, email, balance: 0.0 },
+      user: { id: userId, name, email, balance: 0.0, coin_balance: 0.0 },
     });
   } catch (err) {
     console.error('Register error:', err);
@@ -89,7 +89,7 @@ router.post('/login', [
     const { email, password, device_info } = req.body;
 
     // Find user by email
-    const [rows] = await pool.query('SELECT id, name, email, password_hash, balance, referral_code FROM users WHERE email = ?', [email]);
+    const [rows] = await pool.query('SELECT id, name, email, password_hash, balance, coin_balance, referral_code FROM users WHERE email = ?', [email]);
     if (rows.length === 0) {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
@@ -124,6 +124,7 @@ router.post('/login', [
         name: user.name,
         email: user.email,
         balance: parseFloat(user.balance),
+        coin_balance: parseFloat(user.coin_balance || 0),
       },
     });
   } catch (err) {
@@ -223,7 +224,7 @@ router.post('/reset-password', async (req, res) => {
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query(
-      'SELECT id, name, email, balance, bonus_balance, gaming_bonus_balance, referral_balance, locked_balance, locked_bonus_balance, locked_referral_balance, referral_code, phone_number, address, city, state, pin_code, profile_photo, created_at FROM users WHERE id = ?',
+      'SELECT id, name, email, balance, coin_balance, bonus_balance, gaming_bonus_balance, referral_balance, locked_balance, locked_bonus_balance, locked_referral_balance, referral_code, phone_number, address, city, state, pin_code, profile_photo, created_at FROM users WHERE id = ?',
       [req.user.userId]
     );
 
@@ -244,6 +245,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
       name: user.name,
       email: user.email,
       balance: parseFloat(user.balance),
+      coin_balance: parseFloat(user.coin_balance || 0),
       bonus_balance: parseFloat(user.bonus_balance || 0),
       gaming_bonus_balance: parseFloat(user.gaming_bonus_balance || 0),
       referral_balance: parseFloat(user.referral_balance || 0),

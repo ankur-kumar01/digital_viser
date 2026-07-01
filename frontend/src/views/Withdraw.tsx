@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { walletAPI, uploadFile } from '../api';
+import { walletAPI, uploadFile, globalConfigAPI } from '../api';
 import { CheckCircle2, AlertCircle, Info, Clock, XCircle, Ban } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
@@ -35,6 +35,11 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
   const [withdrawalsLoading, setWithdrawalsLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
+  // Global Config for Coin Charges
+  const [allowCoinCharges, setAllowCoinCharges] = useState(false);
+  const [coinChargeRate, setCoinChargeRate] = useState(1);
+  const [useCoins, setUseCoins] = useState(false);
+
   useEffect(() => {
     const fetchMethods = async () => {
       try {
@@ -62,7 +67,17 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
       }
     };
 
-    Promise.all([fetchMethods(), fetchWithdrawals(), fetchLimits()]).finally(() => {
+    const fetchConfig = async () => {
+      try {
+        const config = await globalConfigAPI.getConfig();
+        setAllowCoinCharges(config.allow_coin_withdrawal_charges);
+        setCoinChargeRate(config.coin_to_inr_charge_rate || 1);
+      } catch (err) {
+        console.error('Failed to fetch global config');
+      }
+    };
+
+    Promise.all([fetchMethods(), fetchWithdrawals(), fetchLimits(), fetchConfig()]).finally(() => {
       setIsFetching(false);
     });
   }, []);
@@ -131,7 +146,9 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
   });
   
   const earlyFee = Math.round(totalChargeAmount * 100) / 100;
-  const netPayout = numericAmount - earlyFee;
+  
+  const coinsRequired = earlyFee * coinChargeRate;
+  const netPayout = useCoins ? numericAmount : (numericAmount - earlyFee);
 
   const handleCustomDataChange = (label: string, value: any) => {
     setCustomData(prev => ({ ...prev, [label]: value }));
@@ -219,7 +236,7 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
       }
 
       // 2. Submit withdrawal
-      const result = await walletAPI.withdraw(numericAmount, paymentMethod, sourceWallet, finalCustomData);
+      const result = await walletAPI.withdraw(numericAmount, paymentMethod, sourceWallet, finalCustomData, useCoins);
       setSuccessData(result.withdrawal || { amount: numericAmount, payment_method: paymentMethod, transaction_id: 'pending-approval' });
       setAmount('');
       setCustomData({});
@@ -330,7 +347,27 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
                     <span>Total Deduction</span>
                     <span>-₹{earlyFee.toFixed(2)}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: 'var(--accent-secondary)', marginTop: '4px', fontSize: '1rem' }}>
+
+                  {allowCoinCharges && earlyFee > 0 && (
+                    <div style={{ marginTop: '12px', background: 'rgba(234, 179, 8, 0.05)', padding: '10px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(234, 179, 8, 0.2)' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                        <input
+                          type="checkbox"
+                          checked={useCoins}
+                          onChange={(e) => setUseCoins(e.target.checked)}
+                          disabled={(parseFloat((user as any)?.coin_balance || '0') < coinsRequired)}
+                        />
+                        <span>Pay charges with Coins (Cost: <b>{coinsRequired} 🪙</b>)</span>
+                      </label>
+                      {parseFloat((user as any)?.coin_balance || '0') < coinsRequired && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--accent-danger)', marginTop: '4px', marginLeft: '24px' }}>
+                          Insufficient Coin Balance (You have {(user as any)?.coin_balance || '0'} 🪙)
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: 'var(--accent-secondary)', marginTop: '8px', fontSize: '1rem' }}>
                     <span>You Receive</span>
                     <span>₹{netPayout.toFixed(2)}</span>
                   </div>

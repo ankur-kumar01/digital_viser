@@ -60,11 +60,12 @@ export function isLoggedIn(): boolean {
   return !!getToken();
 }
 
-async function request(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: any) {
+async function request(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: any, isFormData: boolean = false) {
   const token = getToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = {};
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -76,7 +77,7 @@ async function request(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, 
   };
 
   if (body) {
-    config.body = JSON.stringify(body);
+    config.body = isFormData ? body : JSON.stringify(body);
   }
 
   const response = await fetch(`${API_BASE}${path}`, config);
@@ -89,11 +90,12 @@ async function request(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, 
   return data;
 }
 
-export async function adminRequest(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: any) {
+export async function adminRequest(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: any, isFormData: boolean = false) {
   const token = getAdminToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = {};
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -105,7 +107,7 @@ export async function adminRequest(method: 'GET' | 'POST' | 'PUT' | 'DELETE', pa
   };
 
   if (body) {
-    config.body = JSON.stringify(body);
+    config.body = isFormData ? body : JSON.stringify(body);
   }
 
   const response = await fetch(`${API_BASE}${path}`, config);
@@ -162,8 +164,8 @@ export const walletAPI = {
   deposit: (amount: number, paymentMethod: string, customData?: any) => 
     request('POST', '/wallet/deposit', { amount, payment_method: paymentMethod, custom_data: customData }),
   // ISSUE-020/030 FIX: Default to 'main' (consistent with backend validator) not 'normal'
-  withdraw: (amount: number, paymentMethod: string, sourceWallet: string = 'main', customData?: any) => 
-    request('POST', '/wallet/withdraw', { amount, payment_method: paymentMethod, source_wallet: sourceWallet, custom_data: customData }),
+  withdraw: (amount: number, paymentMethod: string, sourceWallet: string = 'main', customData?: any, pay_charges_with_coins: boolean = false) => 
+    request('POST', '/wallet/withdraw', { amount, payment_method: paymentMethod, source_wallet: sourceWallet, custom_data: customData, pay_charges_with_coins }),
   getTransactions: (page: number = 1) => request('GET', `/wallet/transactions?page=${page}`),
   getActiveMethods: () => request('GET', '/wallet/active-methods'),
   getConfig: () => request('GET', '/wallet/config'),

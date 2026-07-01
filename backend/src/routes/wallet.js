@@ -98,7 +98,7 @@ router.post('/withdraw', [
 ], async (req, res) => {
   const conn = await pool.getConnection();
   try {
-    const { amount, payment_method, custom_data, source_wallet } = req.body;
+    const { amount, payment_method, custom_data, source_wallet, pay_charges_with_coins } = req.body;
     const userId = req.user.userId;
     const withdrawAmount = parseFloat(amount);
 
@@ -225,7 +225,41 @@ router.post('/withdraw', [
     });
 
     const chargeAmount = Math.round(totalChargeAmount * 100) / 100;
-    const netPayout = withdrawAmount - chargeAmount;
+    let netPayout = withdrawAmount - chargeAmount;
+    let coinsDeducted = 0;
+
+    if (pay_charges_with_coins === true && chargeAmount > 0) {
+      const [settingRowsCT] = await conn.query(`SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('allow_coin_withdrawal_charges', 'coin_to_inr_charge_rate')`);
+      let allowCoinCharges = false;
+      let coinRate = 1;
+      settingRowsCT.forEach(row => {
+        if (row.setting_key === 'allow_coin_withdrawal_charges') allowCoinCharges = (row.setting_value === 'true');
+        if (row.setting_key === 'coin_to_inr_charge_rate') coinRate = parseFloat(row.setting_value) || 1;
+      });
+
+      if (allowCoinCharges) {
+        const requiredCoins = chargeAmount * coinRate;
+        const [coinRows] = await conn.query(`SELECT coin_balance FROM users WHERE id = ? FOR UPDATE`, [userId]);
+        const coinBalance = parseFloat(coinRows[0].coin_balance || '0');
+
+        if (coinBalance < requiredCoins) {
+          await conn.rollback();
+          return res.status(400).json({ error: 'Insufficient coin balance to pay for withdrawal charges.' });
+        }
+
+        // Deduct coins
+        await conn.query(`UPDATE users SET coin_balance = coin_balance - ? WHERE id = ?`, [requiredCoins, userId]);
+        coinsDeducted = requiredCoins;
+        
+        // Log coin deduction
+        await conn.query(
+          'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
+          [userId, 'coin_withdrawal_charge', requiredCoins, `Paid withdrawal charges (${chargeAmount} INR) with ${requiredCoins} Coins`]
+        );
+
+        netPayout = withdrawAmount; // Reset netPayout since charges are covered by coins
+      }
+    }
 
     if (netPayout <= 0) {
       await conn.rollback();
@@ -243,7 +277,7 @@ router.post('/withdraw', [
     // Insert into withdrawals table (store full amount for admin reference)
     await conn.query(
       'INSERT INTO withdrawals (user_id, amount, payment_method, transaction_id, status, custom_data) VALUES (?, ?, ?, ?, "pending", ?)',
-      [userId, withdrawAmount, payment_method || 'direct', transactionId, JSON.stringify({ ...custom_data, source_wallet, charge_applied: chargeAmount > 0, charge_amount: chargeAmount, net_payout: netPayout, charge_details: chargeDetails } || {})]
+      [userId, withdrawAmount, payment_method || 'direct', transactionId, JSON.stringify({ ...custom_data, source_wallet, charge_applied: chargeAmount > 0, charge_amount: chargeAmount, net_payout: netPayout, charge_details: chargeDetails, coins_deducted: coinsDeducted } || {})]
     );
 
     // Insert into transactions table
@@ -257,7 +291,7 @@ router.post('/withdraw', [
     );
 
     // Record the charge as a separate transaction entry
-    if (chargeAmount > 0) {
+    if (chargeAmount > 0 && coinsDeducted === 0) {
       await conn.query(
         'INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)',
         [userId, 'withdrawal_charge', chargeAmount, `Withdrawal fees (${chargeDetails.join(', ')})`]

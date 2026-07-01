@@ -17,6 +17,10 @@ export const AdminSettings: React.FC = () => {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceEndTime, setMaintenanceEndTime] = useState('');
 
+  // Coin Withdrawal Settings
+  const [allowCoinCharges, setAllowCoinCharges] = useState(true);
+  const [coinChargeRate, setCoinChargeRate] = useState('1');
+
   // Global Withdrawal Lock State
   const [globalWithdrawalDisabled, setGlobalWithdrawalDisabled] = useState(false);
   const [globalWithdrawalDisabledUntil, setGlobalWithdrawalDisabledUntil] = useState('');
@@ -43,6 +47,8 @@ export const AdminSettings: React.FC = () => {
       setEnableAviatorBet(res.enable_aviator_bet_simulation !== 'false');
       setEnableColourTradingBet(res.enable_colour_trading_bet_simulation !== 'false');
       setMaintenanceMode(res.maintenance_mode === 'true');
+      setAllowCoinCharges(res.allow_coin_withdrawal_charges !== 'false');
+      setCoinChargeRate(res.coin_to_inr_charge_rate || '1');
       // Convert stored ISO/timestamp to local datetime-local format
       if (res.maintenance_end_time) {
         try {
@@ -204,6 +210,25 @@ export const AdminSettings: React.FC = () => {
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       setError(err.message || 'Failed to update withdrawal lock settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCoinChargeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      await adminAPI.updateSettings({
+        allow_coin_withdrawal_charges: String(allowCoinCharges),
+        coin_to_inr_charge_rate: coinChargeRate
+      });
+      setSuccess('Coin charge settings updated successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update coin charge settings');
     } finally {
       setSaving(false);
     }
@@ -437,6 +462,50 @@ export const AdminSettings: React.FC = () => {
           <button type="submit" className="btn btn-secondary" disabled={saving}>
             <Save size={18} />
             {saving ? 'Saving...' : 'Save Withdrawal Settings'}
+          </button>
+        </form>
+      </div>
+
+      {/* ===== COIN CHARGE SETTINGS CARD ===== */}
+      <div className="glass-card">
+        <h3 style={{ marginBottom: '20px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '12px' }}>Coin Withdrawal Charges</h3>
+        <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>
+          Configure whether users can pay withdrawal charges using their Coin Wallet balance, and define the conversion rate.
+        </p>
+        <form onSubmit={handleCoinChargeSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <label className="input-label">Allow Coin Withdrawal Charges</label>
+            <select
+              className="input-field"
+              value={allowCoinCharges ? 'true' : 'false'}
+              onChange={e => setAllowCoinCharges(e.target.value === 'true')}
+            >
+              <option value="true">Enabled (Users can pay with coins)</option>
+              <option value="false">Disabled</option>
+            </select>
+          </div>
+
+          {allowCoinCharges && (
+            <div>
+              <label className="input-label">Coin to INR Charge Rate</label>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                How many coins are needed to pay ₹1 of withdrawal charges? (e.g., 10 means 10 coins = ₹1 charge)
+              </p>
+              <input
+                type="number"
+                step="any"
+                min="0.001"
+                className="input-field"
+                value={coinChargeRate}
+                onChange={e => setCoinChargeRate(e.target.value)}
+                required
+              />
+            </div>
+          )}
+
+          <button type="submit" className="btn btn-primary" disabled={saving}>
+            <Save size={18} />
+            {saving ? 'Saving...' : 'Save Settings'}
           </button>
         </form>
       </div>

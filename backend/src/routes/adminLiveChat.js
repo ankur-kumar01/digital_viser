@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const upload = multer();
 
 const JWT_SECRET = process.env.JWT_ADMIN_SECRET || process.env.JWT_SECRET;
 
@@ -50,7 +52,7 @@ router.get('/sessions/:id/messages', adminAuth, async (req, res) => {
 });
 
 // Post message via API (primarily for attachments)
-router.post('/sessions/:id/message', adminAuth, async (req, res) => {
+router.post('/sessions/:id/message', adminAuth, upload.any(), async (req, res) => {
   try {
     const sessionId = req.params.id;
     const { message, attachment_url } = req.body;

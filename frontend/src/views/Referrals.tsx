@@ -84,6 +84,7 @@ export const Referrals: React.FC<ReferralsProps> = ({ user }) => {
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '8px' }}>Referral Rewards Program</h2>
           <ul style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: 0, paddingLeft: '20px', lineHeight: 1.6 }}>
             <li>Earn <strong>10% Commission</strong> instantly on your referred friend's first deposit!</li>
+            <li>Plus, earn an additional <strong>5% Coin Bonus</strong> on their first deposit!</li>
             <li>Earn <strong>5% Monthly Recurring Commission</strong> on the total active FDRs held by your referred friends (credited to locked wallet and released monthly).</li>
           </ul>
         </div>
