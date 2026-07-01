@@ -347,6 +347,7 @@ app.get('/api/config', async (req, res) => {
     const referralPercent = schemeRows.find((s) => s.type === 'referral_percent');
     const fdrReferralPercent = schemeRows.find((s) => s.type === 'fdr_referral_percent');
     const coinReferralPercent = schemeRows.find((s) => s.type === 'coin_referral_percent');
+    const fdrCoinReferralPercent = schemeRows.find((s) => s.type === 'fdr_coin_referral_percent');
     
     const configData = {
       global_timezone: settings.global_timezone || 'UTC',
@@ -357,6 +358,7 @@ app.get('/api/config', async (req, res) => {
       referral_percent: referralPercent ? parseFloat(referralPercent.reward_amount) : 10,
       fdr_referral_percent: fdrReferralPercent ? parseFloat(fdrReferralPercent.reward_amount) : 5,
       coin_referral_percent: coinReferralPercent ? parseFloat(coinReferralPercent.reward_amount) : 3,
+      fdr_coin_referral_percent: fdrCoinReferralPercent ? parseFloat(fdrCoinReferralPercent.reward_amount) : 1,
       maintenance_mode: settings.maintenance_mode === 'true',
       maintenance_end_time: settings.maintenance_end_time || null,
       allow_coin_withdrawal_charges: settings.allow_coin_withdrawal_charges !== 'false',

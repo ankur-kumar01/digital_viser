@@ -44,6 +44,10 @@ async function processDailyFinancials(triggeredBy = 'system') {
     const [schemes] = await mainConn.query("SELECT reward_amount FROM reward_schemes WHERE type = 'fdr_referral_percent' AND is_active = true");
     const monthlyReferralPercent = schemes.length > 0 ? parseFloat(schemes[0].reward_amount) : 0;
 
+    // Fetch dynamic FDR coin referral percent
+    const [coinSchemes] = await mainConn.query("SELECT reward_amount FROM reward_schemes WHERE type = 'fdr_coin_referral_percent' AND is_active = true");
+    const monthlyCoinReferralPercent = coinSchemes.length > 0 ? parseFloat(coinSchemes[0].reward_amount) : 0;
+
     // Get all active FDR IDs globally (locked individually)
     const [activeFdrRows] = await mainConn.query("SELECT id FROM fdrs WHERE status = 'active'");
 
@@ -241,6 +245,54 @@ async function processDailyFinancials(triggeredBy = 'system') {
             await conn.query(
               "UPDATE fdrs SET last_referral_commission_date = ? WHERE id = ?",
               [lastRefCommDate, fdr.id]
+            );
+          }
+        }
+
+        // Process Coin Referral Commission Daily (Direct Credit to Coin Balance)
+        // SAFETY: Only process referral commission dates up to the real-world today ceiling
+        if (monthlyCoinReferralPercent > 0) {
+          let lastCoinRefCommDate = fdr.last_coin_referral_commission_date
+            ? (typeof fdr.last_coin_referral_commission_date === 'string'
+              ? fdr.last_coin_referral_commission_date.split('T')[0]
+              : new Date(fdr.last_coin_referral_commission_date).toISOString().split('T')[0])
+            : (typeof fdr.start_date === 'string'
+              ? fdr.start_date.split('T')[0]
+              : new Date(fdr.start_date).toISOString().split('T')[0]);
+
+          const [userReferrerRows] = await conn.query("SELECT invited_by FROM users WHERE id = ?", [fdr.user_id]);
+          const invitedBy = userReferrerRows.length > 0 ? userReferrerRows[0].invited_by : null;
+
+          let refInstDate = addDays(lastCoinRefCommDate, 1);
+          let refProcessed = false;
+
+          const refCeiling = [currentDate, endDate, realWorldToday].sort()[0];
+
+          while (refInstDate <= refCeiling) {
+            if (invitedBy) {
+              const dailyCoinCommissionPercent = monthlyCoinReferralPercent / 30;
+              const dailyCoinCommissionAmount = (fdrAmount * dailyCoinCommissionPercent) / 100;
+              
+              // Directly credit coin_balance without locking!
+              await conn.query(
+                "UPDATE users SET coin_balance = coin_balance + ? WHERE id = ?",
+                [dailyCoinCommissionAmount, invitedBy]
+              );
+              
+              await conn.query(
+                "INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)",
+                [invitedBy, 'fdr_coin_referral_commission', dailyCoinCommissionAmount, `${dailyCoinCommissionPercent.toFixed(4)}% daily recurring coin commission from referred user's active FDR #${fdr.id}`]
+              );
+            }
+            lastCoinRefCommDate = refInstDate;
+            refInstDate = addDays(refInstDate, 1);
+            refProcessed = true;
+          }
+
+          if (refProcessed) {
+            await conn.query(
+              "UPDATE fdrs SET last_coin_referral_commission_date = ? WHERE id = ?",
+              [lastCoinRefCommDate, fdr.id]
             );
           }
         }

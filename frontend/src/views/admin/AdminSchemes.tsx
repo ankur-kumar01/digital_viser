@@ -110,13 +110,13 @@ export const AdminSchemes: React.FC = () => {
             {schemes.map((scheme) => (
               <tr key={scheme.id} style={{ borderBottom: '1px solid var(--border-glass)' }}>
                 <td style={{ padding: '16px 24px' }}>
-                  {scheme.type === 'fdr_bonus' ? 'FDR Creation Bonus' : scheme.type === 'referral_percent' ? '1st Deposit Referral Commission' : scheme.type === 'fdr_referral_percent' ? 'FDR Recurring Commission' : scheme.type === 'coin_referral_percent' ? 'Deposit Coin Commission (All Deposits)' : 'Referral Bonus'}
+                  {scheme.type === 'fdr_bonus' ? 'FDR Creation Bonus' : scheme.type === 'referral_percent' ? '1st Deposit Referral Commission' : scheme.type === 'fdr_referral_percent' ? 'FDR Recurring Commission' : scheme.type === 'fdr_coin_referral_percent' ? 'FDR Recurring Coin Commission' : scheme.type === 'coin_referral_percent' ? 'Deposit Coin Commission (All Deposits)' : 'Referral Bonus'}
                 </td>
                 <td style={{ padding: '16px 24px' }}>
                   {scheme.type === 'fdr_bonus' ? `₹${scheme.min_amount} FDR` : scheme.type === 'referral_percent' ? '1st Approved Deposit' : scheme.type === 'coin_referral_percent' ? 'Every Approved Deposit' : 'Monthly FDR Active Volume'}
                 </td>
                 <td style={{ padding: '16px 24px', fontWeight: 600, color: 'var(--accent-primary)' }}>
-                  {scheme.type === 'referral_percent' || scheme.type === 'fdr_referral_percent' || scheme.type === 'coin_referral_percent' ? `${scheme.reward_amount}%` : `₹${scheme.reward_amount}`}
+                  {scheme.type === 'referral_percent' || scheme.type === 'fdr_referral_percent' || scheme.type === 'fdr_coin_referral_percent' || scheme.type === 'coin_referral_percent' ? `${scheme.reward_amount}%` : `₹${scheme.reward_amount}`}
                 </td>
                 <td style={{ padding: '16px 24px' }}>
                   <span className={`badge ${scheme.is_active ? 'badge-success' : 'badge-danger'}`}>
@@ -182,6 +182,7 @@ export const AdminSchemes: React.FC = () => {
                   <option value="referral_percent">Referral Commission (Percentage of 1st Deposit)</option>
                   <option value="coin_referral_percent">Coin Commission (Percentage of All Approved Deposits)</option>
                   <option value="fdr_referral_percent">FDR Recurring Commission (Monthly Percentage)</option>
+                  <option value="fdr_coin_referral_percent">FDR Recurring Coin Commission (Monthly Percentage)</option>
                   <option value="fdr_bonus">FDR Creation Bonus (Flat Amount)</option>
                 </select>
               </div>
@@ -202,7 +203,7 @@ export const AdminSchemes: React.FC = () => {
 
               <div>
                 <label className="input-label">
-                  {formData.type === 'referral_percent' || formData.type === 'fdr_referral_percent' || formData.type === 'coin_referral_percent' ? 'Reward Bonus Percentage (%)' : 'Reward Bonus Amount (₹)'}
+                  {formData.type === 'referral_percent' || formData.type === 'fdr_referral_percent' || formData.type === 'fdr_coin_referral_percent' || formData.type === 'coin_referral_percent' ? 'Reward Bonus Percentage (%)' : 'Reward Bonus Amount (₹)'}
                 </label>
                 <input 
                   type="number" 
@@ -211,7 +212,7 @@ export const AdminSchemes: React.FC = () => {
                   onChange={(e) => setFormData({...formData, reward_amount: e.target.value})}
                   required
                   min="0"
-                  max={formData.type === 'referral_percent' || formData.type === 'fdr_referral_percent' || formData.type === 'coin_referral_percent' ? "100" : undefined}
+                  max={formData.type === 'referral_percent' || formData.type === 'fdr_referral_percent' || formData.type === 'fdr_coin_referral_percent' || formData.type === 'coin_referral_percent' ? "100" : undefined}
                 />
               </div>
 
