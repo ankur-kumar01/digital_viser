@@ -110,10 +110,10 @@ export const AdminSchemes: React.FC = () => {
             {schemes.map((scheme) => (
               <tr key={scheme.id} style={{ borderBottom: '1px solid var(--border-glass)' }}>
                 <td style={{ padding: '16px 24px' }}>
-                  {scheme.type === 'fdr_bonus' ? 'FDR Creation Bonus' : scheme.type === 'referral_percent' ? '1st Deposit Referral Commission' : scheme.type === 'fdr_referral_percent' ? 'FDR Recurring Commission' : scheme.type === 'coin_referral_percent' ? '1st Deposit Coin Commission' : 'Referral Bonus'}
+                  {scheme.type === 'fdr_bonus' ? 'FDR Creation Bonus' : scheme.type === 'referral_percent' ? '1st Deposit Referral Commission' : scheme.type === 'fdr_referral_percent' ? 'FDR Recurring Commission' : scheme.type === 'coin_referral_percent' ? 'Deposit Coin Commission (All Deposits)' : 'Referral Bonus'}
                 </td>
                 <td style={{ padding: '16px 24px' }}>
-                  {scheme.type === 'fdr_bonus' ? `₹${scheme.min_amount} FDR` : scheme.type === 'referral_percent' ? '1st Approved Deposit' : 'Monthly FDR Active Volume'}
+                  {scheme.type === 'fdr_bonus' ? `₹${scheme.min_amount} FDR` : scheme.type === 'referral_percent' ? '1st Approved Deposit' : scheme.type === 'coin_referral_percent' ? 'Every Approved Deposit' : 'Monthly FDR Active Volume'}
                 </td>
                 <td style={{ padding: '16px 24px', fontWeight: 600, color: 'var(--accent-primary)' }}>
                   {scheme.type === 'referral_percent' || scheme.type === 'fdr_referral_percent' || scheme.type === 'coin_referral_percent' ? `${scheme.reward_amount}%` : `₹${scheme.reward_amount}`}
@@ -180,7 +180,7 @@ export const AdminSchemes: React.FC = () => {
                   disabled={!!editingScheme}
                 >
                   <option value="referral_percent">Referral Commission (Percentage of 1st Deposit)</option>
-                  <option value="coin_referral_percent">Coin Commission (Percentage of 1st Deposit)</option>
+                  <option value="coin_referral_percent">Coin Commission (Percentage of All Approved Deposits)</option>
                   <option value="fdr_referral_percent">FDR Recurring Commission (Monthly Percentage)</option>
                   <option value="fdr_bonus">FDR Creation Bonus (Flat Amount)</option>
                 </select>

@@ -467,14 +467,13 @@ router.post('/deposits/:id/approve', async (req, res) => {
     await conn.query('UPDATE users SET balance = balance + ? WHERE id = ?', [parseFloat(deposit.amount), deposit.user_id]);
     await conn.query('INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)', [deposit.user_id, 'deposit_approved', deposit.amount, `Deposit Approved via ${deposit.payment_method}`]);
     
-    // If it's the first deposit, check for referrer and grant percentage commission
-    if (isFirstDeposit) {
-      const [userRows] = await conn.query('SELECT invited_by FROM users WHERE id = ?', [deposit.user_id]);
-      const invitedBy = userRows.length > 0 ? userRows[0].invited_by : null;
-      
-      if (invitedBy) {
-        // 1. Fiat Referral Commission
-        // Find referral_percent scheme, default to 10% if not found
+    // Check for referrer and grant referral commissions
+    const [userRows] = await conn.query('SELECT invited_by FROM users WHERE id = ?', [deposit.user_id]);
+    const invitedBy = userRows.length > 0 ? userRows[0].invited_by : null;
+
+    if (invitedBy) {
+      // 1. Fiat Referral Commission (Granted ONLY on first approved deposit)
+      if (isFirstDeposit) {
         const [schemes] = await conn.query("SELECT reward_amount FROM reward_schemes WHERE type = 'referral_percent' AND is_active = true");
         const percent = schemes.length > 0 ? parseFloat(schemes[0].reward_amount) : 10;
         
@@ -484,17 +483,17 @@ router.post('/deposits/:id/approve', async (req, res) => {
           await conn.query("UPDATE users SET referral_balance = referral_balance + ? WHERE id = ?", [commissionAmount, invitedBy]);
           await conn.query("INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)", [invitedBy, 'referral_commission', commissionAmount, `Commission (${percent}%) from referee's first deposit`]);
         }
+      }
 
-        // 2. Coin Referral Commission
-        const [coinSchemes] = await conn.query("SELECT reward_amount FROM reward_schemes WHERE type = 'coin_referral_percent' AND is_active = true");
-        const coinPercent = coinSchemes.length > 0 ? parseFloat(coinSchemes[0].reward_amount) : 5;
+      // 2. Coin Referral Commission (Granted on ALL approved deposits of referred user)
+      const [coinSchemes] = await conn.query("SELECT reward_amount FROM reward_schemes WHERE type = 'coin_referral_percent' AND is_active = true");
+      const coinPercent = coinSchemes.length > 0 ? parseFloat(coinSchemes[0].reward_amount) : 3;
 
-        const coinCommissionAmount = (parseFloat(deposit.amount) * coinPercent) / 100;
+      const coinCommissionAmount = (parseFloat(deposit.amount) * coinPercent) / 100;
 
-        if (coinCommissionAmount > 0) {
-          await conn.query("UPDATE users SET coin_balance = coin_balance + ? WHERE id = ?", [coinCommissionAmount, invitedBy]);
-          await conn.query("INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)", [invitedBy, 'coin_referral_commission', coinCommissionAmount, `Coin Commission (${coinPercent}%) from referee's first deposit`]);
-        }
+      if (coinCommissionAmount > 0) {
+        await conn.query("UPDATE users SET coin_balance = coin_balance + ? WHERE id = ?", [coinCommissionAmount, invitedBy]);
+        await conn.query("INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)", [invitedBy, 'coin_referral_commission', coinCommissionAmount, `Coin Commission (${coinPercent}%) from referee's deposit`]);
       }
     }
 
