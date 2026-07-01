@@ -314,14 +314,20 @@ router.get('/referral-stats', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    // 1. Get total lifetime referral earnings
+    // 1. Get total lifetime referral earnings (fiat & coins split)
     const [earningsRows] = await pool.query(
-      `SELECT IFNULL(SUM(amount), 0) AS lifetime_earnings 
+      `SELECT 
+         IFNULL(SUM(CASE WHEN type IN ('referral_commission', 'fdr_referral_commission') THEN amount ELSE 0 END), 0) AS lifetime_fiat_earnings,
+         IFNULL(SUM(CASE WHEN type IN ('coin_referral_commission', 'fdr_coin_referral_commission') THEN amount ELSE 0 END), 0) AS lifetime_coin_earnings,
+         IFNULL(SUM(CASE WHEN type = 'coin_referral_commission' THEN amount ELSE 0 END), 0) AS coin_earnings_deposit,
+         IFNULL(SUM(CASE WHEN type = 'fdr_coin_referral_commission' THEN amount ELSE 0 END), 0) AS coin_earnings_fdr
        FROM transactions 
-       WHERE user_id = ? AND type IN ('referral_commission', 'fdr_referral_commission')`,
+       WHERE user_id = ? AND type IN ('referral_commission', 'fdr_referral_commission', 'coin_referral_commission', 'fdr_coin_referral_commission')`,
       [userId]
     );
-    const lifetimeEarnings = earningsRows[0].lifetime_earnings;
+    
+    const statsRow = earningsRows[0];
+    const lifetimeEarnings = statsRow.lifetime_fiat_earnings;
 
     // 2. Get referred users with deposit and FDR stats in a single query
     const [detailedReferrals] = await pool.query(
@@ -347,6 +353,10 @@ router.get('/referral-stats', authMiddleware, async (req, res) => {
 
     res.json({
       lifetime_earnings: parseFloat(lifetimeEarnings),
+      lifetime_fiat_earnings: parseFloat(lifetimeEarnings),
+      lifetime_coin_earnings: parseFloat(statsRow.lifetime_coin_earnings),
+      coin_earnings_deposit: parseFloat(statsRow.coin_earnings_deposit),
+      coin_earnings_fdr: parseFloat(statsRow.coin_earnings_fdr),
       referrals: detailedReferrals.map(r => ({
         ...r,
         active_fdr_total: parseFloat(r.active_fdr_total)

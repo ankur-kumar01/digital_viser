@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Copy, CheckCircle2, TrendingUp, Info } from 'lucide-react';
+import { Users, Copy, CheckCircle2, TrendingUp, Info, Coins } from 'lucide-react';
 import { authAPI } from '../api';
 import { formatGlobalDate } from '../utils/dateFormatter';
 
@@ -83,9 +83,10 @@ export const Referrals: React.FC<ReferralsProps> = ({ user }) => {
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '8px' }}>Referral Rewards Program</h2>
           <ul style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', margin: 0, paddingLeft: '20px', lineHeight: 1.6 }}>
-            <li>Earn <strong>10% Commission</strong> instantly on your referred friend's first deposit!</li>
-            <li>Plus, earn an additional <strong>5% Coin Bonus</strong> on their first deposit!</li>
-            <li>Earn <strong>5% Monthly Recurring Commission</strong> on the total active FDRs held by your referred friends (credited to locked wallet and released monthly).</li>
+            <li>Earn <strong>10% Fiat Commission</strong> instantly on your referred friend's first deposit!</li>
+            <li>Earn <strong>3% Coin Commission</strong> on EVERY approved deposit made by your referred friends!</li>
+            <li>Earn <strong>5% Monthly Recurring Fiat Commission</strong> on active FDRs (credited to locked wallet).</li>
+            <li>Earn <strong>1% Monthly Recurring Coin Commission</strong> on active FDRs (directly credited daily to your live coin wallet!).</li>
           </ul>
         </div>
       </div>
@@ -136,9 +137,47 @@ export const Referrals: React.FC<ReferralsProps> = ({ user }) => {
         </div>
 
         <div className="glass-card" style={{ textAlign: 'center', padding: '32px' }}>
-          <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '8px' }}>Lifetime Earnings</h4>
+          <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '8px' }}>Lifetime Fiat Earnings</h4>
           <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--accent-secondary)' }}>
-            {loading ? '...' : formatCurrency(stats?.lifetime_earnings || 0)}
+            {loading ? '...' : formatCurrency(stats?.lifetime_fiat_earnings || stats?.lifetime_earnings || 0)}
+          </div>
+        </div>
+      </div>
+
+      {/* Coin Earnings Dedicated Section */}
+      <div className="glass-card" style={{
+        background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.08), rgba(245, 158, 11, 0.03))',
+        border: '1px solid rgba(234, 179, 8, 0.3)',
+        boxShadow: '0 8px 32px rgba(234, 179, 8, 0.08)',
+        padding: '24px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+          <Coins size={24} color="#eab308" />
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#eab308', margin: 0 }}>Coin Referral Earnings Breakdown</h3>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+          <div style={{ background: 'rgba(0, 0, 0, 0.2)', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid rgba(234, 179, 8, 0.15)' }}>
+            <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '6px' }}>Total Coins Earned</h4>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#facc15' }}>
+              {loading ? '...' : (stats?.lifetime_coin_earnings || 0).toLocaleString()} 🪙
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Lifetime Coins from Referrals</div>
+          </div>
+
+          <div style={{ background: 'rgba(0, 0, 0, 0.2)', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid rgba(234, 179, 8, 0.15)' }}>
+            <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '6px' }}>Direct Deposit Coins</h4>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#38bdf8' }}>
+              {loading ? '...' : (stats?.coin_earnings_deposit || 0).toLocaleString()} 🪙
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>3% on Referee Deposits</div>
+          </div>
+
+          <div style={{ background: 'rgba(0, 0, 0, 0.2)', padding: '20px', borderRadius: '12px', textAlign: 'center', border: '1px solid rgba(234, 179, 8, 0.15)' }}>
+            <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '6px' }}>FDR Commission Coins</h4>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#4ade80' }}>
+              {loading ? '...' : (stats?.coin_earnings_fdr || 0).toLocaleString()} 🪙
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>1% Monthly Direct Credit</div>
           </div>
         </div>
       </div>
