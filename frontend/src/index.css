@@ -999,3 +999,35 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* ===== RESPONSIVE RECENT WITHDRAWALS ===== */
+.withdrawal-desktop-table {
+  display: block;
+  overflow-x: auto;
+}
+
+.withdrawal-mobile-cards {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.withdrawal-mobile-card-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .withdrawal-desktop-table {
+    display: none !important;
+  }
+  .withdrawal-mobile-cards {
+    display: flex !important;
+  }
+}
+
+

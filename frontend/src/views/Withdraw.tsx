@@ -596,51 +596,103 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
         ) : withdrawals.length === 0 ? (
           <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '20px', fontSize: '0.9rem' }}>No recent withdrawals</p>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Amount</th>
-                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Method</th>
-                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Wallet</th>
-                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Date</th>
-                  <th style={{ textAlign: 'right', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {withdrawals.map((w: any) => {
-                  const wd = typeof w.custom_data === 'string' ? JSON.parse(w.custom_data) : (w.custom_data || {});
-                  return (
-                    <tr key={w.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <td style={{ padding: '12px', fontWeight: 600 }}>₹{parseFloat(w.amount || '0').toFixed(2)}</td>
-                      <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{w.payment_method || '-'}</td>
-                      <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{wd.source_wallet || 'normal'}</td>
-                      <td style={{ padding: '12px' }}>
-                        <div><span style={statusStyle(w.status)}>{statusIcon(w.status)}{w.status}</span></div>
-                        {w.status === 'pending' && <WithdrawalTimer createdAt={w.created_at} />}
-                      </td>
-                      <td style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{new Date(w.created_at).toLocaleString()}</td>
-                      <td style={{ padding: '12px', textAlign: 'right' }}>
-                        {w.status === 'pending' && (
-                          <button
-                            onClick={() => handleCancelWithdrawal(w.id)}
-                            disabled={cancellingId === w.id}
-                            style={{
-                              background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)',
-                              padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
-                              display: 'inline-flex', alignItems: 'center', gap: '4px',
-                            }}
-                          >
-                            <Ban size={12} /> {cancellingId === w.id ? '...' : 'Cancel'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div>
+            {/* Desktop Table View */}
+            <div className="withdrawal-desktop-table">
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Amount</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Method</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Wallet</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Status</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Date</th>
+                    <th style={{ textAlign: 'right', padding: '10px 12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {withdrawals.map((w: any) => {
+                    const wd = typeof w.custom_data === 'string' ? JSON.parse(w.custom_data) : (w.custom_data || {});
+                    return (
+                      <tr key={w.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <td style={{ padding: '12px', fontWeight: 600 }}>₹{parseFloat(w.amount || '0').toFixed(2)}</td>
+                        <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{w.payment_method || '-'}</td>
+                        <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{wd.source_wallet || 'normal'}</td>
+                        <td style={{ padding: '12px' }}>
+                          <div><span style={statusStyle(w.status)}>{statusIcon(w.status)}{w.status}</span></div>
+                          {w.status === 'pending' && <WithdrawalTimer createdAt={w.created_at} />}
+                        </td>
+                        <td style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{new Date(w.created_at).toLocaleString()}</td>
+                        <td style={{ padding: '12px', textAlign: 'right' }}>
+                          {w.status === 'pending' && (
+                            <button
+                              onClick={() => handleCancelWithdrawal(w.id)}
+                              disabled={cancellingId === w.id}
+                              style={{
+                                background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)',
+                                padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
+                                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                              }}
+                            >
+                              <Ban size={12} /> {cancellingId === w.id ? '...' : 'Cancel'}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="withdrawal-mobile-cards">
+              {withdrawals.map((w: any) => {
+                const wd = typeof w.custom_data === 'string' ? JSON.parse(w.custom_data) : (w.custom_data || {});
+                return (
+                  <div key={w.id} className="withdrawal-mobile-card-item">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        ₹{parseFloat(w.amount || '0').toFixed(2)}
+                      </span>
+                      <span style={statusStyle(w.status)}>{statusIcon(w.status)}{w.status}</span>
+                    </div>
+
+                    {w.status === 'pending' && (
+                      <div>
+                        <WithdrawalTimer createdAt={w.created_at} />
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
+                      <div>
+                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Method: </span> {w.payment_method || '-'}
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Wallet: </span> {wd.source_wallet || 'normal'}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
+                      <span>{new Date(w.created_at).toLocaleString()}</span>
+                      {w.status === 'pending' && (
+                        <button
+                          onClick={() => handleCancelWithdrawal(w.id)}
+                          disabled={cancellingId === w.id}
+                          style={{
+                            background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)',
+                            padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                          }}
+                        >
+                          <Ban size={12} /> {cancellingId === w.id ? '...' : 'Cancel'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
