@@ -259,6 +259,35 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
         </p>
       </div>
 
+      {/* 24/7 Withdrawal Facility Achievement Banner */}
+      <div className="achievement-banner-card">
+        <div className="achievement-banner-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="8" r="6"/>
+            <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+          </svg>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+          <div className="achievement-banner-title">
+            <span>🎉 CONGRATULATIONS! ACCOUNT PRIVILEGE UNLOCKED</span>
+            <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '2px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.5px' }}>
+              ✨ ELIGIBLE
+            </span>
+          </div>
+          <p style={{ color: 'var(--text-primary)', fontSize: '0.92rem', lineHeight: 1.5, margin: 0 }}>
+            Your account is verified and eligible for our <strong style={{ color: '#f59e0b' }}>24/7 Express Daily Withdrawal Facility</strong>! Enjoy hassle-free payout requests anytime with high-priority processing.
+          </p>
+          <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', marginTop: '4px', fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ color: '#f59e0b' }}>⚡</span> Availability: 24 Hours / Daily
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ color: '#10b981' }}>🛡️</span> Processing Time: Within 24 - 48 Hours
+            </span>
+          </div>
+        </div>
+      </div>
+
       {lockStatus.is_locked ? (
         <div className="glass-card glow-card" style={{ textAlign: 'center', padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', border: '1px solid rgba(239, 68, 68, 0.35)', boxShadow: '0 0 40px rgba(239, 68, 68, 0.15)' }}>
           <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
