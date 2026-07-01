@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { walletAPI, uploadFile, globalConfigAPI } from '../api';
-import { CheckCircle2, AlertCircle, Info, Clock, XCircle, Ban } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info, Clock, XCircle, Ban, ChevronLeft, ChevronRight } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
 interface WithdrawProps {
@@ -77,6 +77,9 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [withdrawalsLoading, setWithdrawalsLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Global Config for Coin Charges
   const [allowCoinCharges, setAllowCoinCharges] = useState(false);
@@ -120,29 +123,47 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
       }
     };
 
-    Promise.all([fetchMethods(), fetchWithdrawals(), fetchLimits(), fetchConfig()]).finally(() => {
+    Promise.all([fetchMethods(), fetchWithdrawals(1, true), fetchLimits(), fetchConfig()]).finally(() => {
       setIsFetching(false);
     });
   }, []);
 
-  const fetchWithdrawals = async () => {
-    setWithdrawalsLoading(true);
+  const fetchWithdrawals = async (p: number = 1, showLoading: boolean = true) => {
+    if (showLoading) setWithdrawalsLoading(true);
     try {
-      const data = await walletAPI.getMyWithdrawals();
-      setWithdrawals(data);
+      const response = await walletAPI.getMyWithdrawals(p, 10);
+      if (Array.isArray(response)) {
+        setWithdrawals(response);
+      } else if (response && response.data) {
+        setWithdrawals(response.data);
+        if (response.pagination) {
+          setPage(response.pagination.page);
+          setTotalPages(response.pagination.totalPages || 1);
+          setTotalCount(response.pagination.total || 0);
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch withdrawals');
     } finally {
-      setWithdrawalsLoading(false);
+      if (showLoading) setWithdrawalsLoading(false);
     }
   };
+
+  // Real-time live auto-update every 10 seconds for balance and withdrawal list
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchWithdrawals(page, false);
+      refreshUser();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [page]);
 
   const handleCancelWithdrawal = async (id: number) => {
     if (!window.confirm('Cancel this withdrawal request? Your funds will be refunded.')) return;
     setCancellingId(id);
     try {
       await walletAPI.cancelWithdrawal(id);
-      fetchWithdrawals();
+      fetchWithdrawals(page, false);
       await refreshUser();
     } catch (err: any) {
       alert(err?.error || 'Failed to cancel withdrawal');
@@ -285,6 +306,13 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
       setCustomData({});
       // refresh user to reflect deducted balance immediately
       await refreshUser();
+      // immediately refresh withdrawals list without page reload
+      await fetchWithdrawals(1, false);
+      // refresh daily withdrawal limit counter
+      try {
+        const limitsData = await walletAPI.getWithdrawalLimits();
+        setTodayWithdrawals(limitsData.today_withdrawals || 0);
+      } catch (e) {}
     } catch (err: any) {
       setError(err.message || 'Withdrawal transaction failed.');
     } finally {
@@ -693,6 +721,30 @@ export const Withdraw: React.FC<WithdrawProps> = ({ user, refreshUser }) => {
                 );
               })}
             </div>
+
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', padding: '16px 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '16px' }}>
+                <button
+                  className="btn btn-secondary"
+                  disabled={page <= 1}
+                  onClick={() => fetchWithdrawals(page - 1)}
+                  style={{ display: 'flex', gap: '6px', padding: '8px 16px', fontSize: '0.85rem' }}
+                >
+                  <ChevronLeft size={16} /> Previous
+                </button>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+                  Page {page} of {totalPages} ({totalCount} total)
+                </span>
+                <button
+                  className="btn btn-secondary"
+                  disabled={page >= totalPages}
+                  onClick={() => fetchWithdrawals(page + 1)}
+                  style={{ display: 'flex', gap: '6px', padding: '8px 16px', fontSize: '0.85rem' }}
+                >
+                  Next <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
